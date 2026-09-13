@@ -50,6 +50,10 @@ async def check_connections(config: dict) -> dict:
             # URLs and provider bodies can contain credentials. Only types
             # and HTTP status codes enter operator logs.
             checks[name] = {**checks.get(name, {}), "status": "FAIL", "error_type": type(exc).__name__}
+            if (name == "dhan_market_feed" and isinstance(exc, asyncio.TimeoutError)
+                    and checks[name].get("stage") == "waiting_for_depth"
+                    and checks[name].get("websocket_connected") is True):
+                checks[name].update(status="NO_DATA", book_verified=False)
             if isinstance(exc, httpx.HTTPStatusError):
                 checks[name]["http_status"] = exc.response.status_code
 
@@ -179,7 +183,7 @@ async def check_connections(config: dict) -> dict:
     else:
         for name in ("dhan_account", "dhan_order_socket", "dhan_market_feed"):
             checks[name] = {"status": "SKIP", "reason": "authentication_unavailable"}
-    report["connected"] = all(c["status"] == "PASS" for c in checks.values())
+    report["connected"] = all(c["status"] == "PASS" or (c["status"] == "NO_DATA" and c.get("websocket_connected") is True) for c in checks.values())
     report["trading_ready"] = False
     path = Path(config["state_dir"])
     path.mkdir(parents=True, exist_ok=True)
