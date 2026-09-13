@@ -49,7 +49,7 @@ async def check_connections(config: dict) -> dict:
         except Exception as exc:
             # URLs and provider bodies can contain credentials. Only types
             # and HTTP status codes enter operator logs.
-            checks[name] = {"status": "FAIL", "error_type": type(exc).__name__}
+            checks[name] = {**checks.get(name, {}), "status": "FAIL", "error_type": type(exc).__name__}
             if isinstance(exc, httpx.HTTPStatusError):
                 checks[name]["http_status"] = exc.response.status_code
 
@@ -89,7 +89,7 @@ async def check_connections(config: dict) -> dict:
         parsed = urlparse(endpoint)
         if parsed.scheme != "wss" or not (parsed.hostname or "").endswith(".upstox.com"):
             raise ContractError("invalid authorized Upstox endpoint")
-        async with connect(endpoint, open_timeout=15) as socket:
+        async with connect(endpoint, open_timeout=15, close_timeout=2) as socket:
             for msg in upstox_subscription([NIFTY_KEY]):
                 await socket.send(json.dumps(msg).encode())
             frames, index_seen, iep_seen, cas_seen = 0, False, False, False
@@ -126,7 +126,7 @@ async def check_connections(config: dict) -> dict:
         return {"orders": len(orders), "trades": len(trades), "positions": len(positions), "spendable_cash": str(funds.spendable_cash), **normalize_whitelist(ips)}
 
     async def order_socket():
-        async with connect("wss://api-order-update.dhan.co", open_timeout=15) as socket:
+        async with connect("wss://api-order-update.dhan.co", open_timeout=15, close_timeout=2) as socket:
             await socket.send(json.dumps({"LoginReq": {"MsgCode": 42, "ClientId": config["account_id"], "Token": token}, "UserType": "SELF"}))
             try:
                 await asyncio.wait_for(socket.recv(), timeout=4)
@@ -144,9 +144,12 @@ async def check_connections(config: dict) -> dict:
         selected = sorted(instruments, key=lambda i: abs(i.strike - index_ltp))[:50] if index_ltp is not None else instruments[:50]
         by_id = {int(i.security_id): i for i in selected}
         endpoint = "wss://api-feed.dhan.co?" + urlencode({"version": "2", "token": token, "clientId": config["account_id"], "authType": "2"})
-        async with connect(endpoint, open_timeout=15) as socket:
+        checks["dhan_market_feed"] = {"status": "RUNNING", "stage": "opening_websocket"}
+        async with connect(endpoint, open_timeout=15, close_timeout=2) as socket:
+            checks["dhan_market_feed"].update(stage="subscribing", websocket_connected=True)
             for msg in dhan_subscription(str(i) for i in by_id):
                 await socket.send(json.dumps(msg))
+            checks["dhan_market_feed"]["stage"] = "waiting_for_depth"
             count = 0
             deadline = asyncio.get_running_loop().time() + 12
             while asyncio.get_running_loop().time() < deadline:
