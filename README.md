@@ -22,7 +22,7 @@ real network writes disabled, and a local simulator available for verification.
 No credential, live feed, broker order, account change or deployment is needed
 to run the test suite.
 
-## Commissioning the one remaining operator-controlled layer
+## Configuration and connection checks
 
 The repository never contains broker secrets. Copy `.env.example` to `.env`,
 set `UPSTOX_ANALYTICS_TOKEN` and either `DHAN_ACCESS_TOKEN` or `DHAN_PIN` plus
