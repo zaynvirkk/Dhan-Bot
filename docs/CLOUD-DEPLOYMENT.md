@@ -11,7 +11,9 @@ SSH is restricted to IAP (`35.235.240.0/20`). The VM has no attached cloud
 service account. It makes outbound HTTPS/WebSocket connections.
 
 Source is installed at `/opt/sablestone-dhan-cas-bot`; operator configuration
-and secrets live at `/etc/sablestone-dhan` with directory mode 0700.
+and secrets live at `/etc/sablestone-dhan` with directory mode 0750
+(`root:sablestone`). The config is 0640; the secret file is root-only 0600
+and systemd loads it before changing to the service user.
 State lives at `/var/lib/sablestone-dhan`, owned by the `sablestone` service
 user. Neither secrets nor live state are published to GitHub.
 

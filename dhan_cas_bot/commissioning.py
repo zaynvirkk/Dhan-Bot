@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
+from decimal import Decimal
 from io import StringIO
 import json
 import os
@@ -24,12 +25,22 @@ from .upstox_signal import decode_binary, NIFTY_KEY
 from .dhan_feed import decode_full_binary
 
 
+def normalize_whitelist(value):
+    if isinstance(value, list) and len(value) == 1:
+        value = value[0]
+    if not isinstance(value, dict):
+        raise ContractError("unrecognized Dhan whitelist response")
+    keys = {"primaryIP", "secondaryIP"}
+    return {"primary_ip": value.get("primaryIP"), "secondary_ip": value.get("secondaryIP"), "whitelist_resolved": bool(keys & value.keys())}
+
+
 async def check_connections(config: dict) -> dict:
     report = {"observed_at": datetime.now(timezone.utc).isoformat(), "writes": False, "connected": False, "checks": {}}
     checks = report["checks"]
     timeout = httpx.Timeout(20, connect=10)
     token = None
     instruments = []
+    index_ltp = None
 
     async def attempt(name, operation):
         try:
@@ -67,6 +78,7 @@ async def check_connections(config: dict) -> dict:
         return {"expiry": expiry.isoformat(), "is_expiry_today": expiry == today, "instruments": len(instruments), "lot_sizes": sorted({i.lot_size for i in instruments}), "tick_sizes": sorted({str(i.tick_size) for i in instruments}), "freeze_quantity": quantity, "master_digest": master.digest, "freeze_digest": freeze.digest}
 
     async def upstox():
+        nonlocal index_ltp
         upstox_token = os.environ.get("UPSTOX_ANALYTICS_TOKEN", "")
         if not upstox_token:
             raise ContractError("Upstox token is missing")
@@ -93,6 +105,9 @@ async def check_connections(config: dict) -> dict:
                 frames += 1
                 if NIFTY_KEY in value.feeds:
                     index_seen = True
+                    price = value.feeds[NIFTY_KEY].fullFeed.indexFF.ltpc.ltp
+                    if price > 0:
+                        index_ltp = Decimal(str(price))
                     iep_seen |= value.feeds[NIFTY_KEY].fullFeed.indexFF.ltpc.HasField("iep")
                 cas_seen |= bool(value.marketInfo.casMarketStatus)
             if frames == 0:
@@ -108,7 +123,7 @@ async def check_connections(config: dict) -> dict:
             response = await client.get("https://api.dhan.co/v2/ip/getIP", headers={"access-token": token})
             response.raise_for_status()
             ips = response.json()
-        return {"orders": len(orders), "trades": len(trades), "positions": len(positions), "spendable_cash": str(funds.spendable_cash), "primary_ip": ips.get("primaryIP"), "secondary_ip": ips.get("secondaryIP")}
+        return {"orders": len(orders), "trades": len(trades), "positions": len(positions), "spendable_cash": str(funds.spendable_cash), **normalize_whitelist(ips)}
 
     async def order_socket():
         async with connect("wss://api-order-update.dhan.co", open_timeout=15) as socket:
@@ -126,7 +141,7 @@ async def check_connections(config: dict) -> dict:
         if not instruments:
             raise ContractError("current instrument metadata unavailable")
         # Read-only subscription only; no signal ranking or execution object.
-        selected = instruments[:50]
+        selected = sorted(instruments, key=lambda i: abs(i.strike - index_ltp))[:50] if index_ltp is not None else instruments[:50]
         by_id = {int(i.security_id): i for i in selected}
         endpoint = "wss://api-feed.dhan.co?" + urlencode({"version": "2", "token": token, "clientId": config["account_id"], "authType": "2"})
         async with connect(endpoint, open_timeout=15) as socket:

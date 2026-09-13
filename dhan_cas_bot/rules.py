@@ -42,7 +42,7 @@ class RuleSource:
         reader = csv.DictReader(text.splitlines())
         fields = {str(x).strip().upper() for x in (reader.fieldnames or [])}
         symbol_field = next((x for x in ("SYMBOL", "INDEX SYMBOL", "UNDERLYING") if x in fields), None)
-        quantity_field = next((x for x in ("QUANTITY", "FREEZE_QTY", "QUANTITY FREEZE LIMIT", "FREEZE QUANTITY") if x in fields), None)
+        quantity_field = next((x for x in ("VOL_FRZ_QTY", "QUANTITY", "FREEZE_QTY", "QUANTITY FREEZE LIMIT", "FREEZE QUANTITY") if x in fields), None)
         if not symbol_field or not quantity_field:
             raise ContractError("NSE freeze source has no recognized fields")
         output = {}

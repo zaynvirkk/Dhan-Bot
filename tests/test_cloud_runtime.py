@@ -12,6 +12,7 @@ from dhan_cas_bot.instruments import load_dhan_master
 from dhan_cas_bot.rules import RuleSource
 from dhan_cas_bot.transport import WebSocketRunner
 from dhan_cas_bot.release import run_verification
+from dhan_cas_bot.commissioning import normalize_whitelist
 
 
 def test_native_master_segment_and_decimal_quantity():
@@ -22,6 +23,16 @@ def test_native_master_segment_and_decimal_quantity():
     assert expiry == date(2026, 9, 15)
     result = load_dhan_master(StringIO(payload), expiry=expiry)
     assert len(result) == 1 and result[0].lot_size == 65
+
+
+def test_native_nse_freeze_columns():
+    assert RuleSource.parse_freeze(b"S.No.,SYMBOL    ,VOL_FRZ_QTY    \n1,NIFTY     ,1800\n") == {"NIFTY": 1800}
+
+
+def test_whitelist_message_array_is_unknown_not_verified():
+    value = normalize_whitelist([{"message": "No registered address", "status": "failure"}])
+    assert value == {"primary_ip": None, "secondary_ip": None, "whitelist_resolved": False}
+    assert normalize_whitelist({"primaryIP": "192.0.2.1"})["primary_ip"] == "192.0.2.1"
 
 
 def test_real_socket_reconnect_resubscribes_binary_and_clears_epoch():
