@@ -1,0 +1,10 @@
+[Unit]
+Description=Check Dhan CAS connectivity before the weekday session
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 09:20:00 UTC
+Persistent=false
+Unit=dhan-cas-connections.service
+
+[Install]
+WantedBy=timers.target

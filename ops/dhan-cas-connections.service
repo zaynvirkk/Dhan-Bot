@@ -1,0 +1,20 @@
+[Unit]
+Description=Dhan CAS read-only cloud connection check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=sablestone
+WorkingDirectory=/opt/sablestone-dhan-cas-bot
+ExecStart=/opt/sablestone-dhan-cas-bot/.venv/bin/dhan-cas check-connections --config /etc/sablestone-dhan/production.toml
+EnvironmentFile=/etc/sablestone-dhan/secrets.env
+Environment=DHAN_BROKER_READ_ONLY=1
+Environment=PYTHONUNBUFFERED=1
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sablestone-dhan
+TimeoutStartSec=120

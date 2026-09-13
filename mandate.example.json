@@ -1,0 +1,11 @@
+{
+  "account_id": "REQUIRED",
+  "allocated_capital": "0",
+  "cumulative_entry_debit_cap": null,
+  "debit_cap_scope": "none",
+  "reinvest_realized_profit": true,
+  "probe_max_attempts_per_session": 1,
+  "probe_entry_debit_cap_per_session": "100.00",
+  "probe_spending_cap_per_mandate": "500.00",
+  "live_order_authority": false
+}

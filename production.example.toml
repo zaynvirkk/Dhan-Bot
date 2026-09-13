@@ -1,0 +1,10 @@
+state_dir = "state"
+live_order_authority = false
+account_id = "REQUIRED"
+dhan_api_base = "https://api.dhan.co/v2"
+dhan_auth_url = "https://auth.dhan.co/app/generateAccessToken"
+expected_egress_ip = ""
+upstox_authorize_url = "https://api.upstox.com/v3/feed/market-data-feed/authorize"
+# Leave the Dhan websocket URLs empty to use the documented production defaults.
+dhan_market_ws_url = ""
+dhan_order_ws_url = ""

@@ -1,0 +1,14 @@
+{
+  "name": "sablestone-dhan-cas-bot",
+  "version": "0.1.0",
+  "entrypoint": "dhan_cas_bot.cli:main",
+  "execution_broker": "Dhan",
+  "signal_provider": "Upstox V3 official NIFTY CAS feed",
+  "strategy": "CAS_LAG_V1",
+  "production_mode": "AUTO_LIVE",
+  "default_live_order_authority": false,
+  "writes_in_offline_tests": false,
+  "state": "SQLite WAL synchronous FULL",
+  "acceptance_commands": 20,
+  "acceptance_cases": 60
+}
