@@ -35,6 +35,11 @@ An order socket connection is not a successful OMS route proof. Missing IEP
 outside CAS and absence of depth packets outside market hours remain unknown.
 
 The `dhan-cas-connections.timer` runs the bounded check at 14:50 IST weekdays.
+The `dhan-cas-session-refresh.timer` restarts the read-only daemon at 14:55 IST
+weekdays so PIN/TOTP supplies a fresh session token and metadata before CAS.
+It refuses to restart if either authority flag permits orders, the broker
+read-only interlock is absent, or a fixed token replaces PIN/TOTP. This is
+commissioning scheduling; funded in-process credential rotation remains open.
 The `dhan-cas.service` daemon is enabled and running with
 `DHAN_BROKER_READ_ONLY=1` at the broker boundary. Both configuration and mandate retain false live
 authority; a template bankroll of zero is not a funded mandate.
@@ -46,7 +51,7 @@ Review found missing entry-budget/lifecycle integration, automatic exit
 integration, route-proof races, and incomplete recovery/disarm enforcement.
 The cloud deployment is for genuine provider commissioning, not approval to
 arm this revision with money. These defects remain development work.
-Also unresolved: automatic token renewal for sessions beyond the initial
+Also unresolved: funded in-process token renewal beyond the initial
 24-hour token lifetime and explicit price-unit conversion for the native
 Dhan instrument master's tick field (observed raw value `5.0000`). Do not use
 that unqualified field to construct funded orders.
@@ -75,3 +80,10 @@ event was observed. The report explicitly retains `trading_ready=false` and
 `writes=false`. Starting the daemon and check simultaneously had caused an
 authentication failure; the separately run check succeeded. Authentication
 coordination remains part of the token lifecycle work above.
+
+Recheck at 15:56 UTC reproduced successful authentication, account reads and
+all three socket connections. Market depth and CAS indication remained
+unobserved; broker IP registration was still unresolved. The daemon had
+remained active with zero restarts since 12:54 UTC. The pre-session refresh
+guard adds five regression cases, bringing the suite to 91 component tests.
+Token-generation contract: [Dhan authentication documentation](https://dhanhq.co/docs/v2/authentication/).

@@ -18,6 +18,8 @@ python3 -m venv "$SOURCE_ROOT/.venv"
 install -m 0644 "$SOURCE_ROOT/ops/dhan-cas.service" /etc/systemd/system/dhan-cas.service
 install -m 0644 "$SOURCE_ROOT/ops/dhan-cas-connections.service" /etc/systemd/system/dhan-cas-connections.service
 install -m 0644 "$SOURCE_ROOT/ops/dhan-cas-connections.timer" /etc/systemd/system/dhan-cas-connections.timer
+install -m 0644 "$SOURCE_ROOT/ops/dhan-cas-session-refresh.service" /etc/systemd/system/dhan-cas-session-refresh.service
+install -m 0644 "$SOURCE_ROOT/ops/dhan-cas-session-refresh.timer" /etc/systemd/system/dhan-cas-session-refresh.timer
 systemctl daemon-reload
 systemctl enable --now chrony
 echo 'Installed. Trading is disabled; configure secrets before starting connection checks.'

@@ -1,0 +1,16 @@
+[Unit]
+Description=Refresh read-only Dhan CAS login before the weekday session
+After=network-online.target dhan-cas-connections.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/sablestone-dhan-cas-bot
+ExecStart=/opt/sablestone-dhan-cas-bot/.venv/bin/python -m dhan_cas_bot.session_refresh /etc/sablestone-dhan/production.toml
+EnvironmentFile=/etc/sablestone-dhan/secrets.env
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+UMask=0077
+TimeoutStartSec=60

@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh Dhan CAS read-only login at 14:55 IST weekdays
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 09:25:00 UTC
+Persistent=false
+Unit=dhan-cas-session-refresh.service
+
+[Install]
+WantedBy=timers.target
