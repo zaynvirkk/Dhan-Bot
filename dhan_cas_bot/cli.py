@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json
 import os
+import httpx
 from pathlib import Path
 import tempfile
 from decimal import Decimal
@@ -107,6 +108,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         print(json.dumps({"command": args.command, "status": "reconciliation requires configured broker credentials"}))
         return 0
+    except httpx.HTTPError as exc:
+        print(json.dumps({"error": "provider_request_failed", "error_type": type(exc).__name__}))
+        return 2
     except (OSError, ValueError, ContractError) as exc:
         print(json.dumps({"error": str(exc)}))
         return 2
