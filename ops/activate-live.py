@@ -46,6 +46,9 @@ def atomic(path, text, mode, owner=None):
 async def checks(config, state, capital):
     if not current_verification(ROOT,state):
         raise ContractError("current deployed source must pass dhan-cas verify first")
+    from dhan_cas_bot.service import clock_uncertainty
+    if await clock_uncertainty()>100:
+        raise ContractError("host UTC uncertainty exceeds the 100 ms reference policy")
     await require_expected_egress(config["expected_egress_ip"])
     token=await session_token(config,state)
     broker=DhanBroker(config["account_id"],token,config["dhan_api_base"],allow_writes=False)
@@ -134,7 +137,10 @@ def main():
         override=Path("/etc/systemd/system/dhan-cas.service.d")
         override.mkdir(parents=True,exist_ok=True)
         atomic(override/"90-operator-live.conf","[Service]\nUnsetEnvironment=DHAN_BROKER_READ_ONLY\n",0o644)
-    finally: os.close(descriptor)
+    finally:
+        os.close(descriptor)
+        for name in ("writer.lock","ledger.sqlite3","ledger.sqlite3-wal","ledger.sqlite3-shm"):
+            if (state/name).exists(): os.chown(state/name,*owner)
     command("systemctl","disable","--now","dhan-cas-session-refresh.timer")
     command("systemctl","daemon-reload")
     command("systemctl","reset-failed","dhan-cas.service")

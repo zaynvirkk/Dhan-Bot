@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from decimal import Decimal
 from datetime import datetime, time, timezone
 import fcntl
 import hashlib
@@ -49,15 +50,28 @@ def write_status(state_dir: Path, runtime, **extra):
     path.replace(state_dir / "status.json")
 
 
+def parse_clock_uncertainty(payload: str) -> int:
+    fields = payload.strip().split(",")
+    # Newer chrony CSV includes a source-address field after the reference ID.
+    # The ten trailing tracking values retain the same relative positions.
+    if len(fields) not in {13,14} or fields[-1].strip() != "Normal":
+        return 100000
+    try:
+        offset, delay, dispersion = (Decimal(fields[index]) for index in (-10,-4,-3))
+        if not all(x.is_finite() for x in (offset,delay,dispersion)) or min(delay,dispersion)<0:
+            return 100000
+        return int((abs(offset)+dispersion+delay/2)*1000)+1
+    except (ValueError, ArithmeticError):
+        return 100000
+
+
 async def clock_uncertainty() -> int:
     try:
         process = await asyncio.create_subprocess_exec("chronyc", "-c", "tracking", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
         stdout, _ = await asyncio.wait_for(process.communicate(), 3)
-        fields = stdout.decode().strip().split(",")
-        if process.returncode or len(fields) < 13 or fields[-1].strip() != "Normal":
+        if process.returncode:
             return 100000
-        # System offset, root dispersion and half root delay bound UTC error.
-        return int((abs(float(fields[3])) + abs(float(fields[10])) + abs(float(fields[9]))/2)*1000)+1
+        return parse_clock_uncertainty(stdout.decode())
     except (OSError, ValueError, asyncio.TimeoutError):
         return 100000
 
@@ -287,6 +301,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         runners.append(WebSocketRunner(config.get("dhan_order_ws_url") or "wss://api-order-update.dhan.co", {}, record_order, connect_messages=[{"LoginReq":{"MsgCode":42,"ClientId":broker.account_id,"Token":token},"UserType":"SELF"}], on_connect=orders.protocol.on_connect, on_disconnect=order_disconnect))
         tasks = [asyncio.create_task(runner.run()) for runner in runners]
         last_reconcile = last_status = last_clock = 0.0
+        metadata_retry_at = monotime.monotonic()+30
         route_failed_epochs = set()
         while not stop.is_set():
             current = now().astimezone(IST)
@@ -351,6 +366,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                 # overnight settlement and ambiguous orders. Pending positions
                 # must not prevent renewal before the authentication expires.
                 if not ledger.order_lock.locked():
+                    if metadata_error and engine.active is None and monotonic >= metadata_retry_at:
+                        return
                     if current.date() != today or (started_before_session and current.time() >= time(15,5)):
                         return
                     cached = state_dir / "dhan_token.json"

@@ -13,6 +13,7 @@ from dhan_cas_bot.rules import RuleSource
 from dhan_cas_bot.transport import WebSocketRunner
 from dhan_cas_bot.release import run_verification
 from dhan_cas_bot.commissioning import normalize_whitelist
+from dhan_cas_bot.service import parse_clock_uncertainty
 
 
 def test_native_master_segment_and_decimal_quantity():
@@ -24,6 +25,17 @@ def test_native_master_segment_and_decimal_quantity():
     result = load_dhan_master(StringIO(payload), expiry=expiry)
     assert len(result) == 1 and result[0].lot_size == 65
     assert str(result[0].tick_size) == "0.0500"
+
+
+def test_gcp_chrony_tracking_with_optional_source_address():
+    observed="A9FEA9FE,169.254.169.254,3,1789361487.124628006,-0.000005826,0.000006912,0.000004503,-95.593,0.000,0.003,0.000350781,0.000284748,1039.5,Normal"
+    assert parse_clock_uncertainty(observed)==1
+    legacy=observed.replace(",169.254.169.254", "")
+    assert parse_clock_uncertainty(legacy)==1
+    assert parse_clock_uncertainty(observed.replace("Normal","Not synchronised"))>100
+    assert parse_clock_uncertainty(observed.replace("-0.000005826","0.200"))>100
+    assert parse_clock_uncertainty(observed.replace("0.000350781","NaN"))>100
+    assert parse_clock_uncertainty("invalid")>100
 
 
 def test_native_nse_freeze_columns():

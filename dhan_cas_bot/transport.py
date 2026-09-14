@@ -28,7 +28,7 @@ class WebSocketRunner:
 
     async def run(self) -> None:
         from websockets.asyncio.client import connect
-        from websockets.exceptions import ConnectionClosed
+        from websockets.exceptions import ConnectionClosed, InvalidHandshake
         delay = 1.0
         while not self.stop.is_set():
             try:
@@ -54,7 +54,7 @@ class WebSocketRunner:
                         await self.on_message(message)
             except asyncio.CancelledError:
                 raise
-            except (OSError, ConnectionClosed, ContractError, httpx.HTTPError) as exc:
+            except (OSError, ConnectionClosed, InvalidHandshake, ContractError, httpx.HTTPError) as exc:
                 self.last_error = type(exc).__name__
                 if self.stop.is_set():
                     return

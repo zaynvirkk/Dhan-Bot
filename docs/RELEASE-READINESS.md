@@ -1,10 +1,10 @@
 # Release readiness — 2026-09-14
 
 Version 0.2.0 implements the connected execution lifecycle that the previous
-read-only deployment lacked. Local verification executed **113 tests**, with
+read-only deployment lacked. Local verification executed **114 tests**, with
 no failures/skips, and killed four isolated production-source mutations.
 The verified source digest is
-`79937510e583dff3c88fd3a17045f1580bbfc121c8d002366bed253a54272737`.
+`800e2e88d9f65bd3fdc1c5137a72b8b9469ce94dcddce13e062a483b9997d9ab`.
 This receipt includes 60 historical CP component cases; those 60 alone do not
 represent complete connected acceptance of every statement in the build plan.
 
@@ -34,6 +34,12 @@ The mutation replay removes intent-before-send durability, pending-exposure
 protection, the dispatch-time disarm check and the broker read-only boundary,
 one at a time. Each altered implementation fails its connected assertion.
 
+The actual VM exposed a 14-field chrony tracking response (with an extra
+source-address field). The parser now handles both documented layouts; the
+exact observed VM response is a regression fixture. WebSocket handshake
+failures reconnect independently, and a transient instrument-source failure
+can trigger another metadata qualification instead of disabling the whole day.
+
 ## Real external evidence and outstanding empirical facts
 
 The actual Mumbai VM check at 04:31 UTC on September 14 verified Dhan PIN/TOTP
@@ -55,6 +61,9 @@ availability before the entry cutoff has **not** been established. If unavailabl
 final-dependent entries stay disabled automatically. Expiry ledger narration
 matching is deliberately exact; the actual Dhan voucher format remains to be
 commissioned. Unmatched credits remain pending instead of becoming invented P&L.
+
+Dhan has now accepted and read back **34.100.255.111** as the account primary
+static IP. Registration sent no broker order and did not enable trading.
 
 The installed service retains read-only authority until the operator runs the
 activation helper in [CLOUD-DEPLOYMENT.md](CLOUD-DEPLOYMENT.md). That command
