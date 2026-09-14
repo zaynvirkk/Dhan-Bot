@@ -23,6 +23,7 @@ from .instruments import load_dhan_master
 from .rules import RuleSource, DHAN_MASTER_URL, NSE_FREEZE_URL
 from .upstox_signal import decode_binary, NIFTY_KEY
 from .dhan_feed import decode_full_binary
+from .profile import require_derivatives_profile
 
 
 def normalize_whitelist(value):
@@ -70,7 +71,10 @@ async def check_connections(config: dict) -> dict:
             value = response.json()
         if str(value.get("dhanClientId")) != config["account_id"]:
             raise ContractError("Dhan profile account mismatch")
-        return {"account_matches": True, "data_plan": str(value.get("dataPlan", "UNKNOWN")), "data_validity": str(value.get("dataValidity", "UNKNOWN")), "token_validity": str(value.get("tokenValidity", "UNKNOWN"))}
+        derivatives = True
+        try: require_derivatives_profile(value,config["account_id"])
+        except ContractError: derivatives = False
+        return {"account_matches": True, "derivatives_enabled":derivatives, "active_segments":value.get("activeSegment","UNKNOWN"), "data_plan": str(value.get("dataPlan", "UNKNOWN")), "data_validity": str(value.get("dataValidity", "UNKNOWN")), "token_validity": str(value.get("tokenValidity", "UNKNOWN"))}
 
     async def metadata():
         nonlocal instruments

@@ -31,6 +31,7 @@ from .final_source import NseFinalSource
 from .instruments import load_dhan_master
 from .ledger import Ledger
 from .release import current_verification
+from .profile import require_derivatives_profile
 from .route import RouteQualifier
 from .rules import RuleSource, DHAN_MASTER_URL, NSE_FREEZE_URL
 from .runtime import AutoLive
@@ -114,6 +115,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             ledger.observe("freeze:"+freeze.digest, "FREEZE", {"source": freeze.url, "retrieved_at": freeze.retrieved_at.isoformat(), "sha256": freeze.digest})
             account_admitted = expiry == today
             if broker.allow_writes:
+                require_derivatives_profile(await broker._request("GET","/profile"),broker.account_id)
                 await require_expected_egress(config["expected_egress_ip"])
                 ips = normalize_whitelist(await broker._request("GET", "/ip/getIP"))
                 if config["expected_egress_ip"] not in {ips["primary_ip"], ips["secondary_ip"]}:

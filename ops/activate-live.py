@@ -24,6 +24,7 @@ from dhan_cas_bot.domain import ContractError, json_safe
 from dhan_cas_bot.egress import require_expected_egress
 from dhan_cas_bot.ledger import Ledger
 from dhan_cas_bot.release import current_verification, source_digest
+from dhan_cas_bot.profile import require_derivatives_profile
 
 
 def command(*args):
@@ -54,8 +55,7 @@ async def checks(config, state, capital):
     broker=DhanBroker(config["account_id"],token,config["dhan_api_base"],allow_writes=False)
     try:
         profile=await broker._request("GET","/profile")
-        if str(profile.get("dhanClientId")) != config["account_id"] or profile.get("dataPlan")!="Active" or "Derivative" not in profile.get("activeSegment",""):
-            raise ContractError("Dhan account identity, derivatives permission or data entitlement failed")
+        require_derivatives_profile(profile,config["account_id"])
         ips=normalize_whitelist(await broker._request("GET","/ip/getIP"))
         if config["expected_egress_ip"] not in {ips["primary_ip"],ips["secondary_ip"]}:
             raise ContractError("set Dhan primary IP to "+config["expected_egress_ip"]+" before activation")

@@ -54,6 +54,7 @@ def test_connected_service_qualifies_route_freezes_reference_buys_and_exits(tmp_
                     if self.path == "/master": return self.reply("SEGMENT,SECURITY_ID,INSTRUMENT,UNDERLYING_SYMBOL,SM_EXPIRY_DATE,OPTION_TYPE,STRIKE_PRICE,LOT_SIZE,TICK_SIZE,SM_FREEZE_QTY\nNSE_FNO,100,OPTIDX,NIFTY,2026-09-15,CE,25000,65,0.05,1800\nNSE_FNO,200,OPTIDX,NIFTY,2026-09-15,PE,25000,65,0.05,1800\n","text/csv")
                     if self.path == "/freeze": return self.reply("SYMBOL,VOL_FRZ_QTY\nNIFTY,1800\n","text/csv")
                     if self.path == "/v2/orders": return self.reply(broker.order_rows)
+                    if self.path == "/v2/profile": return self.reply({"dhanClientId":"TEST","dataPlan":"Active","activeSegment":"E, D, "})
                     if self.path == "/v2/trades": return self.reply(broker.trade_rows)
                     if self.path == "/v2/positions": return self.reply(asyncio.run(broker.positions()))
                     if self.path == "/v2/fundlimit": return self.reply({"dhanClientId":"TEST","availabelBalance":str(broker.cash),"withdrawableBalance":str(broker.cash)})

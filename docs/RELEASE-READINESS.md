@@ -1,12 +1,30 @@
 # Release readiness — 2026-09-14
 
 Version 0.2.0 implements the connected execution lifecycle that the previous
-read-only deployment lacked. Local verification executed **114 tests**, with
+read-only deployment lacked. Local verification executed **121 tests**, with
 no failures/skips, and killed four isolated production-source mutations.
 The verified source digest is
-`800e2e88d9f65bd3fdc1c5137a72b8b9469ce94dcddce13e062a483b9997d9ab`.
+`d89708208f9cfacf815b93e8e7a30ec3a0bbde3d6264a4575ac380df734bf0d7`.
 This receipt includes 60 historical CP component cases; those 60 alone do not
 represent complete connected acceptance of every statement in the build plan.
+
+## Current activation blocker
+
+The actual Dhan profile returned `activeSegment: "E, "`. The authenticated Dhan
+web profile independently lists **Equity, MF and IPO**, without F&O. Data API
+entitlement is active, but that does not grant derivatives trading permission.
+The operator must complete Dhan F&O activation; the helper correctly refuses
+to enable a NIFTY options strategy on this account state.
+
+Open Dhan **Profile → Equity F&O, Commodities & Currencies**. If income-proof
+or KYC processing is required, its completion is controlled by Dhan; Tuesday
+activation cannot be promised. [Dhan activation help](https://dhan.co/support/account-related/activate-my-f-and-o/)
+explains the required account steps. No segment application, income statement,
+bank document or legal declaration was submitted on the operator’s behalf.
+
+The VM is already configured, its static IP is registered, and the deployment
+has passed its tests. Real-money service activation remains an operator action
+after Dhan confirms F&O eligibility.
 
 ## What the verification actually exercises
 

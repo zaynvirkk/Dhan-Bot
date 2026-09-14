@@ -13,6 +13,13 @@ Source: `/opt/sablestone-dhan-cas-bot`. Configuration:
 `/var/lib/sablestone-dhan` (0700 sablestone). Broker secrets and account reports
 must never be committed.
 
+## Account requirement
+
+Current broker/profile checks show Equity without F&O. Complete **Dhan Profile
+→ Equity F&O, Commodities & Currencies** first; an active data subscription
+alone does not authorize NIFTY option orders. The VM primary IP has already
+been registered as **34.100.255.111**.
+
 ## Activation by the operator
 
 Connect to the existing VM:
