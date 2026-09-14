@@ -17,12 +17,13 @@ from dhan_cas_bot.commissioning import normalize_whitelist
 
 def test_native_master_segment_and_decimal_quantity():
     payload = ("EXCH_ID,SEGMENT,SECURITY_ID,INSTRUMENT,UNDERLYING_SYMBOL,SM_EXPIRY_DATE,OPTION_TYPE,STRIKE_PRICE,LOT_SIZE,TICK_SIZE,SM_FREEZE_QTY\n"
-               "NSE,D,123,OPTIDX,NIFTY,2026-09-15,PE,23650,65.0,0.05,1800\n"
-               "BSE,D,456,OPTIDX,NIFTY,2026-09-14,PE,23650,65.0,0.05,1800\n")
+               "NSE,D,123,OPTIDX,NIFTY,2026-09-15,PE,23650,65.0,5.0000,1800\n"
+               "BSE,D,456,OPTIDX,NIFTY,2026-09-14,PE,23650,65.0,5.0000,1800\n")
     expiry = RuleSource.current_expiry(payload.encode(), today=date(2026, 9, 13))
     assert expiry == date(2026, 9, 15)
     result = load_dhan_master(StringIO(payload), expiry=expiry)
     assert len(result) == 1 and result[0].lot_size == 65
+    assert str(result[0].tick_size) == "0.0500"
 
 
 def test_native_nse_freeze_columns():
@@ -59,8 +60,14 @@ def test_real_socket_reconnect_resubscribes_binary_and_clears_epoch():
 def test_vm_readonly_boundary_blocks_even_authorized_broker(monkeypatch):
     monkeypatch.setenv("DHAN_BROKER_READ_ONLY", "1")
     broker = DhanBroker("TEST", "test-token", allow_writes=True)
+    calls=[]
+    async def transport(*args, **kwargs):
+        calls.append(args)
+        return {"orderId":"fixture"}
+    monkeypatch.setattr(broker,"_request",transport)
     with pytest.raises(ContractError, match="writes are disabled"):
         asyncio.run(broker.submit_order({"dhanClientId": "TEST"}))
+    assert not calls
 
 
 def test_malformed_orders_cannot_reconcile_as_empty(monkeypatch):

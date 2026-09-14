@@ -47,3 +47,51 @@ async def resolve_dhan_access_token(account_id: str, *, access_token: str = "", 
     if not token:
         raise ContractError("Dhan token endpoint returned no accessToken")
     return str(token)
+
+
+async def session_token(config: dict, state_dir) -> str:
+    """Share a bounded-life token between the daemon and read-only checks."""
+    import asyncio
+    import fcntl
+    import json
+    import os
+    from pathlib import Path
+    access_token = os.environ.get("DHAN_ACCESS_TOKEN", "")
+    if access_token:
+        return access_token
+    path = Path(state_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    lock_path = path / "token.lock"
+    fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+    acquired = False
+    try:
+        deadline = time.monotonic() + 25
+        while not acquired:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise ContractError("authentication lock timeout")
+                await asyncio.sleep(.05)
+        cached = path / "dhan_token.json"
+        try:
+            record = json.loads(cached.read_text())
+        except (OSError, ValueError):
+            record = {}
+        issued = record.get("issued", 0)
+        if record.get("account") == config["account_id"] and isinstance(issued, (int, float)) and 0 <= time.time() - issued < 20 * 3600 and isinstance(record.get("token"), str) and record["token"]:
+            return record["token"]
+        token = await resolve_dhan_access_token(config["account_id"], pin=os.environ.get("DHAN_PIN", ""), totp_secret=os.environ.get("DHAN_TOTP_SECRET", ""), auth_url=config.get("dhan_auth_url", "https://auth.dhan.co/app/generateAccessToken"))
+        temporary = path / "dhan_token.json.tmp"
+        descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(descriptor, "w") as stream:
+            json.dump({"account": config["account_id"], "issued": time.time(), "token": token}, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.replace(cached)
+        return token
+    finally:
+        if acquired:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)

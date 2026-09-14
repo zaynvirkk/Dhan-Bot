@@ -26,6 +26,10 @@ def load_mandate(path: str | Path) -> Mandate:
     required = {"account_id", "allocated_capital", "cumulative_entry_debit_cap", "debit_cap_scope", "reinvest_realized_profit", "probe_max_attempts_per_session", "probe_entry_debit_cap_per_session", "probe_spending_cap_per_mandate", "live_order_authority"}
     if set(data) != required:
         raise ContractError("mandate fields must be explicit")
+    if any(type(data[field]) is not bool for field in ("live_order_authority", "reinvest_realized_profit")):
+        raise ContractError("mandate authority and reinvestment must be booleans")
+    if type(data["probe_max_attempts_per_session"]) is not int:
+        raise ContractError("probe attempt allowance must be an integer")
     cap = data["cumulative_entry_debit_cap"]
     mandate = Mandate(data["account_id"], allocated_capital=dec(data["allocated_capital"], "allocated_capital"), cumulative_entry_debit_cap=None if cap is None else dec(cap, "cumulative_entry_debit_cap"), debit_cap_scope=data["debit_cap_scope"], reinvest_realized_profit=bool(data["reinvest_realized_profit"]), probe_max_attempts_per_session=int(data["probe_max_attempts_per_session"]), probe_entry_debit_cap_per_session=dec(data["probe_entry_debit_cap_per_session"], "probe_entry_debit_cap_per_session"), probe_spending_cap_per_mandate=dec(data["probe_spending_cap_per_mandate"], "probe_spending_cap_per_mandate"), live_order_authority=bool(data["live_order_authority"]))
     mandate.validate()

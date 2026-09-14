@@ -33,24 +33,35 @@ class RouteQualifier:
 
     async def qualify(self, book: OptionBook, *, epoch: str) -> RouteProof:
         attempts = int(self.ledger.counter(f"probe.attempts:{self.session_id}"))
-        spent = self.ledger.counter("probe.spent")
+        totals = self.ledger.lifecycle_totals("route-probe")
+        spent = totals["entry_debit"] + totals["reserved"]
         if attempts >= self.max_attempts:
             raise ContractError("qualification attempt budget exhausted")
         bid = book.top_bid
         if bid is None or bid.quantity < book.instrument.lot_size:
             raise ContractError("no one-lot bid for qualification")
-        limit = bid.price - book.instrument.tick_size
-        if limit <= 0:
+        from decimal import ROUND_CEILING
+        limit = max(book.instrument.tick_size, book.instrument.lower_limit or Decimal("0"))
+        limit = (limit / book.instrument.tick_size).to_integral_value(rounding=ROUND_CEILING) * book.instrument.tick_size
+        if limit >= bid.price:
             raise ContractError("no positive non-marketable probe price")
         cost = reserve_cash(worst_case_entry_cash(book.instrument.lot_size, limit, 1, FeeSchedule()))
-        if cost > self.debit_cap or spent + cost > self.mandate_spend_cap:
+        session_debit = self.ledger.counter(f"probe.debit:{self.session_id}")
+        if session_debit + cost > self.debit_cap or spent + cost > self.mandate_spend_cap:
             raise ContractError("qualification debit budget exhausted")
-        intent = Intent("probe-" + uuid.uuid4().hex, "BUY", book.instrument, book.instrument.lot_size, limit, "probe-" + uuid.uuid4().hex, datetime.now(timezone.utc), "route-probe")
+        funds = await self.broker.funds()
+        if funds.broker_account != self.broker.account_id or cost > funds.spendable_cash:
+            raise ContractError("qualification cash unavailable")
+        intent = Intent("probe-" + uuid.uuid4().hex, "BUY", book.instrument, book.instrument.lot_size, limit, "p" + uuid.uuid4().hex[:28], datetime.now(timezone.utc), "route-probe")
         manager = OrderManager(self.ledger, self.broker)
         self.ledger.set_counter(f"probe.attempts:{self.session_id}", attempts + 1)
-        response = await manager.submit(intent, reserved_cash=cost)
         self.ledger.set_counter("probe.spent", spent + cost)
+        self.ledger.set_counter(f"probe.debit:{self.session_id}", session_debit + cost)
+        self.ledger.put_metadata("route_probe", {"epoch": epoch, "correlation_id": intent.client_order_id, "intent_id": intent.intent_id})
+        response = await manager.submit(intent, reserved_cash=cost)
         order_id = str(response["orderId"])
         if response.get("accountId", self.broker.account_id) != self.broker.account_id:
             raise ContractError("qualification response account mismatch")
-        return RouteProof(epoch, order_id, self.broker.account_id, datetime.now(timezone.utc), response.get("orderStatus") in {"CANCELLED", "REJECTED"})
+        if response.get("orderStatus") == "REJECTED":
+            raise ContractError("rejected probe cannot qualify route")
+        return RouteProof(epoch, order_id, self.broker.account_id, datetime.now(timezone.utc), False)

@@ -41,6 +41,7 @@ class AutoLive:
     async def recover(self) -> dict[str, Any]:
         self.status.state = "RECOVERING"
         result = await self.orders.reconcile()
+        self.reconciled = result
         self.status.state = "ARMED_WAITING_SIGNAL" if self.mandate.live_order_authority else "DISARMED"
         return result
 
@@ -48,16 +49,21 @@ class AutoLive:
         funds = await self.broker.funds()
         self.status.current_account_funded = funds.spendable_cash > 0 and funds.broker_account == self.mandate.account_id
 
-    def permit_entry(self) -> bool:
-        return bool(self.status.software_verified and self.status.current_account_funded and self.status.broker_route_verified and self.status.official_cas_signal_seen and self.status.auto_live_armed and self.status.state not in {"DISARMED", "SETTLEMENT_PENDING"})
+    def permit_entry(self, *, settlement_add=False) -> bool:
+        blocked = {"DISARMED", "RECOVERING"}
+        if not settlement_add:
+            blocked.add("SETTLEMENT_PENDING")
+        return bool(self.mandate.live_order_authority and self.mandate.allocated_capital > 0 and self.status.software_verified and self.status.current_account_funded and self.status.broker_route_verified and self.status.official_cas_signal_seen and self.status.auto_live_armed and not self.ledger.metadata("disarmed", False) and self.status.state not in blocked)
 
     def disarm_new_entries(self) -> None:
         self.status.auto_live_armed = False
         self.status.state = "ENTRY_HALTED"
         self.status.reason = "operator_disarmed_new_entries"
+        self.ledger.put_metadata("disarmed", True)
 
     def arm(self) -> None:
         if not self.mandate.live_order_authority:
             raise ContractError("standing mandate does not authorize live writes")
         self.status.auto_live_armed = True
+        self.ledger.put_metadata("disarmed", False)
         self.status.state = "ARMED_WAITING_SIGNAL"

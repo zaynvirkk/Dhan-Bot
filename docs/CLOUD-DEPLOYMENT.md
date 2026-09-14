@@ -2,88 +2,74 @@
 
 Repository: https://github.com/zaynvirkk/Dhan-Bot
 
-Project: `project-cead8bae-10ea-4ea9-875`
+Project `project-cead8bae-10ea-4ea9-875`; VM `sablestone-dhan-cas` in
+`asia-south1-a`; Ubuntu 24.04, e2-small, 20 GB balanced disk. Reserved external
+IPv4 **34.100.255.111** (`sablestone-dhan-cas-ip`). SSH uses IAP only. No public
+application port or attached cloud service account is needed.
 
-Deployed VM: `sablestone-dhan-cas`, zone `asia-south1-a`, Ubuntu 24.04,
-`e2-small`, 20 GB balanced disk. Network `dhan-cas-network`, subnet
-`dhan-cas-mumbai`, reserved address `sablestone-dhan-cas-ip`.
-The reserved public IPv4 is **34.100.255.111**. This is the address to register
-as Dhan's Primary IP for this VM; registration has not been performed.
-SSH is restricted to IAP (`35.235.240.0/20`). The VM has no attached cloud
-service account. It makes outbound HTTPS/WebSocket connections.
+Source: `/opt/sablestone-dhan-cas-bot`. Configuration:
+`/etc/sablestone-dhan/production.toml` (0640 root:sablestone). Secrets:
+`/etc/sablestone-dhan/secrets.env` (0600 root, loaded by systemd). State:
+`/var/lib/sablestone-dhan` (0700 sablestone). Broker secrets and account reports
+must never be committed.
 
-Source is installed at `/opt/sablestone-dhan-cas-bot`; operator configuration
-and secrets live at `/etc/sablestone-dhan` with directory mode 0750
-(`root:sablestone`). The config is 0640; the secret file is root-only 0600
-and systemd loads it before changing to the service user.
-State lives at `/var/lib/sablestone-dhan`, owned by the `sablestone` service
-user. Neither secrets nor live state are published to GitHub.
+## Activation by the operator
 
-## Operation
+Connect to the existing VM:
 
 ```bash
 gcloud compute ssh sablestone-dhan-cas --zone=asia-south1-a \
   --project=project-cead8bae-10ea-4ea9-875 --tunnel-through-iap
-sudo systemctl start dhan-cas-connections.service
-sudo journalctl -u dhan-cas-connections.service --no-pager -n 30
-sudo cat /var/lib/sablestone-dhan/connections.json
 ```
 
-The connection check uses existing credentials to authenticate, read account
-state, subscribe to feeds and ping the order socket. It never places an order.
-An order socket connection is not a successful OMS route proof. Missing IEP
-outside CAS and absence of depth packets outside market hours remain unknown.
+The deployed service retains its read-only interlock until the operator runs:
 
-The `dhan-cas-connections.timer` runs the bounded check at 14:50 IST weekdays.
-The `dhan-cas-session-refresh.timer` restarts the read-only daemon at 14:55 IST
-weekdays so PIN/TOTP supplies a fresh session token and metadata before CAS.
-It refuses to restart if either authority flag permits orders, the broker
-read-only interlock is absent, or a fixed token replaces PIN/TOTP. This is
-commissioning scheduling; funded in-process credential rotation remains open.
-The `dhan-cas.service` daemon is enabled and running with
-`DHAN_BROKER_READ_ONLY=1` at the broker boundary. Both configuration and mandate retain false live
-authority; a template bankroll of zero is not a funded mandate.
+```bash
+sudo /opt/sablestone-dhan-cas-bot/.venv/bin/python \
+  /opt/sablestone-dhan-cas-bot/ops/activate-live.py --capital available
+```
 
-## Release boundary
+The command validates the current installed-source receipt, Dhan identity,
+derivatives/data permissions, reusable cash, empty initial position/order
+state, static egress/whitelist and Upstox authorization. It records the chosen
+capital once, enables the standing mandate and service, and removes the
+read-only environment interlock. It does not reset previous trading history.
+An explicit amount can replace `available`. `--check-only` performs the checks
+without enabling orders.
 
-The earlier 79-test success did not establish complete production readiness.
-Review found missing entry-budget/lifecycle integration, automatic exit
-integration, route-proof races, and incomplete recovery/disarm enforcement.
-The cloud deployment is for genuine provider commissioning, not approval to
-arm this revision with money. These defects remain development work.
-Also unresolved: funded in-process token renewal beyond the initial
-24-hour token lifetime and explicit price-unit conversion for the native
-Dhan instrument master's tick field (observed raw value `5.0000`). Do not use
-that unqualified field to construct funded orders.
+The service automatically recovers before signal/calendar logic, refreshes its
+session around 15:05 IST, and qualifies its current order socket using a bounded
+IOC before 15:19:30. A rejected or unobserved probe never qualifies entries.
+Actual CAS state controls entry permission; active-auction entry ends at the
+earlier of CAS_STOP and 15:30. Qualified final-value entries end at 15:38:30;
+unprotected positions enter time-exit handling at 15:39. Expiry is discovered
+from the current master, including holiday-shifted dates. Rule changes affecting
+the signal/settlement contract require a validated policy update.
 
-`dhan-cas verify` now executes the installed tests and requires successful,
-skip-free CP cases before writing the source-bound offline marker. That marker
-is a component-test receipt, not a broker, settlement or profitability proof.
+PIN/TOTP authentication is cached under a process-shared file lock and rotates
+before its 24-hour lifetime, including when settlement or unknown orders remain
+pending. Rotation re-enters broker-first recovery. The older external 14:55
+read-only refresh timer is disabled by activation; the production process owns
+its token and session refresh. The independent connection timer runs at 14:50.
 
-No broker PIN, TOTP seed, token, account profile, wallet balance, or private
-connection report belongs in a Git commit, startup metadata, or this document.
+## Status and recovery
 
-## Deployment evidence — 2026-09-13
+```bash
+sudo systemctl status dhan-cas.service --no-pager
+sudo cat /var/lib/sablestone-dhan/status.json
+sudo journalctl -u dhan-cas.service --no-pager -n 30
+sudo -u sablestone /opt/sablestone-dhan-cas-bot/.venv/bin/dhan-cas \
+  disarm --config /etc/sablestone-dhan/production.toml --new-entries
+```
 
-Runtime revision `5c2b1ea` is installed on the VM. All 86 component tests pass
-on the actual Ubuntu VM. The daemon reports `active/running` with zero
-restarts; its systemd environment independently forces broker writes off.
-The weekday connection timer is enabled. These observations are deployment
-and component evidence, not completed Rev 4 strategy acceptance.
+Disarming persists in SQLite and leaves exits/recovery authorized. Avoid
+stopping the process while exposed; its position manager must remain running.
+`auto_live_armed` means authority is enabled, not that every market-dependent
+entry condition is satisfied. `broker_route_verified`, `official_cas_signal_seen`
+and `final_value_source_verified` are separate observed facts. A no-trade day
+is not an error. Never erase the ledger to recover from an incident.
 
-The separate connection check completed successfully at 12:58:22 UTC:
-Dhan PIN/TOTP login and account reads passed, Upstox delivered two protobuf
-frames including the NIFTY index, and both Dhan WebSockets connected. Egress
-matched the reserved address. The market socket timed out waiting for usable
-depth (`NO_DATA`, `book_verified=false`); no CAS status, IEP or order-route
-event was observed. The report explicitly retains `trading_ready=false` and
-`writes=false`. Starting the daemon and check simultaneously had caused an
-authentication failure; the separately run check succeeded. Authentication
-coordination remains part of the token lifecycle work above.
-
-Recheck at 15:56 UTC reproduced successful authentication, account reads and
-all three socket connections. Market depth and CAS indication remained
-unobserved; broker IP registration was still unresolved. The daemon had
-remained active with zero restarts since 12:54 UTC. The pre-session refresh
-guard adds five regression cases, bringing the suite to 91 component tests.
-Token-generation contract: [Dhan authentication documentation](https://dhanhq.co/docs/v2/authentication/).
+Actual checks, test results and remaining empirical limits are recorded in
+[RELEASE-READINESS.md](RELEASE-READINESS.md). A successful socket handshake,
+synthetic fill or current-source test receipt cannot prove a real order route
+or profitability.

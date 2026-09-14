@@ -49,7 +49,10 @@ def load_dhan_master(stream: TextIOBase, *, expiry: date, freeze_by_security: di
         freeze = min(x for x in (exchange_freeze, dhan_freeze) if x > 0) if exchange_freeze > 0 and dhan_freeze > 0 else max(exchange_freeze, dhan_freeze)
         if freeze <= 0:
             raise ContractError(f"missing current freeze for {security_id}")
-        result.append(Instrument(security_id, "NIFTY", Segment.NSE_FNO, expiry, OptionType(option), Decimal(row["STRIKE_PRICE"]), integer_field(row["LOT_SIZE"]), Decimal(row["TICK_SIZE"]), freeze, Decimal(row["SM_LOWER_LIMIT"]) if row.get("SM_LOWER_LIMIT") else None, Decimal(row["SM_UPPER_LIMIT"]) if row.get("SM_UPPER_LIMIT") else None))
+        # Native Dhan exchange master stores the tick in paise. Internal
+        # normalized fixtures use rupees, explicitly identified by NSE_FNO.
+        tick = Decimal(row["TICK_SIZE"]) / (100 if row["SEGMENT"] == "D" else 1)
+        result.append(Instrument(security_id, "NIFTY", Segment.NSE_FNO, expiry, OptionType(option), Decimal(row["STRIKE_PRICE"]), integer_field(row["LOT_SIZE"]), tick, freeze, Decimal(row["SM_LOWER_LIMIT"]) if row.get("SM_LOWER_LIMIT") else None, Decimal(row["SM_UPPER_LIMIT"]) if row.get("SM_UPPER_LIMIT") else None))
     if not result:
         raise ContractError("no current NIFTY options resolved")
     return result

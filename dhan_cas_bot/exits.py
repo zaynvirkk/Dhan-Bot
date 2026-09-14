@@ -7,15 +7,17 @@ from .domain import ContractError, OptionBook
 
 def sell_limit(book: OptionBook, *, emergency: bool = False) -> Decimal:
     bid = book.top_bid
-    if bid is None:
+    if bid is None and not emergency:
         raise ContractError("no current bid for normal sale")
     ticks = 10 if emergency else 2
-    value = bid.price - book.instrument.tick_size * ticks
+    value = bid.price - book.instrument.tick_size * ticks if bid else book.instrument.tick_size
     value = max(book.instrument.tick_size, value)
     if book.instrument.lower_limit is not None:
         value = max(value, book.instrument.lower_limit)
     if book.instrument.upper_limit is not None:
         value = min(value, book.instrument.upper_limit)
+    from decimal import ROUND_CEILING
+    value = (value / book.instrument.tick_size).to_integral_value(rounding=ROUND_CEILING) * book.instrument.tick_size
     book.instrument.tick(value)
     return value
 

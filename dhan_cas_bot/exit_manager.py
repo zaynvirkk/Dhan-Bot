@@ -27,7 +27,8 @@ class ExitManager:
         if broker_qty < quantity:
             raise ContractError("requested exit exceeds broker-verified long quantity")
         limit = sell_limit(book, emergency=emergency)
-        intent = Intent("exit-" + uuid.uuid4().hex, "SELL", instrument, quantity, limit, "exit-" + uuid.uuid4().hex, datetime.now(timezone.utc), lifecycle_id)
+        quantity = min(quantity, instrument.freeze_qty // instrument.lot_size * instrument.lot_size)
+        intent = Intent("exit-" + uuid.uuid4().hex, "SELL", instrument, quantity, limit, "x" + uuid.uuid4().hex[:28], datetime.now(timezone.utc), lifecycle_id)
         # A sell has no premium debit, but a tiny positive reservation keeps the
         # durable intent invariant and covers a charge/reconciliation incident.
         return await self.orders.submit(intent, reserved_cash=Decimal("0.01"))

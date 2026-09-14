@@ -2,8 +2,7 @@
 Description=SableStone Dhan CAS AUTO_LIVE service
 After=network-online.target
 Wants=network-online.target
-StartLimitIntervalSec=600
-StartLimitBurst=3
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple

@@ -27,6 +27,13 @@ def test_strategy_requires_bid_and_ask_lot_and_does_not_need_future():
     inst = Instrument("25100", "NIFTY", Segment.NSE_FNO, date(2026, 9, 15), OptionType.PE, Decimal("25100"), 65, Decimal("0.05"), 1800)
     book = OptionBook(inst, (Level(Decimal("9"), 65),), (Level(Decimal("10"), 195),), "dhan", 1_700_000_000_000_000_000)
     allocation = Allocation.start(Decimal("9411.18"), Decimal("9411.18"))
-    assert find_opportunity(ref, [(Decimal("24995"), "a"), (Decimal("24900"), "b")], [book], allocation) is not None
+    assert find_opportunity(ref, [(Decimal("24980"), "a"), (Decimal("24900"), "b")], [book], allocation) is not None
     thin = OptionBook(inst, (Level(Decimal("9"), 1),), book.asks, "dhan", book.received_ns)
-    assert find_opportunity(ref, [(Decimal("24995"), "a"), (Decimal("24900"), "b")], [thin], allocation) is None
+    assert find_opportunity(ref, [(Decimal("24980"), "a"), (Decimal("24900"), "b")], [thin], allocation) is None
+
+
+def test_opposite_direction_observations_do_not_establish_persistence():
+    ref = Reference(Decimal("25000"), 1, (), "e")
+    inst = Instrument("1", "NIFTY", Segment.NSE_FNO, date(2026,9,15), OptionType.PE, Decimal("25100"),65,Decimal("0.05"),1800)
+    book = OptionBook(inst,(Level(Decimal("9"),65),),(Level(Decimal("10"),195),),"d",1)
+    assert find_opportunity(ref,[(Decimal("25001"),"a"),(Decimal("24900"),"b")],[book],Allocation.start(Decimal("9000"),Decimal("9000"))) is None

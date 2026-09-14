@@ -1,6 +1,6 @@
 {
   "name": "sablestone-dhan-cas-bot",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "entrypoint": "dhan_cas_bot.cli:main",
   "execution_broker": "Dhan",
   "signal_provider": "Upstox V3 official NIFTY CAS feed",

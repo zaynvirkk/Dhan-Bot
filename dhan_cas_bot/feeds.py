@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 import json
+import uuid
 
 from .domain import ContractError
 
@@ -13,6 +14,7 @@ class FeedEpoch:
     number: int = 0
     connected: bool = False
     seen: set[str] = field(default_factory=set)
+    process_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
 
     def reconnect(self) -> None:
         self.number += 1
@@ -25,7 +27,7 @@ class FeedEpoch:
 
     @property
     def id(self) -> str:
-        return f"{self.name}:{self.number}"
+        return f"{self.name}:{self.process_id}:{self.number}"
 
     def accept(self, identity: str) -> bool:
         if not self.connected or not identity or identity in self.seen:

@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 import httpx
 from websockets.asyncio.client import connect
 
-from .auth import resolve_dhan_access_token
+from .auth import session_token
 from .broker import DhanBroker
 from .domain import ContractError
 from .egress import public_egress_ip
@@ -63,7 +63,7 @@ async def check_connections(config: dict) -> dict:
 
     async def authenticate():
         nonlocal token
-        token = await resolve_dhan_access_token(config["account_id"], access_token=os.environ.get("DHAN_ACCESS_TOKEN", ""), pin=os.environ.get("DHAN_PIN", ""), totp_secret=os.environ.get("DHAN_TOTP_SECRET", ""))
+        token = await session_token(config, config["state_dir"])
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.get("https://api.dhan.co/v2/profile", headers={"access-token": token})
             response.raise_for_status()
