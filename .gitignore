@@ -16,3 +16,13 @@ secrets/
 *.pem
 *.key
 artifacts/private/
+# Raw account, authentication, cloud-access and broker-margin receipts are
+# retained locally. Publish derived research reports, not account responses.
+research/results/**/account_*.json
+research/results/**/auth_*.json
+research/results/**/capital*.json
+research/results/**/cash_capital.json
+research/results/**/cloud_*.json
+research/results/**/api_check.json
+research/results/**/connection_checks.json
+research/results/**/fresh_api_probe.json

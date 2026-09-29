@@ -1,0 +1,1649 @@
+{
+  "generated_at": "2026-09-19T23:17:08.735028+00:00",
+  "status": "EXECUTION_FRONTIER_COMPLETE_NO_LIVE_QUALIFIER",
+  "window": [
+    "2026-07-20",
+    "2026-09-18"
+  ],
+  "start_cash_each": "9411.18",
+  "source_sha256": "2e819b19b4391705bd6572539d2acf6f467f16912d497afc28cabd9436bd253a",
+  "suite": {
+    "started_at": "2026-09-19T16:25:17.775966+00:00",
+    "finished_at": "2026-09-19T16:56:04.877222+00:00",
+    "status": "COMPLETED_DISCOVERY_SWEEP",
+    "completed_engines": [
+      {
+        "engine": "INTRADAY_EVENT",
+        "baseline_status": "UNKNOWN_COVERAGE",
+        "trades": 2,
+        "final_cash": null,
+        "last_conditional_cash": "3368.37"
+      },
+      {
+        "engine": "EXPIRY_FORCED_FLOW",
+        "baseline_status": "CONDITIONAL_BAR_MODEL_REPLAY",
+        "trades": 0,
+        "final_cash": "9411.18",
+        "last_conditional_cash": "9411.18"
+      },
+      {
+        "engine": "PASSIVE_FLOW",
+        "baseline_status": "CONDITIONAL_BAR_MODEL_REPLAY",
+        "trades": 0,
+        "final_cash": "9411.18",
+        "last_conditional_cash": "9411.18"
+      },
+      {
+        "engine": "SCHEDULED_EVENT_VOL",
+        "baseline_status": "CONDITIONAL_BAR_MODEL_REPLAY",
+        "trades": 0,
+        "final_cash": "9411.18",
+        "last_conditional_cash": "9411.18"
+      },
+      {
+        "engine": "BLOCK_OFS_DISLOCATION",
+        "baseline_status": "CONDITIONAL_BAR_MODEL_REPLAY",
+        "trades": 0,
+        "final_cash": "9411.18",
+        "last_conditional_cash": "9411.18"
+      },
+      {
+        "engine": "NONEXPIRY_FORCED_FLOW",
+        "baseline_status": "UNKNOWN_COVERAGE",
+        "trades": 2,
+        "final_cash": null,
+        "last_conditional_cash": "9394.55"
+      },
+      {
+        "engine": "CROSS_MARKET_LEAD_LAG",
+        "baseline_status": "CONDITIONAL_BAR_MODEL_REPLAY",
+        "trades": 0,
+        "final_cash": "9411.18",
+        "last_conditional_cash": "9411.18"
+      },
+      {
+        "engine": "EVENT_CONTINUATION",
+        "baseline_status": "UNKNOWN_COVERAGE",
+        "trades": 3,
+        "final_cash": null,
+        "last_conditional_cash": "2574.15"
+      },
+      {
+        "engine": "SECTOR_SHOCK_LAG",
+        "baseline_status": "UNKNOWN_COVERAGE",
+        "trades": 16,
+        "final_cash": null,
+        "last_conditional_cash": "5612.37"
+      }
+    ],
+    "winner": null,
+    "note": "A completed sweep is not complete universe coverage or validation."
+  },
+  "winner": null,
+  "full_family_bankrolls_available": 0,
+  "validated_families": 0,
+  "underlying_files": 222,
+  "underlying_bars": 5699958,
+  "scoreboard": [
+    {
+      "engine": "EVENT_CONTINUATION",
+      "scope": "NSE disclosure-metadata classifier; seven-day stock expiry buffer",
+      "signals": 137,
+      "trades": 3,
+      "wins": 0,
+      "targets": 0,
+      "conditional_cash": "2574.15",
+      "conditional_return_pct": "-72.64795700432889393253555877",
+      "closed_trade_drawdown_pct": "72.64795700432889393253555877",
+      "half_premium_losses": 1,
+      "replay_status": "UNKNOWN_COVERAGE",
+      "coverage_gap_records": 44,
+      "signals_examined": 41,
+      "unresolved_path": true,
+      "conditional_terminal_cash": null,
+      "trade_dates": 2,
+      "trade_underlyings": 3,
+      "full_family_bankroll": null,
+      "champion_eligible": false,
+      "outcomes": {
+        "MODELED_LIMIT_MISS": 2,
+        "MODELED_ROUND_TRIP": 3,
+        "NO_ORDER_UNDER_MODEL": 21,
+        "OUTSIDE_METADATA_VARIANT": 12,
+        "POSITION_ALREADY_OPEN": 2,
+        "UNKNOWN_EXIT_CAPACITY": 1
+      }
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "scope": "NSE intraday disclosure metadata; same expiry buffer",
+      "signals": 33,
+      "trades": 2,
+      "wins": 0,
+      "targets": 0,
+      "conditional_cash": "3368.37",
+      "conditional_return_pct": "-64.20884522450957265720132863",
+      "closed_trade_drawdown_pct": "64.20884522450957265720132863",
+      "half_premium_losses": 0,
+      "replay_status": "UNKNOWN_COVERAGE",
+      "coverage_gap_records": 22,
+      "signals_examined": 33,
+      "unresolved_path": false,
+      "conditional_terminal_cash": "3368.37",
+      "trade_dates": 2,
+      "trade_underlyings": 2,
+      "full_family_bankroll": null,
+      "champion_eligible": false,
+      "outcomes": {
+        "OUTSIDE_METADATA_VARIANT": 15,
+        "NO_ORDER_UNDER_MODEL": 11,
+        "MODELED_ROUND_TRIP": 2,
+        "MODELED_CAPACITY_MISS": 2,
+        "MODELED_LIMIT_MISS": 3
+      }
+    },
+    {
+      "engine": "NONEXPIRY_FORCED_FLOW",
+      "scope": "21,415 NSE exact-contract days; persistent spot strike crossings",
+      "signals": 34,
+      "trades": 2,
+      "wins": 1,
+      "targets": 0,
+      "conditional_cash": "9394.55",
+      "conditional_return_pct": "-0.1767047277812134078829647300",
+      "closed_trade_drawdown_pct": "3.266345887515869918665701510",
+      "half_premium_losses": 0,
+      "replay_status": "UNKNOWN_COVERAGE",
+      "coverage_gap_records": 6,
+      "signals_examined": 34,
+      "unresolved_path": false,
+      "conditional_terminal_cash": "9394.55",
+      "trade_dates": 2,
+      "trade_underlyings": 1,
+      "full_family_bankroll": null,
+      "champion_eligible": false,
+      "outcomes": {
+        "MODELED_ROUND_TRIP": 2,
+        "POSITION_ALREADY_OPEN": 2,
+        "NO_ORDER_UNDER_MODEL": 29,
+        "MODELED_LIMIT_MISS": 1
+      }
+    },
+    {
+      "engine": "EXPIRY_FORCED_FLOW",
+      "scope": "NSE index expiry spot crossings; excludes auction indicative-index signals",
+      "signals": 0,
+      "trades": 0,
+      "wins": 0,
+      "targets": 0,
+      "conditional_cash": "9411.18",
+      "conditional_return_pct": "0",
+      "closed_trade_drawdown_pct": "0",
+      "half_premium_losses": 0,
+      "replay_status": "CONDITIONAL_BAR_MODEL_REPLAY",
+      "coverage_gap_records": 0,
+      "signals_examined": 0,
+      "unresolved_path": false,
+      "conditional_terminal_cash": "9411.18",
+      "trade_dates": 0,
+      "trade_underlyings": 0,
+      "full_family_bankroll": null,
+      "champion_eligible": false,
+      "outcomes": {}
+    },
+    {
+      "engine": "PASSIVE_FLOW",
+      "scope": "August MSCI Standard additions/deletions only",
+      "signals": 0,
+      "trades": 0,
+      "wins": 0,
+      "targets": 0,
+      "conditional_cash": "9411.18",
+      "conditional_return_pct": "0",
+      "closed_trade_drawdown_pct": "0",
+      "half_premium_losses": 0,
+      "replay_status": "CONDITIONAL_BAR_MODEL_REPLAY",
+      "coverage_gap_records": 0,
+      "signals_examined": 0,
+      "unresolved_path": false,
+      "conditional_terminal_cash": "9411.18",
+      "trade_dates": 0,
+      "trade_underlyings": 0,
+      "full_family_bankroll": null,
+      "champion_eligible": false,
+      "outcomes": {}
+    },
+    {
+      "engine": "SCHEDULED_EVENT_VOL",
+      "scope": "August RBI decision; NIFTY/BANKNIFTY straddle filter only",
+      "signals": 0,
+      "trades": 0,
+      "wins": 0,
+      "targets": 0,
+      "conditional_cash": "9411.18",
+      "conditional_return_pct": "0",
+      "closed_trade_drawdown_pct": "0",
+      "half_premium_losses": 0,
+      "replay_status": "CONDITIONAL_BAR_MODEL_REPLAY",
+      "coverage_gap_records": 0,
+      "signals_examined": 0,
+      "unresolved_path": false,
+      "conditional_terminal_cash": "9411.18",
+      "trade_dates": 0,
+      "trade_underlyings": 0,
+      "full_family_bankroll": null,
+      "champion_eligible": false,
+      "outcomes": {}
+    },
+    {
+      "engine": "BLOCK_OFS_DISLOCATION",
+      "scope": "Disclosed LICI OFS only",
+      "signals": 0,
+      "trades": 0,
+      "wins": 0,
+      "targets": 0,
+      "conditional_cash": "9411.18",
+      "conditional_return_pct": "0",
+      "closed_trade_drawdown_pct": "0",
+      "half_premium_losses": 0,
+      "replay_status": "CONDITIONAL_BAR_MODEL_REPLAY",
+      "coverage_gap_records": 0,
+      "signals_examined": 0,
+      "unresolved_path": false,
+      "conditional_terminal_cash": "9411.18",
+      "trade_dates": 0,
+      "trade_underlyings": 0,
+      "full_family_bankroll": null,
+      "champion_eligible": false,
+      "outcomes": {}
+    },
+    {
+      "engine": "SECTOR_SHOCK_LAG",
+      "scope": "Bank and software index leads; graph fitted before July 20",
+      "signals": 142,
+      "trades": 16,
+      "wins": 2,
+      "targets": 0,
+      "conditional_cash": "5612.37",
+      "conditional_return_pct": "-40.36486391717085423931961773",
+      "closed_trade_drawdown_pct": "40.36486391717085423931961773",
+      "half_premium_losses": 0,
+      "replay_status": "UNKNOWN_COVERAGE",
+      "coverage_gap_records": 99,
+      "signals_examined": 142,
+      "unresolved_path": false,
+      "conditional_terminal_cash": "5612.37",
+      "trade_dates": 13,
+      "trade_underlyings": 5,
+      "full_family_bankroll": null,
+      "champion_eligible": false,
+      "outcomes": {
+        "MODELED_ROUND_TRIP": 16,
+        "POSITION_ALREADY_OPEN": 24,
+        "NO_ORDER_UNDER_MODEL": 89,
+        "MODELED_CAPACITY_MISS": 6,
+        "INVALIDATED_BEFORE_DISPATCH": 2,
+        "MODELED_LIMIT_MISS": 5
+      }
+    },
+    {
+      "engine": "CROSS_MARKET_LEAD_LAG",
+      "scope": "GIFT-to-NIFTY only; assumed two-minute feed delay",
+      "signals": 0,
+      "trades": 0,
+      "wins": 0,
+      "targets": 0,
+      "conditional_cash": "9411.18",
+      "conditional_return_pct": "0",
+      "closed_trade_drawdown_pct": "0",
+      "half_premium_losses": 0,
+      "replay_status": "CONDITIONAL_BAR_MODEL_REPLAY",
+      "coverage_gap_records": 0,
+      "signals_examined": 0,
+      "unresolved_path": false,
+      "conditional_terminal_cash": "9411.18",
+      "trade_dates": 0,
+      "trade_underlyings": 0,
+      "full_family_bankroll": null,
+      "champion_eligible": false,
+      "outcomes": {}
+    }
+  ],
+  "scenarios": [
+    {
+      "engine": "EVENT_CONTINUATION",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 3,
+      "targets": 0,
+      "conditional_cash": "2574.15",
+      "coverage_gaps": 44,
+      "unresolved_path": true,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "EVENT_CONTINUATION",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": true,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 12,
+      "targets": 3,
+      "conditional_cash": "13865.97",
+      "coverage_gaps": 136,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "EVENT_CONTINUATION",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 5,
+      "targets": 1,
+      "conditional_cash": "4099.26",
+      "coverage_gaps": 158,
+      "unresolved_path": true,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "EVENT_CONTINUATION",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 1,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 6,
+      "targets": 1,
+      "conditional_cash": "3812.35",
+      "coverage_gaps": 138,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "EVENT_CONTINUATION",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 2,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 8,
+      "targets": 3,
+      "conditional_cash": "16559.10",
+      "coverage_gaps": 146,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "EVENT_CONTINUATION",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 3,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 3,
+      "targets": 0,
+      "conditional_cash": "2574.15",
+      "coverage_gaps": 42,
+      "unresolved_path": true,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "EVENT_CONTINUATION",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 4,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 5,
+      "targets": 1,
+      "conditional_cash": "4857.73",
+      "coverage_gaps": 169,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "EVENT_CONTINUATION",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_open_plus_1pct",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 3,
+      "targets": 0,
+      "conditional_cash": "2607.94",
+      "coverage_gaps": 44,
+      "unresolved_path": true,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "EVENT_CONTINUATION",
+      "delay_bars": 2,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 3,
+      "targets": 0,
+      "conditional_cash": "3251.93",
+      "coverage_gaps": 44,
+      "unresolved_path": true,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "EVENT_CONTINUATION",
+      "delay_bars": 3,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 2,
+      "targets": 0,
+      "conditional_cash": "4108.31",
+      "coverage_gaps": 40,
+      "unresolved_path": true,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 2,
+      "targets": 0,
+      "conditional_cash": "3368.37",
+      "coverage_gaps": 22,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": true,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 2,
+      "targets": 0,
+      "conditional_cash": "4856.54",
+      "coverage_gaps": 22,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 1,
+      "targets": 0,
+      "conditional_cash": "5527.44",
+      "coverage_gaps": 25,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 1,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 1,
+      "targets": 0,
+      "conditional_cash": "5527.44",
+      "coverage_gaps": 26,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 2,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 2,
+      "targets": 0,
+      "conditional_cash": "5369.82",
+      "coverage_gaps": 26,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 3,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 1,
+      "targets": 0,
+      "conditional_cash": "5527.44",
+      "coverage_gaps": 21,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 4,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 2,
+      "targets": 0,
+      "conditional_cash": "3368.37",
+      "coverage_gaps": 26,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_open_plus_1pct",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 3,
+      "targets": 0,
+      "conditional_cash": "2643.94",
+      "coverage_gaps": 22,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "delay_bars": 2,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 3,
+      "targets": 0,
+      "conditional_cash": "4080.63",
+      "coverage_gaps": 22,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "delay_bars": 3,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 4,
+      "targets": 0,
+      "conditional_cash": "3570.74",
+      "coverage_gaps": 22,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "NONEXPIRY_FORCED_FLOW",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 2,
+      "targets": 0,
+      "conditional_cash": "9394.55",
+      "coverage_gaps": 6,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "NONEXPIRY_FORCED_FLOW",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": true,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 1,
+      "targets": 0,
+      "conditional_cash": "9093.96",
+      "coverage_gaps": 7,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "NONEXPIRY_FORCED_FLOW",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 1,
+      "targets": 0,
+      "conditional_cash": "9093.96",
+      "coverage_gaps": 17,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "NONEXPIRY_FORCED_FLOW",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 1,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 1,
+      "targets": 0,
+      "conditional_cash": "9711.77",
+      "coverage_gaps": 21,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "NONEXPIRY_FORCED_FLOW",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 2,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 1,
+      "targets": 0,
+      "conditional_cash": "9711.77",
+      "coverage_gaps": 23,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "NONEXPIRY_FORCED_FLOW",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 3,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 1,
+      "targets": 0,
+      "conditional_cash": "9711.77",
+      "coverage_gaps": 16,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "NONEXPIRY_FORCED_FLOW",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 4,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 1,
+      "targets": 0,
+      "conditional_cash": "9711.77",
+      "coverage_gaps": 17,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "NONEXPIRY_FORCED_FLOW",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_open_plus_1pct",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 2,
+      "targets": 0,
+      "conditional_cash": "9479.09",
+      "coverage_gaps": 6,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "NONEXPIRY_FORCED_FLOW",
+      "delay_bars": 2,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 2,
+      "targets": 0,
+      "conditional_cash": "9700.18",
+      "coverage_gaps": 6,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "NONEXPIRY_FORCED_FLOW",
+      "delay_bars": 3,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 3,
+      "targets": 0,
+      "conditional_cash": "8695.40",
+      "coverage_gaps": 6,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "EXPIRY_FORCED_FLOW",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "CONDITIONAL_BAR_MODEL_REPLAY",
+      "trades": 0,
+      "targets": 0,
+      "conditional_cash": "9411.18",
+      "coverage_gaps": 0,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "PASSIVE_FLOW",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "CONDITIONAL_BAR_MODEL_REPLAY",
+      "trades": 0,
+      "targets": 0,
+      "conditional_cash": "9411.18",
+      "coverage_gaps": 0,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "SCHEDULED_EVENT_VOL",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "CONDITIONAL_BAR_MODEL_REPLAY",
+      "trades": 0,
+      "targets": 0,
+      "conditional_cash": "9411.18",
+      "coverage_gaps": 0,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "BLOCK_OFS_DISLOCATION",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "CONDITIONAL_BAR_MODEL_REPLAY",
+      "trades": 0,
+      "targets": 0,
+      "conditional_cash": "9411.18",
+      "coverage_gaps": 0,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "SECTOR_SHOCK_LAG",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 16,
+      "targets": 0,
+      "conditional_cash": "5612.37",
+      "coverage_gaps": 99,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "SECTOR_SHOCK_LAG",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": true,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 14,
+      "targets": 0,
+      "conditional_cash": "4542.92",
+      "coverage_gaps": 99,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "SECTOR_SHOCK_LAG",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 11,
+      "targets": 0,
+      "conditional_cash": "5600.15",
+      "coverage_gaps": 82,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "SECTOR_SHOCK_LAG",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 1,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 11,
+      "targets": 0,
+      "conditional_cash": "4425.73",
+      "coverage_gaps": 102,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "SECTOR_SHOCK_LAG",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 2,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 9,
+      "targets": 0,
+      "conditional_cash": "5708.82",
+      "coverage_gaps": 78,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "SECTOR_SHOCK_LAG",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 3,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 7,
+      "targets": 0,
+      "conditional_cash": "9103.68",
+      "coverage_gaps": 95,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "SECTOR_SHOCK_LAG",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": "RANDOM_SIDE_MATCHED_TIME",
+      "control_seed": 4,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 9,
+      "targets": 0,
+      "conditional_cash": "5959.32",
+      "coverage_gaps": 92,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "SECTOR_SHOCK_LAG",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_open_plus_1pct",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 18,
+      "targets": 0,
+      "conditional_cash": "6352.80",
+      "coverage_gaps": 99,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "SECTOR_SHOCK_LAG",
+      "delay_bars": 2,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 11,
+      "targets": 0,
+      "conditional_cash": "7060.30",
+      "coverage_gaps": 99,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "SECTOR_SHOCK_LAG",
+      "delay_bars": 3,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "UNKNOWN_COVERAGE",
+      "trades": 7,
+      "targets": 0,
+      "conditional_cash": "8747.16",
+      "coverage_gaps": 100,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    },
+    {
+      "engine": "CROSS_MARKET_LEAD_LAG",
+      "delay_bars": 1,
+      "entry_model": "next_full_bar_high",
+      "control": null,
+      "control_seed": 0,
+      "best_trade_deleted": false,
+      "status": "CONDITIONAL_BAR_MODEL_REPLAY",
+      "trades": 0,
+      "targets": 0,
+      "conditional_cash": "9411.18",
+      "coverage_gaps": 0,
+      "unresolved_path": false,
+      "full_family_bankroll": null
+    }
+  ],
+  "nonexpiry_reconciliation": {
+    "contract_days": 21415,
+    "counts": {
+      "UNKNOWN_VOLUME_RECONCILIATION": 2188,
+      "CHECKED_RECONCILED": 19227
+    },
+    "signals": 34
+  },
+  "expiry_audit": {
+    "crossings": 60,
+    "signals": 0,
+    "gaps": [
+      {
+        "symbol": "FINNIFTY",
+        "day": "2026-07-28",
+        "key": "NSE_FO|70973|28-07-2026",
+        "reason": {
+          "status": "UNKNOWN_VOLUME_MISMATCH",
+          "reported_units": 18192540,
+          "official_units": 18192600
+        }
+      },
+      {
+        "symbol": "FINNIFTY",
+        "day": "2026-07-28",
+        "key": "NSE_FO|62913|28-07-2026",
+        "reason": {
+          "status": "UNKNOWN_VOLUME_MISMATCH",
+          "reported_units": 27486180,
+          "official_units": 27486420
+        }
+      },
+      {
+        "symbol": "FINNIFTY",
+        "day": "2026-07-28",
+        "key": "NSE_FO|62912|28-07-2026",
+        "reason": {
+          "status": "UNKNOWN_VOLUME_MISMATCH",
+          "reported_units": 18099300,
+          "official_units": 18099420
+        }
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "day": "2026-07-28",
+        "key": "NSE_FO|63499|28-07-2026",
+        "reason": {
+          "status": "UNKNOWN_VOLUME_MISMATCH",
+          "reported_units": 45726360,
+          "official_units": 45726600
+        }
+      },
+      {
+        "symbol": "MIDCPNIFTY",
+        "day": "2026-07-28",
+        "key": "NSE_FO|63497|28-07-2026",
+        "reason": {
+          "status": "UNKNOWN_VOLUME_MISMATCH",
+          "reported_units": 25276200,
+          "official_units": 25276560
+        }
+      },
+      {
+        "symbol": "NIFTY",
+        "day": "2026-07-28",
+        "key": "NSE_FO|63939|28-07-2026",
+        "reason": {
+          "status": "UNKNOWN_VOLUME_MISMATCH",
+          "reported_units": 2619553560,
+          "official_units": 2619553820
+        }
+      },
+      {
+        "symbol": "NIFTYNXT50",
+        "day": "2026-07-28",
+        "key": "NSE_FO|64739|28-07-2026",
+        "reason": {
+          "status": "UNKNOWN_VOLUME_MISMATCH",
+          "reported_units": 14375,
+          "official_units": 14425
+        }
+      },
+      {
+        "symbol": "NIFTY",
+        "day": "2026-08-04",
+        "key": "NSE_FO|65858|04-08-2026",
+        "reason": {
+          "status": "UNKNOWN_VOLUME_MISMATCH",
+          "reported_units": 574051205,
+          "official_units": 574138240
+        }
+      },
+      {
+        "symbol": "NIFTY",
+        "day": "2026-08-11",
+        "key": "NSE_FO|41010|11-08-2026",
+        "reason": {
+          "status": "UNKNOWN_VOLUME_MISMATCH",
+          "reported_units": 1410760390,
+          "official_units": 1410760520
+        }
+      }
+    ],
+    "scope": "NSE indices present in historical files, regular-spot only; CAS indicative path unavailable"
+  },
+  "cross_broker_prices": {
+    "results": [
+      {
+        "contract_key": "NSE_FO|57348|21-07-2026",
+        "at": "2026-07-20T13:15:00+05:30",
+        "upstox": [
+          "2026-07-20T13:15:00+05:30",
+          92.25,
+          107.35,
+          83.35,
+          89.95,
+          14064505,
+          19548945
+        ],
+        "dhan": {
+          "open": 94.15,
+          "high": 106.25,
+          "low": 85.35,
+          "close": 90.9,
+          "volume": 14135030,
+          "oi": 22163960,
+          "strike": 24200.0
+        },
+        "close_difference": 0.95,
+        "expiry_identity_note": "Dhan nearest weekly rolling route; strike and timestamp matched explicitly."
+      },
+      {
+        "contract_key": "NSE_FO|65808|04-08-2026",
+        "at": "2026-07-30T12:33:00+05:30",
+        "upstox": [
+          "2026-07-30T12:33:00+05:30",
+          114.15,
+          139.45,
+          112.4,
+          137.75,
+          3902145,
+          7503535
+        ],
+        "dhan": {
+          "open": 114.35,
+          "high": 138.05,
+          "low": 112.85,
+          "close": 137.45,
+          "volume": 3934580,
+          "oi": 7822815,
+          "strike": 24300.0
+        },
+        "close_difference": -0.3,
+        "expiry_identity_note": "Dhan nearest weekly rolling route; strike and timestamp matched explicitly."
+      },
+      {
+        "contract_key": "NSE_FO|65872|04-08-2026",
+        "at": "2026-08-03T12:48:00+05:30",
+        "upstox": [
+          "2026-08-03T12:48:00+05:30",
+          79.25,
+          83.9,
+          76.4,
+          81.75,
+          8787480,
+          25639055
+        ],
+        "dhan": {
+          "open": 78.5,
+          "high": 83.55,
+          "low": 76.6,
+          "close": 81.55,
+          "volume": 8811855,
+          "oi": 25639055,
+          "strike": 24600.0
+        },
+        "close_difference": -0.2,
+        "expiry_identity_note": "Dhan nearest weekly rolling route; strike and timestamp matched explicitly."
+      },
+      {
+        "contract_key": "NSE_FO|46987|01-09-2026",
+        "at": "2026-08-31T11:55:00+05:30",
+        "upstox": [
+          "2026-08-31T11:55:00+05:30",
+          114.5,
+          127.05,
+          107.8,
+          122.7,
+          6581185,
+          12567945
+        ],
+        "dhan": {
+          "open": 113.1,
+          "high": 126.15,
+          "low": 108.6,
+          "close": 122.85,
+          "volume": 6622720,
+          "oi": 14134250,
+          "strike": 24050.0
+        },
+        "close_difference": 0.15,
+        "expiry_identity_note": "Dhan nearest weekly rolling route; strike and timestamp matched explicitly."
+      }
+    ],
+    "scope": "Four NIFTY signal minutes; not full-market certification."
+  },
+  "cross_broker_necessary_conditions": {
+    "results": [
+      {
+        "signal_id": "NONEXPIRY_FORCED_FLOW:NSE_FO|57348|21-07-2026:2026-07-20T13:16:00+05:30",
+        "contract": "NSE_FO|57348|21-07-2026",
+        "at": "2026-07-20T13:16:00+05:30",
+        "upstox": {
+          "premium_change": "0.360816944024205748865355522",
+          "oi_change": "-0.2511410181392627267407840843"
+        },
+        "dhan": {
+          "premium_change": "0.377272727272727272727272727",
+          "oi_change": "-0.1509679668339080960621490731",
+          "passes_two_required_conditions": true
+        }
+      },
+      {
+        "signal_id": "NONEXPIRY_FORCED_FLOW:NSE_FO|65808|04-08-2026:2026-07-30T12:34:00+05:30",
+        "contract": "NSE_FO|65808|04-08-2026",
+        "at": "2026-07-30T12:34:00+05:30",
+        "upstox": {
+          "premium_change": "0.546883773161145423919146547",
+          "oi_change": "-0.2044121599735353103742961702"
+        },
+        "dhan": {
+          "premium_change": "0.543514879281302638966872544",
+          "oi_change": "-0.1876683203401842664776754075",
+          "passes_two_required_conditions": true
+        }
+      },
+      {
+        "signal_id": "NONEXPIRY_FORCED_FLOW:NSE_FO|65872|04-08-2026:2026-08-03T12:49:00+05:30",
+        "contract": "NSE_FO|65872|04-08-2026",
+        "at": "2026-08-03T12:49:00+05:30",
+        "upstox": {
+          "premium_change": "0.261574074074074074074074074",
+          "oi_change": "-0.0950310644507052593904576615"
+        },
+        "dhan": {
+          "premium_change": "0.262383900928792569659442724",
+          "oi_change": "-0.0950310644507052593904576615",
+          "passes_two_required_conditions": true
+        }
+      },
+      {
+        "signal_id": "NONEXPIRY_FORCED_FLOW:NSE_FO|46987|01-09-2026:2026-08-31T11:56:00+05:30",
+        "contract": "NSE_FO|46987|01-09-2026",
+        "at": "2026-08-31T11:56:00+05:30",
+        "upstox": {
+          "premium_change": "0.435927442949093036863662961",
+          "oi_change": "-0.3441703807721269104747949610"
+        },
+        "dhan": {
+          "premium_change": "0.437682855471035693387946167",
+          "oi_change": "-0.2624363175068346324222751355",
+          "passes_two_required_conditions": true
+        }
+      }
+    ],
+    "scope": "Only two necessary conditions at four preselected NIFTY signals; no full Dhan replay or confirmation of trade fills."
+  },
+  "noise_verdict": "No funded qualifier: added retrospective validation and execution stresses fail; matched-date controls do not establish an edge after prior search.",
+  "cash_interpretation": "Conditional on observed inputs and assumed bar fills; unknown trades can change all subsequent bankrolls.",
+  "remaining": [
+    "Full event-content classification, not disclosure subject-line matching.",
+    "Resolve 2,188 non-expiry contract-day volume mismatches and per-replay missing history/metadata.",
+    "Full-family inputs: auction IEP sequence, wider event calendars, index weights/flow estimates, block announcements and external/exposure graph coverage.",
+    "Historical broker-specific RMS and actual bid/ask/depth, OI publication and feed/decision/order latency.",
+    "Untouched holdout and clustered, selection-adjusted statistical validation."
+  ],
+  "noise_audit": {
+    "status": "COMPLETED_BOUNDED_NOISE_AUDIT",
+    "total_random_paths": 5994,
+    "filing_references": 3413,
+    "winner": null,
+    "full_family_validation_complete": false,
+    "report": "results/NOISE-AUDIT.md"
+  },
+  "nifty_expiry_followup": {
+    "status": "NO_LIVE_QUALIFIED_STRATEGY",
+    "winner": null,
+    "candidate_variants": 12,
+    "primary_expiries": 48,
+    "additional_expiries": 53,
+    "contract_days": 568,
+    "minute_rows": 213780,
+    "controls": 51948,
+    "minimum_holm_primary": 0.30000000000000004,
+    "full_chronology_trend_trail_cash_conditional": "15938.86",
+    "delete_best_conditional": "2817.04",
+    "starting_bankroll": "9411.18",
+    "orders_submitted": 0,
+    "source_hash": "681d142dbb1819b7aa61b0b52230cc189cbf4c61580e391fb0d1bf5a3e112200",
+    "report": "results/expiry/FINDINGS.md",
+    "scenario_count": 680,
+    "tests_passed": 45,
+    "available_account_cash": "9411.18",
+    "open_account_positions": 0,
+    "checked_at": "2026-09-20T12:01:56.974183+00:00"
+  },
+  "latest_report": "results/execution_frontier/REPORT.md",
+  "last_research_update": "2026-09-27T16:04:54.670948+00:00",
+  "multi_source_90": {
+    "source_hash": "02f908b59a3a1212b81447ae9c72c2ab0c3490641ed4d6ee4c10cafba40da766",
+    "data_hash": "532fd29dd6b672443b34cbe2a1f54e22c9ab3a44c2970ecf4895615c0c946992",
+    "status": "NO_LIVE_CERTIFICATION",
+    "research_screen_survivors": [],
+    "winner": null,
+    "scenarios": 1536,
+    "noise_paths": 45908,
+    "audits": {
+      "UNKNOWN_VOLUME_MISMATCH": 347,
+      "UNKNOWN_OFF_TICK_PRICE": 40,
+      "RECONCILED": 1015
+    },
+    "calendar_days_per_strategy_per_window": 90,
+    "candidate_variants": 64,
+    "windows": {
+      "earlier": [
+        "2026-03-23",
+        "2026-06-20"
+      ],
+      "recent": [
+        "2026-06-21",
+        "2026-09-18"
+      ]
+    },
+    "sessions": {
+      "earlier": 59,
+      "recent": 63
+    },
+    "expiry_sessions_each": 13,
+    "known_primary_balances": {
+      "earlier": {
+        "reported": 46,
+        "strict": 10
+      },
+      "recent": {
+        "reported": 52,
+        "strict": 6
+      }
+    },
+    "minute_rows": 513870,
+    "contract_days": 1362,
+    "tests_passed": 54,
+    "minimum_raw_p": 0.108,
+    "minimum_holm_p": 1.0,
+    "account_read_only": {
+      "checked_at": "2026-09-20T19:45:14.010728+00:00",
+      "orders_submitted": 0,
+      "funds_http_status": 200,
+      "available_balance": "9411.18",
+      "withdrawable_balance": "9411.18",
+      "positions_http_status": 200,
+      "open_position_count": 0
+    },
+    "all_nine_full_families_90_day_validated": false,
+    "report": "results/multifeature90/FINDINGS.md"
+  },
+  "readiness_2026_09_21": {
+    "status": "NO_LIVE_CERTIFICATION",
+    "winner": null,
+    "source_hash": "149109cd5167b25b70197cd151f808567bc7cf4f0e0b9bc8c1a57d3afc9b6125",
+    "data_hash": "df6741ae2d587d98e28b58ac500d0c4eae58168c675f5d8861965eca56573639",
+    "scenarios": 320,
+    "noise_paths": 13972,
+    "positive_both_windows": [],
+    "research_screen_survivors": [],
+    "audits": {
+      "UNKNOWN_VOLUME_MISMATCH": 200,
+      "UNKNOWN_OFF_TICK_PRICE": 24,
+      "RECONCILED": 606
+    },
+    "session_counts": {
+      "earlier": {
+        "sessions": 59,
+        "expiries": 13
+      },
+      "recent": {
+        "sessions": 63,
+        "expiries": 13
+      }
+    },
+    "calendar_days_per_strategy_per_window": 90,
+    "notes": [
+      "Retrospective same dates; no new holdout.",
+      "Model P&L does not prove bid/ask fills.",
+      "Missing paths remain UNKNOWN.",
+      "No order or deployment approval is generated."
+    ],
+    "report": "results/readiness/REPORT.md",
+    "live_readiness_report": "../docs/RELEASE-READINESS.md",
+    "actual_available_cash": "9411.18",
+    "open_positions": 0,
+    "derivatives_approved": true,
+    "cloud_order_writes": false,
+    "cloud_cached_token_valid": false,
+    "software_tests": 196,
+    "mutations_killed": 15,
+    "deployment_approved": false
+  },
+  "event90_2026_09_21": {
+    "generated_at": "2026-09-21T03:17:04.240096+00:00",
+    "start": "2026-06-21",
+    "end": "2026-09-18",
+    "calendar_days": 90,
+    "trading_sessions": 63,
+    "start_cash": "9411.18",
+    "source_sha256": "d75cfb638631e3c8979ea0b3a8bc7cd8e7b15794440bbd38900cc517f8b7af8b",
+    "input_sha256": "3f06b3e9c5b2f36cad962a105a3137584d825491c9213b1bde2e85edf0a32e59",
+    "winner": null,
+    "deployment_ready": false,
+    "status": "CONDITIONAL_RESEARCH_ONLY",
+    "coverage_sha256": "7d9d929eb718ac8d19c241f8e9a40612de68f050e6a2a984cc8ee6112d317085",
+    "engines": [
+      {
+        "engine": "EVENT_CONTINUATION",
+        "signals": 205,
+        "primary": {
+          "engine": "EVENT_CONTINUATION",
+          "seed": null,
+          "strict": false,
+          "stopped": true,
+          "gaps": 110,
+          "terminal_conditional_cash": null,
+          "last_resolved_cash": "3913.33",
+          "trades": 5,
+          "wins": 1,
+          "targets": 0,
+          "drawdown": "0.6225601822515043754442717993",
+          "full_family_final_bankroll": null,
+          "status_counts": {
+            "OUTSIDE_METADATA_VARIANT": 34,
+            "NO_ORDER_UNDER_MODEL": 38,
+            "MODELED_LIMIT_MISS": 5,
+            "UNKNOWN_BAN_FILE": 4,
+            "MODELED_ROUND_TRIP": 5,
+            "POSITION_ALREADY_OPEN": 1,
+            "MODELED_CAPACITY_MISS": 2,
+            "UNKNOWN_EXIT_CAPACITY": 1
+          }
+        },
+        "rank_bounds": null,
+        "strict": {
+          "engine": "EVENT_CONTINUATION",
+          "seed": null,
+          "strict": true,
+          "stopped": true,
+          "gaps": 1,
+          "terminal_conditional_cash": null,
+          "last_resolved_cash": "9411.18",
+          "trades": 0,
+          "wins": 0,
+          "targets": 0,
+          "drawdown": "0"
+        },
+        "contract_days": 2655,
+        "contract_audit_counts": {
+          "EXACT_DAILY_VOLUME_RECONCILED": 2026,
+          "UNKNOWN_VOLUME_MISMATCH": 544,
+          "OFFICIAL_ZERO_TRADES_AUDIT": 82,
+          "UNKNOWN_OFFICIAL_VOLUME": 3
+        }
+      },
+      {
+        "engine": "INTRADAY_EVENT",
+        "signals": 44,
+        "primary": {
+          "engine": "INTRADAY_EVENT",
+          "seed": null,
+          "strict": false,
+          "stopped": false,
+          "gaps": 51,
+          "terminal_conditional_cash": "3453.01",
+          "last_resolved_cash": "3453.01",
+          "trades": 4,
+          "wins": 1,
+          "targets": 0,
+          "drawdown": "0.6663568261379151082042357970",
+          "full_family_final_bankroll": null,
+          "status_counts": {
+            "UNKNOWN_BAN_FILE": 3,
+            "NO_ORDER_UNDER_MODEL": 18,
+            "OUTSIDE_METADATA_VARIANT": 12,
+            "MODELED_ROUND_TRIP": 4,
+            "POSITION_ALREADY_OPEN": 1,
+            "MODELED_LIMIT_MISS": 4,
+            "MODELED_CAPACITY_MISS": 2
+          }
+        },
+        "rank_bounds": {
+          "lower": 0.666,
+          "upper": 0.666,
+          "meaning": "Conditional matched-time random-side rank bounds, not a clean-universe significance test"
+        },
+        "strict": {
+          "engine": "INTRADAY_EVENT",
+          "seed": null,
+          "strict": true,
+          "stopped": true,
+          "gaps": 1,
+          "terminal_conditional_cash": null,
+          "last_resolved_cash": "9411.18",
+          "trades": 0,
+          "wins": 0,
+          "targets": 0,
+          "drawdown": "0"
+        },
+        "contract_days": 620,
+        "contract_audit_counts": {
+          "UNKNOWN_VOLUME_MISMATCH": 118,
+          "EXACT_DAILY_VOLUME_RECONCILED": 487,
+          "OFFICIAL_ZERO_TRADES_AUDIT": 15
+        }
+      }
+    ],
+    "report": "results/event90/FINDINGS.md",
+    "software_tests": 201,
+    "mutations_killed": 15,
+    "dhan_latest_renewal": "INCONSISTENT_SESSION_RENEWAL_DIRECT_PRODUCTION_AUTH_SUCCEEDS",
+    "upstox_latest_check": "HTTP_200_MARKET_CLOSED",
+    "latest_available_cash": "9411.18",
+    "latest_open_positions": 0,
+    "latest_account_check": "results/event90/auth_async_diagnostic.json"
+  },
+  "updated_at": "2026-09-27T22:50:12.988143+00:00",
+  "final_bounded_search": {
+    "report": "results/finalsearch/REPORT.md",
+    "variants": 8,
+    "scenarios": 112,
+    "calendar_days_per_window": 90,
+    "qualified_live_candidates": 0,
+    "source_sha256": "39483f66a107d732efa7c120845e2d4a0c98744db30619970dbfdbf1dbd6fb36",
+    "input_sha256": "4716097ce7f3544ea7fdbd6580ec44004f7f154ddb586c15070f172c2e060edf",
+    "strict_primary_paths": "UNKNOWN",
+    "full_family_validation_complete": false,
+    "tests_passed": 209,
+    "live_orders_submitted": 0
+  },
+  "intraday_challengers": {
+    "windows": [
+      [
+        "2026-03-23",
+        "2026-06-20"
+      ],
+      [
+        "2026-06-21",
+        "2026-09-18"
+      ]
+    ],
+    "variants": 30,
+    "scenarios": 360,
+    "start_cash_each": "9411.18",
+    "recent_leader": "GAP_FADE_DOUBLE",
+    "recent_final": "12566.43",
+    "earlier_final": "7544.54",
+    "recent_delete_best": "9275.76",
+    "recent_delay3": "3780.44",
+    "random_side_controls": 999,
+    "at_least_observed": 120,
+    "funded_qualified": false,
+    "report": "results/intraday_challengers/REPORT.md",
+    "source_sha256": "5a8bc6f6a91fc033edb955e18c13b2b75759e2a8d886a6af460e3952c71a9dd1",
+    "input_sha256": "02293737846b943fe1befdb28f0c83572cdd008e567e150407b24a4ca4e78500",
+    "tests_passed": 217,
+    "validated_trade_rows": 1148
+  },
+  "broader_search": {
+    "source_sha256": "404fab8fa53a716eeefe82da66e279ab2915b5f81364c77943eba2ba5cab81a3",
+    "input_sha256": "b78e1eb22f887f57220b662f6d67c2c86d153cf797522ee42a8f3850be3377bd",
+    "scenarios": 260,
+    "validated_trades": 1789,
+    "unchanged_path_parity": 210,
+    "recent_beats": [
+      "NIFTY_SELLOFF_REBOUND_1510",
+      "NIFTY_SELLOFF_REBOUND_0930"
+    ],
+    "both_profitable": [
+      "OI_SQUEEZE_CASH5",
+      "NIFTY_SELLOFF_REBOUND_1510"
+    ],
+    "robust": [],
+    "audit_sessions": 3349,
+    "audit_issues": {
+      "CASH_VOLUME_MISMATCH": 1110,
+      "CASH_RANGE_MISMATCH": 1,
+      "OFF_TICK": 85,
+      "VOLUME_MISMATCH": 407
+    },
+    "primary_unknown": 10,
+    "strict_unknown": 52,
+    "variants": 26,
+    "calendar_days_each": 90,
+    "random_side_controls": 3996,
+    "start_cash_each": "9411.18",
+    "leader": "NIFTY_SELLOFF_REBOUND_1510",
+    "earlier_final": "14663.22",
+    "recent_final": "16762.25",
+    "earlier_random_tail": 0.157,
+    "recent_random_tail": 0.021,
+    "multiplicity_adjusted_upper": 1,
+    "tests_passed": 227,
+    "funded_qualified": false,
+    "report": "results/broader/REPORT.md",
+    "live_orders_submitted": 0
+  },
+  "funded_authority": false,
+  "rebound_validation": {
+    "report": "results/rebound_validation/REPORT.md",
+    "protocol": "rebound_validation/PROTOCOL.md",
+    "source_sha256": "455b17342bc542b901616c0b0e4f0f71acb0b3556ea7bd107de67364c8e51563",
+    "additional_period": [
+      "2025-12-23",
+      "2026-03-22"
+    ],
+    "start_cash_each": "9411.18",
+    "upstox_dated_cash": "8570.94",
+    "dhan_dated_cash": "8639.15",
+    "earlier_alternative_fill_cash": "8255.83",
+    "matched_date_control_paths": 2997,
+    "software_tests": 245,
+    "research_gate": "FAILED",
+    "production_integration": "NOT_EXECUTED_FAILED_RESEARCH_GATE",
+    "market_hours_shadow": "NOT_DONE",
+    "deployment": "NOT_REQUESTED",
+    "cloud_state": "RECOVERING_READ_ONLY_CACHED_AUTH_INVALID",
+    "scenario_attempts": 42,
+    "api_receipt": "results/rebound_validation/api_check.json",
+    "local_api_status": "READS_SUCCEEDED",
+    "available_balance": "9411.18",
+    "positions": 0,
+    "orders": 0,
+    "trades": 0,
+    "vm_ip_whitelisted": true
+  },
+  "execution_frontier": {
+    "report": "results/execution_frontier/REPORT.md",
+    "source_sha256": "51d5fea305d847e7f4829502013c3caa583032d9d64544c9b8985d389d7b56c0",
+    "strategy_allocation_combinations": 24,
+    "scenario_attempts": 504,
+    "windows": 3,
+    "calendar_days_each": 90,
+    "all_windows_reused": true,
+    "positive_all_base_windows": 0,
+    "unknown_paths": 69,
+    "verified_trade_rows": 479,
+    "software_tests": 260,
+    "margin_checks": 56,
+    "cash_leverage_checks_completed": 10,
+    "cash_leverage_status": "READS_SUCCEEDED",
+    "funded_authority": false,
+    "cash_min_margin": "7356.0",
+    "cash_max_margin": "7503.12"
+  }
+}

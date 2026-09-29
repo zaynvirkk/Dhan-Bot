@@ -1,0 +1,12 @@
+{
+  "counts": {
+    "tests": 245,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "source_sha256": "455b17342bc542b901616c0b0e4f0f71acb0b3556ea7bd107de67364c8e51563",
+  "junit_sha256": "9bca882c6504cddda8752451c68b0a1a8a95a49848b808ee59e9436eabc2debb",
+  "command": ".venv/bin/python -m pytest -q --junitxml=artifacts/private/rebound-validation-tests.xml",
+  "profitability_evidence": false
+}

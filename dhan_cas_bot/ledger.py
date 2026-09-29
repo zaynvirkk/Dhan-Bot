@@ -100,18 +100,24 @@ class Ledger:
 
     def record_fill_once(self, fill: Fill, intent_id: str, payload: Any) -> bool:
         with self.transaction() as db:
-            old = db.execute("SELECT * FROM fills WHERE trade_id=?", (fill.trade_id,)).fetchone()
+            identity = json.dumps([fill.order_id, fill.trade_id], separators=(",", ":"))
+            old = db.execute("SELECT * FROM fills WHERE trade_id=?", (identity,)).fetchone()
+            if old is None:
+                # Preserve already recorded fills from the prior raw-ID format.
+                old = db.execute("SELECT * FROM fills WHERE trade_id=? AND order_id=?", (fill.trade_id,fill.order_id)).fetchone()
+                if old:
+                    db.execute("UPDATE fills SET trade_id=? WHERE trade_id=?", (identity,fill.trade_id))
             if old:
                 if (old["order_id"], old["security_id"], old["quantity"], Decimal(old["price"])) != (fill.order_id, fill.security_id, fill.quantity, fill.price):
                     raise ContractError("conflicting duplicate fill")
                 if fill.fees > Decimal(old["fees"]):
-                    db.execute("UPDATE fills SET fees=? WHERE trade_id=?", (str(fill.fees),fill.trade_id))
+                    db.execute("UPDATE fills SET fees=? WHERE trade_id=?", (str(fill.fees),identity))
                 return False
             intent = db.execute("SELECT * FROM intents WHERE intent_id=?", (intent_id,)).fetchone()
             quantity = db.execute("SELECT COALESCE(SUM(quantity),0) FROM fills WHERE intent_id=?", (intent_id,)).fetchone()[0]
             if intent is None or fill.security_id != intent["security_id"] or quantity + fill.quantity > intent["quantity"]:
                 raise ContractError("fill exceeds or mismatches intent")
-            cursor = db.execute("INSERT OR IGNORE INTO fills(trade_id,order_id,intent_id,security_id,quantity,price,fees,occurred_at,payload) VALUES(?,?,?,?,?,?,?,?,?)", (fill.trade_id, fill.order_id, intent_id, fill.security_id, fill.quantity, str(fill.price), str(fill.fees), fill.occurred_at.isoformat(), json.dumps(json_safe(payload), sort_keys=True, default=str)))
+            cursor = db.execute("INSERT OR IGNORE INTO fills(trade_id,order_id,intent_id,security_id,quantity,price,fees,occurred_at,payload) VALUES(?,?,?,?,?,?,?,?,?)", (identity, fill.order_id, intent_id, fill.security_id, fill.quantity, str(fill.price), str(fill.fees), fill.occurred_at.isoformat(), json.dumps(json_safe(payload), sort_keys=True, default=str)))
             return cursor.rowcount == 1
 
     def set_intent_state(self, intent_id: str, state: str) -> None:

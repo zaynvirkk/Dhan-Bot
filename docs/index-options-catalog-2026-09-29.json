@@ -1,0 +1,449 @@
+{
+  "inspected_at": "2026-09-28T20:11:32.487807+00:00",
+  "as_of_date": "2026-09-29",
+  "source_receipt": "research/results/execution_frontier/capital.json",
+  "source_checked_at": "2026-09-27T21:43:53.934977+00:00",
+  "source_master_sha256": "3e628064bb7b738c1afc6d24c8b00831bd53b9608cee1c027d94e2d817c2b034",
+  "fresh_download": false,
+  "fresh_authenticated_status": "UNKNOWN_NETWORK_DNS_UNAVAILABLE",
+  "orders_submitted": 0,
+  "equity_index_families": 10,
+  "commodity_index_families": 1,
+  "indices": [
+    {
+      "exchange": "BSE",
+      "symbol": "BANKEX",
+      "exchange_segment": "BSE_FNO",
+      "contracts": 962,
+      "expiries": {
+        "2026-10-29": [
+          30
+        ],
+        "2026-11-26": [
+          30
+        ],
+        "2026-12-31": [
+          30
+        ]
+      },
+      "derivative_underlying_ids": [
+        "12"
+      ],
+      "buy_sell_indicators": [
+        "A"
+      ],
+      "option_types": [
+        "CE",
+        "PE"
+      ],
+      "index_quote_security_id": "69",
+      "index_quote_mapping": "RESOLVED_FROM_INDEX_ROW",
+      "live_tradability": "UNVERIFIED"
+    },
+    {
+      "exchange": "BSE",
+      "symbol": "FOCIT",
+      "exchange_segment": "BSE_FNO",
+      "contracts": 1014,
+      "expiries": {
+        "2026-10-29": [
+          45
+        ],
+        "2026-11-26": [
+          45
+        ],
+        "2026-12-31": [
+          45
+        ]
+      },
+      "derivative_underlying_ids": [
+        "75"
+      ],
+      "buy_sell_indicators": [
+        "A"
+      ],
+      "option_types": [
+        "CE",
+        "PE"
+      ],
+      "index_quote_security_id": "850",
+      "index_quote_mapping": "RESOLVED_FROM_INDEX_ROW",
+      "live_tradability": "UNVERIFIED"
+    },
+    {
+      "exchange": "BSE",
+      "symbol": "SENSEX",
+      "exchange_segment": "BSE_FNO",
+      "contracts": 3428,
+      "expiries": {
+        "2026-10-01": [
+          20
+        ],
+        "2026-10-08": [
+          20
+        ],
+        "2026-10-15": [
+          20
+        ],
+        "2026-10-22": [
+          20
+        ],
+        "2026-10-29": [
+          20
+        ],
+        "2026-11-05": [
+          20
+        ],
+        "2026-11-12": [
+          20
+        ],
+        "2026-11-26": [
+          20
+        ],
+        "2026-12-31": [
+          20
+        ],
+        "2027-03-25": [
+          20
+        ],
+        "2027-06-24": [
+          20
+        ],
+        "2027-09-30": [
+          20
+        ],
+        "2027-12-30": [
+          20
+        ],
+        "2028-06-29": [
+          20
+        ],
+        "2028-12-28": [
+          20
+        ],
+        "2029-06-28": [
+          20
+        ],
+        "2029-12-27": [
+          20
+        ],
+        "2030-06-27": [
+          20
+        ],
+        "2030-12-26": [
+          20
+        ],
+        "2031-06-26": [
+          20
+        ]
+      },
+      "derivative_underlying_ids": [
+        "1"
+      ],
+      "buy_sell_indicators": [
+        "A"
+      ],
+      "option_types": [
+        "CE",
+        "PE"
+      ],
+      "index_quote_security_id": "51",
+      "index_quote_mapping": "RESOLVED_FROM_INDEX_ROW",
+      "live_tradability": "UNVERIFIED"
+    },
+    {
+      "exchange": "BSE",
+      "symbol": "SENSEX50",
+      "exchange_segment": "BSE_FNO",
+      "contracts": 364,
+      "expiries": {
+        "2026-10-29": [
+          75
+        ],
+        "2026-11-26": [
+          75
+        ],
+        "2026-12-31": [
+          75
+        ]
+      },
+      "derivative_underlying_ids": [
+        "47"
+      ],
+      "buy_sell_indicators": [
+        "A"
+      ],
+      "option_types": [
+        "CE",
+        "PE"
+      ],
+      "index_quote_security_id": "83",
+      "index_quote_mapping": "RESOLVED_FROM_INDEX_ROW",
+      "live_tradability": "UNVERIFIED"
+    },
+    {
+      "exchange": "MCX",
+      "symbol": "MCXBULLDEX",
+      "exchange_segment": "MCX_COMM",
+      "contracts": 542,
+      "expiries": {
+        "2026-10-28": [
+          1
+        ],
+        "2026-11-27": [
+          1
+        ],
+        "2026-12-30": [
+          1
+        ]
+      },
+      "derivative_underlying_ids": [
+        "568"
+      ],
+      "buy_sell_indicators": [
+        "A"
+      ],
+      "option_types": [
+        "CE",
+        "PE"
+      ],
+      "index_quote_security_id": null,
+      "index_quote_mapping": "UNKNOWN",
+      "live_tradability": "UNVERIFIED"
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "BANKNIFTY",
+      "exchange_segment": "NSE_FNO",
+      "contracts": 2364,
+      "expiries": {
+        "2026-09-29": [
+          30
+        ],
+        "2026-10-27": [
+          30
+        ],
+        "2026-11-23": [
+          30
+        ],
+        "2026-12-29": [
+          30
+        ],
+        "2027-03-30": [
+          30
+        ],
+        "2027-06-29": [
+          30
+        ]
+      },
+      "derivative_underlying_ids": [
+        "26009"
+      ],
+      "buy_sell_indicators": [
+        "A"
+      ],
+      "option_types": [
+        "CE",
+        "PE"
+      ],
+      "index_quote_security_id": "25",
+      "index_quote_mapping": "RESOLVED_FROM_INDEX_ROW",
+      "live_tradability": "UNVERIFIED"
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "FINNIFTY",
+      "exchange_segment": "NSE_FNO",
+      "contracts": 1124,
+      "expiries": {
+        "2026-09-29": [
+          60
+        ],
+        "2026-10-27": [
+          60
+        ],
+        "2026-11-23": [
+          60
+        ]
+      },
+      "derivative_underlying_ids": [
+        "26037"
+      ],
+      "buy_sell_indicators": [
+        "A"
+      ],
+      "option_types": [
+        "CE",
+        "PE"
+      ],
+      "index_quote_security_id": "27",
+      "index_quote_mapping": "RESOLVED_FROM_INDEX_ROW",
+      "live_tradability": "UNVERIFIED"
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "MIDCPNIFTY",
+      "exchange_segment": "NSE_FNO",
+      "contracts": 1610,
+      "expiries": {
+        "2026-09-29": [
+          120
+        ],
+        "2026-10-27": [
+          120
+        ],
+        "2026-11-23": [
+          120
+        ]
+      },
+      "derivative_underlying_ids": [
+        "26074"
+      ],
+      "buy_sell_indicators": [
+        "A"
+      ],
+      "option_types": [
+        "CE",
+        "PE"
+      ],
+      "index_quote_security_id": "442",
+      "index_quote_mapping": "RESOLVED_FROM_INDEX_ROW",
+      "live_tradability": "UNVERIFIED"
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "exchange_segment": "NSE_FNO",
+      "contracts": 4034,
+      "expiries": {
+        "2026-09-29": [
+          65
+        ],
+        "2026-10-06": [
+          65
+        ],
+        "2026-10-13": [
+          65
+        ],
+        "2026-10-19": [
+          65
+        ],
+        "2026-10-27": [
+          65
+        ],
+        "2026-11-03": [
+          65
+        ],
+        "2026-11-23": [
+          65
+        ],
+        "2026-12-29": [
+          65
+        ],
+        "2027-03-30": [
+          65
+        ],
+        "2027-06-29": [
+          65
+        ],
+        "2027-12-28": [
+          65
+        ],
+        "2028-06-27": [
+          65
+        ],
+        "2028-12-26": [
+          65
+        ],
+        "2029-06-26": [
+          65
+        ],
+        "2029-12-24": [
+          65
+        ],
+        "2030-06-25": [
+          65
+        ],
+        "2030-12-31": [
+          65
+        ],
+        "2031-06-24": [
+          65
+        ]
+      },
+      "derivative_underlying_ids": [
+        "26000"
+      ],
+      "buy_sell_indicators": [
+        "A"
+      ],
+      "option_types": [
+        "CE",
+        "PE"
+      ],
+      "index_quote_security_id": "13",
+      "index_quote_mapping": "RESOLVED_FROM_INDEX_ROW",
+      "live_tradability": "UNVERIFIED"
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTYFPI",
+      "exchange_segment": "NSE_FNO",
+      "contracts": 1084,
+      "expiries": {
+        "2026-09-29": [
+          1100
+        ],
+        "2026-10-27": [
+          1100
+        ],
+        "2026-11-23": [
+          1100
+        ]
+      },
+      "derivative_underlying_ids": [
+        "26137"
+      ],
+      "buy_sell_indicators": [
+        "A"
+      ],
+      "option_types": [
+        "CE",
+        "PE"
+      ],
+      "index_quote_security_id": null,
+      "index_quote_mapping": "UNKNOWN",
+      "live_tradability": "UNVERIFIED"
+    },
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTYNXT50",
+      "exchange_segment": "NSE_FNO",
+      "contracts": 2146,
+      "expiries": {
+        "2026-09-29": [
+          25
+        ],
+        "2026-10-27": [
+          25
+        ],
+        "2026-11-23": [
+          25
+        ]
+      },
+      "derivative_underlying_ids": [
+        "26013"
+      ],
+      "buy_sell_indicators": [
+        "A"
+      ],
+      "option_types": [
+        "CE",
+        "PE"
+      ],
+      "index_quote_security_id": "38",
+      "index_quote_mapping": "RESOLVED_FROM_INDEX_ROW",
+      "live_tradability": "UNVERIFIED"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "review_started": "2026-09-28",
+  "scope": "First-pass seed resolution, reference chasing and targeted primary-source search. Not exhaustive Scholar pagination or a bibliometric census.",
+  "seed_urls": [
+    {"url": "https://scholar.google.com/scholar?hl=en&as_sdt=0%2C5&q=indian+trading+market&btnG=", "kind": "search", "status": "Browser search inspected; relevance screening continues"},
+    {"url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516905", "paper": "S01"},
+    {"url": "https://www.researchgate.net/publication/369882033_The_effectiveness_of_technical_trading_strategies_Evidence_from_Indian_equity_markets", "paper": "S02"},
+    {"url": "https://www.semanticscholar.org/paper/Investment-and-Trading-Strategies-in-Indian-Stock-Ashraf-Nagar/7f29c8bfa699ec296c21eb574b1eea9c36827cb3", "paper": "S03", "note": "Resolved title to actual Ashraf/Baig body; URL slug not author authority"},
+    {"url": "https://www.ijnrd.org/papers/IJNRD2205074.pdf", "paper": "S04"},
+    {"url": "https://ijnrd.org/viewpaperforall.php?paper=IJNRD2205074", "paper": "S04", "duplicate": true},
+    {"url": "https://www.academia.edu/100938147/The_effectiveness_of_technical_trading_strategies_Evidence_from_Indian_equity_markets", "paper": "S02", "duplicate": true},
+    {"url": "https://journals.sagepub.com/doi/pdf/10.1177/0256090920000404?download=true", "paper": "S05", "note": "Expired challenge-token suffix omitted; DOI unchanged"}
+  ],
+  "reference_chains": [
+    {"from": "S02", "to": ["A22", "L11"], "purpose": "Contrary technical-analysis evidence; compare definitions and costs"},
+    {"from": "L06", "to": ["L07", "A29", "L08", "L12"], "purpose": "Original hedging and intraday momentum definitions, foreign replication limits"},
+    {"from": "L10", "to": ["A24"], "purpose": "Earlier Indian earnings-drift evidence"},
+    {"from": "A19", "to": ["L16"], "purpose": "Participant demand and retail option behavior"},
+    {"from": "Review methodology", "to": ["L17", "L18"], "purpose": "Selection effects from searching many papers/strategies"}
+  ],
+  "recorded_queries": [
+    "\"Market intraday momentum\" Gao Han Li Zhou pdf 2018",
+    "\"Probability of Backtest Overfitting\" Bailey Lopez de Prado pdf",
+    "\"Tests of Technical Analysis in India\" Sehgal Gupta 2007 pdf",
+    "\"Testing the Profitability of Technical Trading Rules across Market Cycles\"",
+    "\"Market intraday momentum\" \"pdf\" \"zhou\" -site:reddit.com -site:scribd.com",
+    "\"Testing the Profitability\" \"cbj\" \"pdf\"",
+    "\"Foreign Institutional Positions and Short-Horizon Option Payoffs\"",
+    "\"The Deflated Sharpe Ratio\" Bailey pdf",
+    "site:papers.ssrn.com \"6781558\"",
+    "site:cbj.sljol.info \"56\" \"download\"",
+    "\"Risk-adjusted Returns from Statistical Arbitrage\" \"pdf\"",
+    "\"Dynamics of variance risk premium\" Sankar Ramachandran pdf",
+    "\"Market intraday momentum: APAC evidence\" India",
+    "\"Indian\" \"expiry\" \"trading\" \"transaction costs\" paper",
+    "\"Momentum profits\" \"India\" \"transaction costs\" research",
+    "\"Indian\" \"pairs trading\" \"Aggarwal\" 2021 pdf",
+    "\"Animal Spirits on Steroids\" \"India\" paper",
+    "\"Intraday overreaction and underreaction\" \"pdf\""
+  ],
+  "recording_limit": "Earlier discovery queries were not persisted verbatim; source URLs and reading status are retained. This log does not invent an exact count or wording for those searches.",
+  "exclusions": [
+    "Search-engine/secondary summaries used for discovery only, not substitutes for primary methods",
+    "Reddit, Scribd, commercial strategy pages and search-result advertising not counted as empirical evidence",
+    "Unrelated MDPI COVID/overconfidence paper excluded after title verification",
+    "Mirrors and working/journal versions not counted as independent replications"
+  ],
+  "access_boundaries": [
+    "Several direct SSRN, SAGE and ResearchGate requests failed; publicly accessible normal-browser bodies were used where available",
+    "A19 current landing says Not Available for Download; no full-text claim",
+    "A20/A21/A22/A23 retain abstract-only status, not a negative research verdict",
+    "No paywall purchase, author email, account creation or challenge bypass"
+  ]
+}

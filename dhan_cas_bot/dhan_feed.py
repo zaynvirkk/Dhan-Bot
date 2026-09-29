@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any, Mapping
 import struct
 
-from .domain import ContractError, Instrument, Level, OptionBook
+from .domain import ContractError, Instrument, Level, MarketStatistics, OptionBook
 
 
 @dataclass(frozen=True)
@@ -17,6 +17,7 @@ class DhanPacket:
     bids: tuple[Level, ...]
     asks: tuple[Level, ...]
     provider_ts_ms: int | None
+    statistics: MarketStatistics | None = None
 
 
 def _level(item: Mapping[str, Any]) -> Level:
@@ -39,18 +40,20 @@ def decode_mapping(packet: Mapping[str, Any], expected: Instrument) -> DhanPacke
 
 def decode_full_binary(payload: bytes, expected: Instrument) -> DhanPacket:
     """Decode Dhan v2 FULL (code 8) in its documented little-endian layout."""
-    if len(payload) != 163:
+    # The official SDK uses 62 bytes before the five 20-byte depth levels.
+    # Documentation byte positions are one-based; offset 63 was off by one.
+    if len(payload) != 162:
         raise ContractError("short Dhan Full packet")
-    code, declared, segment_code, security_num = struct.unpack_from("<BhBI", payload, 0)
+    code, declared, segment_code, security_num = struct.unpack_from("<BHBI", payload, 0)
     expected_num = int(expected.security_id) if expected.security_id.isdigit() else None
     if code != 8 or declared != len(payload) or segment_code != 2 or expected_num is None or security_num != expected_num:
         raise ContractError("invalid Dhan Full packet header")
     import math
     ltp = struct.unpack_from("<f", payload, 8)[0]
-    ltt = struct.unpack_from("<i", payload, 14)[0]
+    ltt = struct.unpack_from("<I", payload, 14)[0]
     if not math.isfinite(ltp) or ltp < 0:
         raise ContractError("invalid Dhan Full LTP")
-    offset = 63
+    offset = 62
     bids: list[Level] = []
     asks: list[Level] = []
     def price(raw: float) -> Decimal:
@@ -61,8 +64,30 @@ def decode_full_binary(payload: bytes, expected: Instrument) -> DhanPacket:
         if abs(rounded - value) > max(Decimal("0.000001"), abs(value) * Decimal("0.0000002")):
             raise ContractError("Dhan depth price is not tick aligned")
         return rounded
+    def statistic_price(offset: int, *, traded: bool = True) -> Decimal:
+        raw = struct.unpack_from("<f", payload, offset)[0]
+        if not math.isfinite(raw) or raw < 0:
+            raise ContractError("invalid Dhan statistic price")
+        # ATP is a weighted average, so unlike traded OHLC it need not be on
+        # the exchange tick. Never round it into an executable price.
+        return price(raw) if traded and raw else Decimal(str(raw))
+    stats = MarketStatistics(
+        last_price=statistic_price(8),
+        last_quantity=struct.unpack_from("<H", payload, 12)[0],
+        average_price=statistic_price(18, traded=False),
+        volume=struct.unpack_from("<I", payload, 22)[0],
+        total_sell_quantity=struct.unpack_from("<I", payload, 26)[0],
+        total_buy_quantity=struct.unpack_from("<I", payload, 30)[0],
+        open_interest=struct.unpack_from("<I", payload, 34)[0],
+        oi_day_high=struct.unpack_from("<I", payload, 38)[0],
+        oi_day_low=struct.unpack_from("<I", payload, 42)[0],
+        day_open=statistic_price(46),
+        day_close=statistic_price(50) or None,
+        day_high=statistic_price(54),
+        day_low=statistic_price(58),
+    )
     for _ in range(5):
-        bid_qty, ask_qty, _bid_orders, _ask_orders, bid_price, ask_price = struct.unpack_from("<IIhhff", payload, offset)
+        bid_qty, ask_qty, _bid_orders, _ask_orders, bid_price, ask_price = struct.unpack_from("<IIHHff", payload, offset)
         offset += 20
         if bid_qty and bid_price > 0:
             bids.append(Level(price(bid_price), bid_qty))
@@ -70,7 +95,7 @@ def decode_full_binary(payload: bytes, expected: Instrument) -> DhanPacket:
             asks.append(Level(price(ask_price), ask_qty))
     # Empty depth invalidates this contract's previous liquidity. It must
     # neither retain the old book nor disconnect all other subscriptions.
-    return DhanPacket(code, declared, expected.segment.value, expected.security_id, tuple(bids), tuple(asks), ltt * 1000)
+    return DhanPacket(code, declared, expected.segment.value, expected.security_id, tuple(bids), tuple(asks), ltt * 1000, stats)
 
 
 def packets(payload: bytes):
@@ -91,4 +116,4 @@ def packets(payload: bytes):
 def book_from_packet(packet: DhanPacket, expected: Instrument, epoch: str, received_ns: int) -> OptionBook:
     if packet.security_id != expected.security_id or packet.segment != expected.segment.value:
         raise ContractError("packet does not match subscription")
-    return OptionBook(expected, packet.bids, packet.asks, epoch, received_ns, packet.provider_ts_ms)
+    return OptionBook(expected, packet.bids, packet.asks, epoch, received_ns, packet.provider_ts_ms, packet.statistics)

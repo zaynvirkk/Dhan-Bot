@@ -55,7 +55,8 @@ class OrderManager:
         potential = sum(max(0, x["quantity"]) for x in self.ledger.pending_intents() if x["side"] == "BUY")
         for row in self.ledger.db.execute("SELECT lifecycle_id FROM lifecycles WHERE state!='CLOSED'"):
             potential += self.ledger.lifecycle_totals(row[0])["quantity"]
-        reserve = max(1, (potential + intent.instrument.freeze_qty - 1) // intent.instrument.freeze_qty) if intent.side == "BUY" else 0
+        child_size = intent.instrument.freeze_qty // intent.instrument.lot_size * intent.instrument.lot_size
+        reserve = max(1, (potential + child_size - 1) // child_size) if intent.side == "BUY" else 0
         with self.ledger.transaction() as db:
             for seconds, limit in ((1, 9), (60, 250), (3600, 1000), (86400, 7000)):
                 used = db.execute("SELECT COUNT(*) FROM rate_events WHERE occurred_at>?", (timestamp-seconds,)).fetchone()[0]

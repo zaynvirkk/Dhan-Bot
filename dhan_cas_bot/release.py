@@ -39,7 +39,7 @@ def run_verification(root: str | Path, state_dir: str | Path) -> dict:
         cp_cases = [case for case in cases if ".acceptance.cas." in case.get("classname", "")]
         if len(cp_cases) < 60 or any(list(case) for case in cases):
             raise ContractError("verification requires all 60 CP cases, with no skipped or failed tests")
-        required={"test_connected_service_qualifies_route_freezes_reference_buys_and_exits","test_up_down_up_executes_real_buy_sell_lifecycles_and_compounds","test_accepted_lost_response_restart_reconciles_once_and_exits_without_signal","test_exercise_cash_remains_pending_until_exact_broker_receipt","test_waiting_oms_lock_rechecks_disarm_before_network"}
+        required={"test_connected_service_qualifies_route_freezes_reference_buys_and_exits","test_up_down_up_executes_real_buy_sell_lifecycles_and_compounds","test_accepted_lost_response_restart_reconciles_once_and_exits_without_signal","test_exercise_cash_remains_pending_until_exact_broker_receipt","test_waiting_oms_lock_rechecks_disarm_before_network", "test_connected_service_exits_during_funds_http_outage", "test_connected_service_snapshot_cannot_supply_fifth_reference_observation", "test_collection_stop_during_cash_read_prevents_entry", "test_zero_intrinsic_expiry_does_not_invent_fee_free_cash_close"}
         if not required <= {case.get("name") for case in cases}:
             raise ContractError("connected production-path acceptance cases are missing")
     mutations=subprocess.run([sys.executable,str(root/"ops/verify-mutations.py")],cwd=root,capture_output=True,text=True)

@@ -89,7 +89,6 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     broker = DhanBroker(config["account_id"], token, config["dhan_api_base"], allow_writes=config["live_order_authority"] and mandate.live_order_authority)
     runtime = AutoLive(ledger, broker, mandate, software_verified=current_verification(Path(__file__).resolve().parents[1], state_dir))
     runtime.status.auto_live_armed = broker.allow_writes and not ledger.metadata("disarmed", False)
-    engine = SessionEngine(runtime, {}, now_fn=now)
     tasks = []
     runners = []
     wake = asyncio.Event()
@@ -101,6 +100,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     try:
         # Broker recovery precedes calendar, Upstox, egress admission and metadata.
         await runtime.recover()
+        engine = SessionEngine(runtime, {}, now_fn=now)
         await runtime.refresh_account()
         if broker.allow_writes:
             ledger.put_mandate(mandate)
@@ -215,7 +215,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                     runtime.status.reason = str(exc)
             # The initial snapshot and status-only messages cannot manufacture
             # pre-CAS observations. Only currentTs + actual NIFTY payload identity.
-            if value.type != 1 or NIFTY_KEY not in value.feeds:
+            if not upstox.accept_live_nifty(value):
                 wake.set()
                 return
             raw = value.feeds[NIFTY_KEY].SerializeToString()
@@ -364,24 +364,29 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                 if broker.allow_writes:
                     await engine.cycle(reconcile=False)
                 runtime.status.auto_live_armed = armed
-                # Rotation always starts with broker-first recovery, including
-                # overnight settlement and ambiguous orders. Pending positions
-                # must not prevent renewal before the authentication expires.
-                if not ledger.order_lock.locked():
-                    if metadata_error and engine.active is None and monotonic >= metadata_retry_at:
-                        return
-                    if current.date() != today or (started_before_session and current.time() >= time(15,5)):
-                        return
-                    cached = state_dir / "dhan_token.json"
-                    if cached.exists() and not os.environ.get("DHAN_ACCESS_TOKEN"):
-                        if monotime.time() - json.loads(cached.read_text()).get("issued",0) >= 20*3600:
-                            return
                 if not account_admitted and engine.active is None:
                     runtime.status.state = "NO_TRADE_DAY" if not metadata_error else "ENTRY_HALTED"
             except Exception as exc:
                 runtime.status.reason = f"RECOVERY_REQUIRED:{type(exc).__name__}"
                 runtime.status.state = "RECOVERING"
                 last_reconcile = 0
+            # Account-read failures must not bypass session/token rotation.
+            # Keep the ledger and pending exposure; the next session begins
+            # with broker-first recovery before it can consider new entries.
+            if not ledger.order_lock.locked():
+                if metadata_error and engine.active is None and monotonic >= metadata_retry_at:
+                    return
+                if current.date() != today or (started_before_session and current.time() >= time(15,5)):
+                    return
+                cached = state_dir / "dhan_token.json"
+                if cached.exists() and not os.environ.get("DHAN_ACCESS_TOKEN"):
+                    try:
+                        issued = json.loads(cached.read_text()).get("issued", 0)
+                        age = monotime.time() - issued
+                    except (OSError, ValueError, TypeError):
+                        return  # session_token revalidates/replaces bad cache
+                    if not 0 <= age < 20*3600:
+                        return
             if monotonic - last_status >= 1:
                 write_status(state_dir, runtime, session=today.isoformat(), contract_count=len(instruments), books_observed=len(engine.books), clock_uncertainty_ms=uncertainty, metadata_error=metadata_error, recorder_failed=recorder_failed, final_input="VERIFIED" if engine.final_value else "UNQUALIFIED", final_source_error=final_error)
                 last_status = monotonic

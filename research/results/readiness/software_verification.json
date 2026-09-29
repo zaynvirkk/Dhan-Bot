@@ -1,0 +1,24 @@
+{
+  "case_count": 60,
+  "kind": "offline_acceptance",
+  "mutations_killed": [
+    "intent_before_post",
+    "pending_snapshot",
+    "dispatch_disarm",
+    "readonly_boundary",
+    "market_reconnect_persistence",
+    "interrupted_lag",
+    "funds_exit_isolation",
+    "freeze_exit_reserve",
+    "expired_order_guard",
+    "snapshot_reference",
+    "fee_rounding_reserve",
+    "fill_identity_scope",
+    "order_writer_noop",
+    "entry_gate_never_opens",
+    "recovery_rotation"
+  ],
+  "source_digest": "ea0de91dcb79eab126b02fd41695ff3b507660380d8e1c43e8989911e83ff567",
+  "total_count": 196,
+  "writes": false
+}

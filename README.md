@@ -1,5 +1,58 @@
 # SableStone Dhan CAS bot
 
+**28 September: execution and capital search expanded.** Tested resting-limit
+policies, calls/puts in both directions, trend filters and three allocations:
+24 combinations / 504 scenario paths across three reused 90-day windows.
+No combination profits in every base window. Broader margin checks include
+24 index verticals and small commodity contracts; Gold Petal fits the current
+cash snapshot, which does not establish profitability. Ten cash intraday
+4x long/short probes also fit current cash. [Results](research/results/execution_frontier/REPORT.md)
+and [coverage inventory](research/execution_frontier/RESEARCH.md).
+
+**27 September: rebound deployment qualification fails.** The added 90-day
+period (23 December–22 March) ends INR 8,561.91, or INR 8,570.94 with dated
+fees, from INR 9,411.18. Full-session monitoring preserves the two favorable
+discovery results, but the earlier alternative entry model ends INR 8,255.83
+after admitting a large losing trade skipped by the adverse-high model.
+Matched-date controls do not establish an edge. Funded authority stays
+disabled; the existing CAS cloud daemon is not a rebound implementation.
+[Qualification evidence](research/results/rebound_validation/REPORT.md).
+
+**27 September: broader search produces a stronger conditional candidate.**
+NIFTY overnight selloff-rebound with next-afternoon exit ends INR 14,663.22 /
+16,762.25 in two separate 90-day windows, independently starting INR 9,411.18.
+This beats the previous recent record, but only nine modeled trades, reused
+samples, inconclusive adjusted noise tests and unresolved strict data audits
+prevent funded qualification. Completed 26 variants / 260 scenarios / 3,996
+controls; 227 software tests pass. [Results and ledger](research/results/broader/REPORT.md).
+
+**27 September: intraday challenger search completed.** Thirty registered
+variants across two 90-day windows produce a new conditional recent-period
+leader: gap-fade, INR 9,411.18 → INR 12,566.43 (four trades, three wins).
+Earlier window: INR 7,544.54; recent delete-best: INR 9,275.76; three-minute
+delay: INR 3,780.44. Of 999 matched-time random-side paths, 120 do at least as
+well. This improves the historical leaderboard without qualifying a funded
+strategy. [Comparison and ledger](research/results/intraday_challengers/REPORT.md).
+
+**27 September 2026: final bounded research pass complete; keep funded trading
+disabled.** Eight additional late-expiry/volatility variants, 112 scenarios
+over two 90-day windows and fresh read-only margin checks produce no qualified
+winner. All 209 tests pass. The account still has INR 9,411.18 and zero
+positions. [Final findings](research/results/finalsearch/REPORT.md) and
+[broader mechanism review](research/finalsearch/RESEARCH.md) distinguish
+conditional backtests, capital constraints and untested approaches. No live
+order, deployment or cloud configuration change was made.
+
+**21 September 2026: no strategy qualifies for funded activation.** F&O is
+approved and the Dhan account holds INR 9,411.18. The existing cloud daemon
+remains read-only; its cached credential is invalid. Fresh account reads with
+the active credential succeed from the VM. See [release readiness](docs/RELEASE-READINESS.md)
+and the [latest event-family replays](research/results/event90/FINDINGS.md).
+The 90-day intraday event model loses money; the overnight event model stops
+at an unresolved exit. Neither qualifies. A later authentication recheck also
+finds inconsistent renewal responses. A later direct production-authentication
+check verifies the funded account; unattended renewal remains unresolved.
+
 Dhan executes the orders and supplies five-level option depth, positions,
 fills and cash. Upstox V3 supplies the official `NSE_INDEX|Nifty 50` CAS status
 and IEP. The governing strategy is [CAS_LAG_V1](docs/BUILD-DEPLOY-PLAN.md).
@@ -25,7 +78,8 @@ The project, VM, permanent IP, protected configuration and commands are in
 [the deployment guide](docs/CLOUD-DEPLOYMENT.md). The environment is already
 configured. Deployment alone does not enable real-money orders.
 
-The final operator-run activation command on the VM is:
+After a qualifying strategy is implemented and the operator separately approves
+funded deployment, the activation mechanism on the VM is:
 
 ```bash
 sudo /opt/sablestone-dhan-cas-bot/.venv/bin/python \
@@ -55,7 +109,7 @@ python3 -m venv .venv
 ```
 
 `verify` runs the complete suite, including a production service connected to
-local HTTP/WebSocket brokers, then injects four execution defects into isolated
+local HTTP/WebSocket brokers, then injects fifteen execution defects into isolated
 copies and requires the tests to reject them. Its source digest covers the
 Python implementation, generated protobuf, schema, tests, dependencies and
 operation scripts. This is software evidence, not a live broker-route receipt.

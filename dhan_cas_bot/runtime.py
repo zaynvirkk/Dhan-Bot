@@ -46,8 +46,14 @@ class AutoLive:
         return result
 
     async def refresh_account(self) -> None:
-        funds = await self.broker.funds()
-        self.status.current_account_funded = funds.spendable_cash > 0 and funds.broker_account == self.mandate.account_id
+        self.status.current_account_funded = False
+        try:
+            funds = await self.broker.funds()
+            self.status.current_account_funded = funds.spendable_cash > 0 and funds.broker_account == self.mandate.account_id
+        except Exception as exc:
+            # Funds qualify new premium debits. A failed funds endpoint must
+            # not skip management of an already broker-reconciled long.
+            self.status.reason = "ACCOUNT_FUNDS_UNAVAILABLE:"+type(exc).__name__
 
     def permit_entry(self, *, settlement_add=False) -> bool:
         blocked = {"DISARMED", "RECOVERING"}

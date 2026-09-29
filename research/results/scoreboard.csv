@@ -1,0 +1,10 @@
+engine,scope,signals,trades,wins,targets,conditional_cash,conditional_return_pct,closed_trade_drawdown_pct,half_premium_losses,replay_status,coverage_gap_records,signals_examined,unresolved_path,conditional_terminal_cash,trade_dates,trade_underlyings,full_family_bankroll,champion_eligible
+EVENT_CONTINUATION,NSE disclosure-metadata classifier; seven-day stock expiry buffer,137,3,0,0,2574.15,-72.64795700432889393253555877,72.64795700432889393253555877,1,UNKNOWN_COVERAGE,44,41,True,,2,3,,False
+INTRADAY_EVENT,NSE intraday disclosure metadata; same expiry buffer,33,2,0,0,3368.37,-64.20884522450957265720132863,64.20884522450957265720132863,0,UNKNOWN_COVERAGE,22,33,False,3368.37,2,2,,False
+NONEXPIRY_FORCED_FLOW,"21,415 NSE exact-contract days; persistent spot strike crossings",34,2,1,0,9394.55,-0.1767047277812134078829647300,3.266345887515869918665701510,0,UNKNOWN_COVERAGE,6,34,False,9394.55,2,1,,False
+EXPIRY_FORCED_FLOW,NSE index expiry spot crossings; excludes auction indicative-index signals,0,0,0,0,9411.18,0,0,0,CONDITIONAL_BAR_MODEL_REPLAY,0,0,False,9411.18,0,0,,False
+PASSIVE_FLOW,August MSCI Standard additions/deletions only,0,0,0,0,9411.18,0,0,0,CONDITIONAL_BAR_MODEL_REPLAY,0,0,False,9411.18,0,0,,False
+SCHEDULED_EVENT_VOL,August RBI decision; NIFTY/BANKNIFTY straddle filter only,0,0,0,0,9411.18,0,0,0,CONDITIONAL_BAR_MODEL_REPLAY,0,0,False,9411.18,0,0,,False
+BLOCK_OFS_DISLOCATION,Disclosed LICI OFS only,0,0,0,0,9411.18,0,0,0,CONDITIONAL_BAR_MODEL_REPLAY,0,0,False,9411.18,0,0,,False
+SECTOR_SHOCK_LAG,Bank and software index leads; graph fitted before July 20,142,16,2,0,5612.37,-40.36486391717085423931961773,40.36486391717085423931961773,0,UNKNOWN_COVERAGE,99,142,False,5612.37,13,5,,False
+CROSS_MARKET_LEAD_LAG,GIFT-to-NIFTY only; assumed two-minute feed delay,0,0,0,0,9411.18,0,0,0,CONDITIONAL_BAR_MODEL_REPLAY,0,0,False,9411.18,0,0,,False

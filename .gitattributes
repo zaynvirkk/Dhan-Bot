@@ -1,0 +1,2 @@
+# Preserve the existing CSV evidence bytes, including standard CRLF records.
+research/results/**/*.csv -text whitespace=cr-at-eol

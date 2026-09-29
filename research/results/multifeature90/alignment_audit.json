@@ -1,0 +1,30 @@
+{
+  "diagnostic_only": true,
+  "note": "Dhan timestamp shifted only for this audit; no shifts applied to strategy or fills. Nearest weekly expiry identity remains inferred. A future shift cannot be used as a contemporaneous feature.",
+  "alignment_minutes": {
+    "0": {
+      "matched": 410148,
+      "within_one_tick": 160503,
+      "median_abs_rupees": 0.10000000000002274,
+      "median_relative": 0.001700680272108747,
+      "p95_relative": 0.012499999999999956,
+      "dhan_close_inside_upstox_range": 409119
+    },
+    "1": {
+      "matched": 409104,
+      "within_one_tick": 21001,
+      "median_abs_rupees": 1.4000000000000057,
+      "median_relative": 0.01807802093244521,
+      "p95_relative": 0.11482939632545933,
+      "dhan_close_inside_upstox_range": 225611
+    },
+    "-1": {
+      "matched": 409128,
+      "within_one_tick": 20816,
+      "median_abs_rupees": 1.4000000000000057,
+      "median_relative": 0.018159806295399514,
+      "p95_relative": 0.1175675675675676,
+      "dhan_close_inside_upstox_range": 384861
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "kind": "SYNTHETIC_ARITHMETIC_AUDIT_NOT_MARKET_BACKTEST",
+  "commit": "8b8589009806b0bdfb876c7005c9ee95a5f26924",
+  "source_sha256": "123f527ef084361499af8d1070bd111f9ba2214d20d53243daabd3d88c6a1811",
+  "isolated_function": "compute_performance",
+  "checks": {
+    "published_average_cost": 3.0,
+    "fixture_cost_rupees_per_unit": 3.0,
+    "fixture_cost_percent_of_margin": 0.1,
+    "published_drawdown": -0.2528279056684038,
+    "drawdown_including_initial_wealth": -0.2602996266117198,
+    "raw_cost_is_not_percent_of_margin": true,
+    "initial_wealth_omission_understates_drawdown": true
+  },
+  "historical_occurrence_and_profitability": "NOT_REPRODUCED"
+}

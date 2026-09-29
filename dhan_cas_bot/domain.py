@@ -117,6 +117,39 @@ class Level:
 
 
 @dataclass(frozen=True)
+class MarketStatistics:
+    """Values observed in the same FULL frame as the book, not future features.
+
+    Volume is cumulative, and LTT is a trade timestamp, not an OI/book update
+    timestamp. Day close is unavailable until supplied by the exchange.
+    """
+
+    last_price: Decimal
+    last_quantity: int
+    average_price: Decimal
+    volume: int
+    total_sell_quantity: int
+    total_buy_quantity: int
+    open_interest: int
+    oi_day_high: int
+    oi_day_low: int
+    day_open: Decimal
+    day_close: Decimal | None
+    day_high: Decimal
+    day_low: Decimal
+
+    def __post_init__(self) -> None:
+        for name in ("last_price", "average_price", "day_open", "day_close", "day_high", "day_low"):
+            value = getattr(self, name)
+            if value is not None and (not isinstance(value, Decimal) or not value.is_finite() or value < 0):
+                raise ContractError("invalid market statistic price")
+        for name in ("last_quantity", "volume", "total_sell_quantity", "total_buy_quantity", "open_interest", "oi_day_high", "oi_day_low"):
+            value = getattr(self, name)
+            if type(value) is not int or value < 0:
+                raise ContractError("invalid market statistic quantity")
+
+
+@dataclass(frozen=True)
 class OptionBook:
     instrument: Instrument
     bids: tuple[Level, ...]
@@ -124,6 +157,7 @@ class OptionBook:
     epoch: str
     received_ns: int
     provider_ts_ms: int | None = None
+    statistics: MarketStatistics | None = None
 
     def __post_init__(self) -> None:
         if len(self.bids) > 5 or len(self.asks) > 5:

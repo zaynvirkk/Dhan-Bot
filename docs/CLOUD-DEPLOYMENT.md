@@ -13,14 +13,21 @@ Source: `/opt/sablestone-dhan-cas-bot`. Configuration:
 `/var/lib/sablestone-dhan` (0700 sablestone). Broker secrets and account reports
 must never be committed.
 
-## Account requirement
+## Current readiness — 21 September 2026
 
-Current broker/profile checks show Equity without F&O. Complete **Dhan Profile
-→ Equity F&O, Commodities & Currencies** first; an active data subscription
-alone does not authorize NIFTY option orders. The VM primary IP has already
-been registered as **34.100.255.111**.
+F&O is approved and verified through Dhan. Available cash is INR 9,411.18,
+with no orders, trades or positions. The VM primary IP is **34.100.255.111**.
+Its running daemon is read-only and RECOVERING with an invalid cached token;
+an ephemeral check with the active credential succeeds from the same VM.
+No source or credential update was deployed during this audit.
 
-## Activation by the operator
+**Funded activation is withheld: no research strategy qualifies.** The
+operator requested approval only after strategy and deployment review.
+The existing CAS_LAG_V1 helper checks engineering/account prerequisites;
+it does not certify a profitable strategy or implement the new research rules.
+See [current evidence](RELEASE-READINESS.md) before using this runbook.
+
+## Future activation reference — requires the requested separate approval
 
 Connect to the existing VM:
 
@@ -29,7 +36,9 @@ gcloud compute ssh sablestone-dhan-cas --zone=asia-south1-a \
   --project=project-cead8bae-10ea-4ea9-875 --tunnel-through-iap
 ```
 
-The deployed service retains its read-only interlock until the operator runs:
+The deployed service retains its read-only interlock. After a qualifying
+strategy is implemented, reviewed and separately approved, its release may
+use the following activation mechanism. It is not the current recommendation:
 
 ```bash
 sudo /opt/sablestone-dhan-cas-bot/.venv/bin/python \

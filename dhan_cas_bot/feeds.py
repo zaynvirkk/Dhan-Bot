@@ -74,6 +74,18 @@ class UpstoxFeedClient:
             raise ContractError("Upstox analytics token is required")
         self.token = token
         self.protocol = SocketProtocol("upstox")
+        self.snapshot_epoch = None
+
+    def accept_live_nifty(self, frame) -> bool:
+        from .upstox_signal import NIFTY_KEY
+        if NIFTY_KEY not in frame.feeds:
+            return False
+        # Upstox documents the first data message as a snapshot, including
+        # examples labelled live_feed. Message type alone cannot qualify it.
+        if self.snapshot_epoch != self.protocol.epoch.id:
+            self.snapshot_epoch = self.protocol.epoch.id
+            return False
+        return frame.type == 1 and self.protocol.epoch.connected
 
     async def connect(self) -> str:
         return self.protocol.on_connect()

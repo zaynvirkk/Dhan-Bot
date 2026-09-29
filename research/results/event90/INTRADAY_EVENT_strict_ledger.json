@@ -1,0 +1,1 @@
+{"engine":"INTRADAY_EVENT","seed":null,"strict":true,"stopped":true,"gaps":1,"terminal_conditional_cash":null,"last_resolved_cash":"9411.18","trades":0,"wins":0,"targets":0,"drawdown":"0","ledger":[{"id":"INTRADAY_EVENT:KPITTECH:2026-07-01T09:51:00+05:30","side":"PE","cash_before":"9411.18","status":"UNKNOWN_BAN_FILE"}]}

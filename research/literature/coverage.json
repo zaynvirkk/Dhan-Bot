@@ -1,0 +1,185 @@
+{
+  "checked_at": "2026-09-28",
+  "paper_count": 30,
+  "reading_levels": {
+    "METHODS_RESULTS_REVIEWED": 15,
+    "BODY_PARTIAL": 3,
+    "ABSTRACT_ONLY": 12
+  },
+  "included_full_text_files": 18,
+  "source_files_verified": 19,
+  "note": "Integrity and reading-status accounting only. This does not verify paper conclusions or reproduce financial results.",
+  "paper_register_sha256": "c114e39b662ab84dad9a1306f2c7d319be676847ad4809a80a20593cd9c8d38f",
+  "sources": [
+    {
+      "paper": "S01",
+      "receipt": "artifacts/private/gauntlet/literature/seed_ssrn_macd_browser.receipt.json",
+      "source_sha256": "1459f4159a40f0072ef1275b9ac9121c180b11f481fa63a54e3dfb686184d5fd",
+      "source_bytes": 547120,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "text_verification": "Legacy source receipt had no text hash; fresh extraction byte-compared on 2026-09-28. Original receipt preserved.",
+      "pages": 7,
+      "text_sha256": "f6d516c7c5aa6d9a6f6e54df622e8f4218d4edc5ac255e0f4c7532165d6702f0"
+    },
+    {
+      "paper": "S02",
+      "receipt": "artifacts/private/gauntlet/literature/seed_technical_publisher.receipt.json",
+      "source_sha256": "70ba37148b8c2bb9fdbc49e1ee569114bbe45447979a664348e1f27bf81de775",
+      "source_bytes": 1081450,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 16,
+      "text_sha256": "51fadb56e07bd24328d64726c3ed27658608c0c36ea72c8a8ac804e049222188"
+    },
+    {
+      "paper": "S03",
+      "receipt": "artifacts/private/gauntlet/literature/seed_investment_pdf.receipt.json",
+      "source_sha256": "3ecb6787c5707b7516ba1b90d97422987f95019c30c178160f60ab32377c12eb",
+      "source_bytes": 193458,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 15,
+      "text_sha256": "a881b5b810a3a5687bcc7f237300e615c1002e23237989c105cb4b8daa542d0c"
+    },
+    {
+      "paper": "S04",
+      "receipt": "artifacts/private/gauntlet/literature/seed_options.receipt.json",
+      "source_sha256": "67ca9e4fbfb37b9bfa459b5f6ee195d7b972dc680571e867fff5b379d25fa923",
+      "source_bytes": 1039702,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 15,
+      "text_sha256": "2fc6414c6d66aa22a6a059160fafabc7f76de6faf55df26fa3c7e2bb679ee187"
+    },
+    {
+      "paper": "S05",
+      "receipt": "artifacts/private/gauntlet/literature/seed_calendar_browser.receipt.json",
+      "source_sha256": "53824f10252d57cc27e8be45e1881d875277b886d61702f1a3f5c002589e3cd8",
+      "source_bytes": 578554,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 12,
+      "text_sha256": "1c9aae637da620d590fb4f41c80fb40085c5473a223f69331cc5588ed97b301c"
+    },
+    {
+      "paper": "L06",
+      "receipt": "artifacts/private/gauntlet/literature/india_hedging_browser.receipt.json",
+      "source_sha256": "12993a00d9bfcdd07ae97290e83731c13c32f3439521edbe533d48dcbde1bc5b",
+      "source_bytes": 940774,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 18,
+      "text_sha256": "dfb82900a51e966a57cd6ee5848acd2d7f2a64d796859cfb85c752e54c2deac8"
+    },
+    {
+      "paper": "L07",
+      "receipt": "artifacts/private/gauntlet/literature/global_hedging.receipt.json",
+      "source_sha256": "623ba82490acd01546f568cf582de5a9b45dfbd97731cd548cb119d7a0acec57",
+      "source_bytes": 2397917,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 27,
+      "text_sha256": "2f4381fb36833b7406d899c4961b31accac53387991f67cf326b74416c3527c4"
+    },
+    {
+      "paper": "L08",
+      "receipt": "artifacts/private/gauntlet/literature/international_intraday.receipt.json",
+      "source_sha256": "39add97e355b49c01ac9d5f0ba76a584fb593e8ec293545127e5c60ca2830bee",
+      "source_bytes": 760579,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 64,
+      "text_sha256": "8f451d7feb0cc936b0d083836814038a19e94e838f0803e03ac5f2e8b200f12a"
+    },
+    {
+      "paper": "L09",
+      "receipt": "artifacts/private/gauntlet/literature/india_four_factors.receipt.json",
+      "source_sha256": "cf8aeaf5e63c893efe46a21d047f464644019a1de808500d5e610fd253dc0bd3",
+      "source_bytes": 529320,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 22,
+      "text_sha256": "38af653edf1cea638a09cac9cf9462570f0ae6e39e6ba2a550fc9252a89f7698"
+    },
+    {
+      "paper": "L10",
+      "receipt": "artifacts/private/gauntlet/literature/india_pead.receipt.json",
+      "source_sha256": "e2c0ea991ee91a11f388181c178eb6ad33356d128aae4d918a40c5921976144f",
+      "source_bytes": 371431,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 18,
+      "text_sha256": "b1b04dc5bf2e97ed6b5f0dbbdbb3604bd86f783ad76a0b7b61df609036afd0f2"
+    },
+    {
+      "paper": "L11",
+      "receipt": "artifacts/private/gauntlet/literature/technical_cycles.receipt.json",
+      "source_sha256": "7342cc756b323abd728306a72f02265dd91d6611f2b595b243d93481e940b842",
+      "source_bytes": 548017,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 23,
+      "text_sha256": "8ba5eca46f2615a32327fac832e4c8c2f19e8ca583669aedd3e53cd5f7c67261"
+    },
+    {
+      "paper": "L12",
+      "receipt": "artifacts/private/gauntlet/literature/apac_intraday.receipt.json",
+      "source_sha256": "48bb5899018bb2a5a61dcc5cf91a2223c06b5419cab2e5ab7e885f0b49f926c8",
+      "source_bytes": 453088,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 13,
+      "text_sha256": "fdae1dffbe48af1078c500a3783f2aa340f8bb3847f0dc0033cb9b8a602995a4"
+    },
+    {
+      "paper": "L13",
+      "receipt": "artifacts/private/gauntlet/literature/options_information.receipt.json",
+      "source_sha256": "eb4ed4b5d750b4b2c23198baacf8dfa1b6cc220743a636269ed017ebbacf423d",
+      "source_bytes": 781026,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 34,
+      "text_sha256": "1ba3d882f14050b740ac9ce0e5e114d66405de20d4d328df4fdebb2a4d5ec7e0"
+    },
+    {
+      "paper": "L14",
+      "receipt": "artifacts/private/gauntlet/literature/nse_momentum.receipt.json",
+      "source_sha256": "d2ea1a2a3498c7a981a0bf6935a021a007f64d8ec0cfce2b0222a84192e49952",
+      "source_bytes": 798868,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 31,
+      "text_sha256": "bdeae5aa6f753fcb81f8cd43f96193f35ceed2137722f2c59e0f3776de3f5043"
+    },
+    {
+      "paper": "L15",
+      "receipt": "artifacts/private/gauntlet/literature/commodity_momentum.receipt.json",
+      "source_sha256": "23be37c456d160b3c11aa695c9092f1f9133526fcc969008c5cccb942874f0df",
+      "source_bytes": 553201,
+      "access": "METHODS_RESULTS_REVIEWED",
+      "pages": 32,
+      "text_sha256": "333a603c2e562737699fcef80e931ca5bea78a4825339317c58685e56751545e"
+    },
+    {
+      "paper": "L16",
+      "receipt": "artifacts/private/gauntlet/literature/retail_options.receipt.json",
+      "source_sha256": "128890385b1219540a7be56a295ba4836e8f00f50e03c5e72817d6f5cb9b59ae",
+      "source_bytes": 1951325,
+      "access": "BODY_PARTIAL",
+      "pages": 94,
+      "text_sha256": "cc770e1446dbbf68cde7cac5e0bd5ff1e408bb4a1a7ac9a614c6d95b460d8649"
+    },
+    {
+      "paper": "L17",
+      "receipt": "artifacts/private/gauntlet/literature/backtest_overfit.receipt.json",
+      "source_sha256": "4022313f771a9947663cf29f6ff24835a116b2c3555f41c7f70f617c0e050015",
+      "source_bytes": 1588599,
+      "access": "BODY_PARTIAL",
+      "pages": 44,
+      "text_sha256": "a3a775a611459023d0b419e7342c9d81939103ba9a6e9be3636abd56a00f79b8"
+    },
+    {
+      "paper": "L18",
+      "receipt": "artifacts/private/gauntlet/literature/deflated_sharpe.receipt.json",
+      "source_sha256": "ca4a1e834a2954b84eb560776e903329cd9cef318d458aadf6d67bc8166d10b5",
+      "source_bytes": 1048118,
+      "access": "BODY_PARTIAL",
+      "pages": 22,
+      "text_sha256": "5d3deb34c19bb978285689955b49623d131a8b62eca1d4e293437c24ece2dc58"
+    },
+    {
+      "paper": "A19",
+      "receipt": "artifacts/private/gauntlet/literature/fpi_options_landing.receipt.json",
+      "source_sha256": "724235f51e3147b2ba91fc652f32b36f2bbd6d49c987a83d174a95289a27e745",
+      "source_bytes": 7560,
+      "access": "ABSTRACT_ONLY"
+    }
+  ]
+}

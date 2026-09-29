@@ -1,0 +1,36 @@
+{
+  "kind": "PUBLISHED_EXAMPLE_ARITHMETIC_NOT_MARKET_BACKTEST",
+  "pdf_sha256": "ca4a1e834a2954b84eb560776e903329cd9cef318d458aadf6d67bc8166d10b5",
+  "annualization_days": 250,
+  "observations": 1250,
+  "cases": [
+    {
+      "trials": 100,
+      "skew": -3,
+      "pearson_kurtosis": 10,
+      "daily_sr_threshold": 0.11317200186513214,
+      "dsr": 0.9003968344493904,
+      "published_rounded_dsr": 0.9004,
+      "matches_published_rounding": true
+    },
+    {
+      "trials": 46,
+      "skew": -3,
+      "pearson_kurtosis": 10,
+      "daily_sr_threshold": 0.10036237061765357,
+      "dsr": 0.9505017068755786,
+      "published_rounded_dsr": 0.9505,
+      "matches_published_rounding": true
+    },
+    {
+      "trials": 88,
+      "skew": 0,
+      "pearson_kurtosis": 3,
+      "daily_sr_threshold": 0.11114576178358426,
+      "dsr": 0.9504908166760138,
+      "published_rounded_dsr": 0.9505,
+      "matches_published_rounding": true
+    }
+  ],
+  "historical_strategy_profitability": "NOT_TESTED_BY_THIS_SCRIPT"
+}

@@ -28,9 +28,9 @@ def test_dhan_foreign_packet_rejected():
 
 def test_dhan_documented_full_binary_packet():
     inst = Instrument("1", "NIFTY", Segment.NSE_FNO, date(2026, 9, 15), OptionType.PE, Decimal("23650"), 65, Decimal("0.05"), 1800)
-    payload = bytearray(struct.pack("<BhBI", 8, 163, 2, 1))
+    payload = bytearray(struct.pack("<BhBI", 8, 162, 2, 1))
     payload.extend(struct.pack("<fhi", 10.0, 1, 100))
-    payload.extend(b"\0" * (63 - len(payload)))
+    payload.extend(b"\0" * (62 - len(payload)))
     for i in range(5): payload.extend(struct.pack("<IIhhff", 65 if i == 0 else 0, 195 if i == 0 else 0, 1, 1, 9.0 - i * .05, 10.0 + i * .05))
     packet = decode_full_binary(bytes(payload), inst)
     assert packet.security_id == "1" and packet.bids[0].quantity == 65 and packet.asks[0].quantity == 195

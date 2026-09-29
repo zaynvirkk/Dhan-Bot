@@ -55,6 +55,15 @@ def intrinsic(option_type: OptionType, strike: Decimal, index: Decimal) -> Decim
     return max(strike - index, Decimal("0"))
 
 
+def permitted_limit(instrument, price: Decimal) -> bool:
+    try:
+        instrument.tick(price)
+        return (price > 0 and (instrument.lower_limit is None or price >= instrument.lower_limit)
+                and (instrument.upper_limit is None or price <= instrument.upper_limit))
+    except (ContractError, ArithmeticError):
+        return False
+
+
 @dataclass(frozen=True)
 class Opportunity:
     instrument: object
@@ -105,7 +114,7 @@ def find_opportunity(reference: Reference, observations: list[tuple[Decimal, str
         target = min(intrinsic(direction, inst.strike, value) for value in contiguous)
         if ask.price + inst.tick_size > target:
             continue
-        limits = sorted({level.price for level in book.asks if level.price < target and level.quantity > 0})
+        limits = sorted({level.price for level in book.asks if level.price < target and level.quantity > 0 and permitted_limit(inst, level.price)})
         for limit in limits:
             available = (ladder_capacity(book, limit) // inst.lot_size) * inst.lot_size
             available = min(available, int(min(allocation.remaining,allocation.spendable_cash) / limit) // inst.lot_size * inst.lot_size)
@@ -149,7 +158,7 @@ def find_final_opportunity(final, books, allocation):
         if inst.expiry.isoformat() != final.trading_date or not book.top_ask:
             continue
         child = inst.freeze_qty//inst.lot_size*inst.lot_size
-        for limit in sorted({x.price for x in book.asks if x.price+inst.tick_size <= target}):
+        for limit in sorted({x.price for x in book.asks if x.price+inst.tick_size <= target and permitted_limit(inst, x.price)}):
             units = min(ladder_capacity(book,limit),int(min(allocation.remaining,allocation.spendable_cash)/limit)//inst.lot_size*inst.lot_size)
             low,high=0,units//inst.lot_size
             while low<high:

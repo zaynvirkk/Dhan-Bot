@@ -195,7 +195,7 @@ def test_empty_untraded_option_book_replaces_liquidity_without_reconnect(tmp_pat
     engine.on_book(previous)
     raw=bytearray(full_packet(100))
     struct.pack_into("<f",raw,8,0)
-    raw[63:]=bytes(100)
+    raw[62:]=bytes(100)
     decoded=decode_full_binary(bytes(raw),previous.instrument)
     engine.on_book(book_from_packet(decoded,previous.instrument,previous.epoch,previous.received_ns+1))
     assert engine.market_connected

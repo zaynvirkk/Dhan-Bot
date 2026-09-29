@@ -9,7 +9,9 @@ from .strategy import intrinsic
 
 def match_settlement(rows, *, account, instrument, final, quantity):
     gross = intrinsic(instrument.option_type,instrument.strike,final.value)*quantity
-    estimated = max(Decimal("0"),gross-FeeSchedule().sell(gross,1))
+    # Even zero-intrinsic expiry can carry Dhan expiry brokerage/GST. A
+    # disappearing position is no evidence that those cash charges are zero.
+    estimated = gross-FeeSchedule().sell(gross,1)
     found=[]
     for row in rows:
         if str(row.get("dhanClientId","")) != account:

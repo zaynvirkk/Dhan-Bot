@@ -1,0 +1,12 @@
+{
+  "counts": {
+    "tests": 260,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "source_sha256": "51d5fea305d847e7f4829502013c3caa583032d9d64544c9b8985d389d7b56c0",
+  "junit_sha256": "671f26a88cac45aeef7dfdefa4689b370789489f0cd761f0a391f630ed5ebd3b",
+  "command": ".venv/bin/python -m pytest -q --junitxml=artifacts/private/execution-frontier-tests.xml",
+  "profitability_evidence": false
+}

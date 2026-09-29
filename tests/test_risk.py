@@ -13,7 +13,8 @@ def test_bankroll_boundaries_and_fixture_cash():
     assert lifecycle_ceiling(Decimal("40000")) == Decimal("10000.00")
     assert lifecycle_ceiling(Decimal("80000")) == Decimal("20000.00")
     assert lifecycle_ceiling(Decimal("100000")) == Decimal("25000.00")
-    assert worst_case_entry_cash(845, Decimal("11")) == Decimal("9322.78569818810")
+    # Includes a conservative per-component/per-child rounding envelope.
+    assert worst_case_entry_cash(845, Decimal("11")) == Decimal("9323.53")
 
 
 def test_cash_rejects_float_and_negative():

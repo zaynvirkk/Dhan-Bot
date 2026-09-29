@@ -1,0 +1,26 @@
+{
+  "recorded_at": "2026-09-27T21:52:27.311481+00:00",
+  "planned_checks": 10,
+  "completed_checks": 0,
+  "status": "UNKNOWN_AUTH_RENEWAL",
+  "attempt_logs": [
+    {
+      "log": "dhan-frontier-capital-final.log",
+      "result": "FEASIBILITY_STOPPED RuntimeError",
+      "sha256": "c94d238026134178bbb7793bdb5f9b313e5a5e7979ba82bddbd704b0b7d73566"
+    },
+    {
+      "log": "dhan-frontier-capital-retry.log",
+      "result": "FEASIBILITY_STOPPED RuntimeError",
+      "sha256": "c94d238026134178bbb7793bdb5f9b313e5a5e7979ba82bddbd704b0b7d73566"
+    },
+    {
+      "log": "dhan-frontier-capital-complete.log",
+      "result": "FEASIBILITY_STOPPED ContractError",
+      "sha256": "6618a35ea735bf32115360d7d26e36ea4c6d9e7b783540f13027764bd07199a7"
+    }
+  ],
+  "direct_auth_diagnostic": "SUCCEEDED_WITH_IDENTITY_GUARD",
+  "credentials_printed": false,
+  "funded_orders": 0
+}

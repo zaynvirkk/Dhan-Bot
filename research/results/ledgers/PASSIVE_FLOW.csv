@@ -1,0 +1,1 @@
+signal_id,symbol,side,signal_time,event_time,event_url,status,cash_before,contract,expiry,strike,lot,quantity,limit,entry_time,entry_price,exit_time,exit_price,exit_reason,fees,net_pnl,cash_after,premium_multiple,rejected_contracts,error

@@ -46,18 +46,37 @@ class SessionEngine:
         self.last_signal_timestamp = -1
         self.exit_manager = ExitManager(runtime.ledger, runtime.broker)
         self.session_id = self.now().astimezone(IST).date().isoformat()
-        row = runtime.ledger.db.execute("SELECT payload FROM references_frozen WHERE session_id=?", (self.session_id,)).fetchone()
-        if row:
-            raw = json.loads(row[0])
-            self.reference = Reference(Decimal(raw["value"]), raw["boundary_ms"], tuple(raw["event_ids"]), raw["epoch"])
-        active = self.active
-        final = runtime.ledger.metadata("final:"+(active["session_id"] if active else self.session_id))
-        if final:
-            from .settlement import FinalValue
-            final["value"]=Decimal(final["value"])
-            self.final_value=FinalValue(**final)
-            self.final_value.validate()
-            runtime.status.final_value_source_verified=True
+        self.saved_signal_invalid = False
+        try:
+            row = runtime.ledger.db.execute("SELECT payload FROM references_frozen WHERE session_id=?", (self.session_id,)).fetchone()
+            if row:
+                raw = json.loads(row[0])
+                reference = Reference(Decimal(raw["value"]), raw["boundary_ms"], tuple(raw["event_ids"]), raw["epoch"])
+                if (not reference.value.is_finite() or reference.value <= 0 or not reference.epoch
+                        or len(set(reference.event_ids)) != 5 or reference.boundary_ms <= 0
+                        or datetime.fromtimestamp(reference.boundary_ms/1000, IST).date().isoformat() != self.session_id):
+                    raise ContractError("invalid saved reference")
+                self.reference = reference
+            active = self.active
+            final = runtime.ledger.metadata("final:"+(active["session_id"] if active else self.session_id))
+            if final:
+                from .settlement import FinalValue
+                final["value"]=Decimal(final["value"])
+                restored = FinalValue(**final)
+                restored.validate()
+                if restored.trading_date != (active["session_id"] if active else self.session_id):
+                    raise ContractError("saved final belongs to another session")
+                self.final_value = restored
+                runtime.status.final_value_source_verified=True
+        except (ValueError, KeyError, TypeError, ArithmeticError) as exc:
+            # Preserve the damaged evidence and monetary ledger. Missing signal
+            # state forbids entries but must not crash the position manager.
+            self.saved_signal_invalid = True
+            self.reference = self.final_value = None
+            self.exit_reason = "SAVED_SIGNAL_INVALID"
+            runtime.status.final_value_source_verified = False
+            runtime.disarm_new_entries()
+            runtime.ledger.incident("saved-signal:"+self.session_id, "SAVED_SIGNAL_INVALID", {"error":type(exc).__name__})
 
     def on_final(self, final):
         final.validate()
@@ -101,13 +120,14 @@ class SessionEngine:
         self.market_epoch = epoch
         self.market_connected = epoch is not None
         self.books.clear()
+        self.streaks.clear()
 
     def on_status(self, status: CasStatus, *, clock_uncertainty_ms: int = 0) -> None:
         if self.status and status.epoch == self.status.epoch and status.updated_time_ms < self.status.updated_time_ms:
             return
         self.status = status
         self.signal_epoch = status.epoch
-        if status.phase is CasPhase.CTS_CLOSE and self.reference is None:
+        if status.phase is CasPhase.CTS_CLOSE and self.reference is None and not self.saved_signal_invalid:
             self.reference = select_reference(self.reference_observations, status, clock_uncertainty_ms)
             self.runtime.ledger.freeze_reference(status.trading_date.isoformat(), self.reference)
         self.runtime.status.official_cas_signal_seen = status.phase is not CasPhase.UNKNOWN
@@ -148,6 +168,14 @@ class SessionEngine:
         if self.market_epoch is not None and book.epoch != self.market_epoch:
             return
         self.books[book.instrument.security_id] = book
+        # A book can lose its lag between two index events. A subsequent cheap
+        # ask cannot revive observations from before that interruption.
+        if book.instrument.security_id in self.streaks and self.observations:
+            inst = book.instrument
+            bid, ask = book.top_bid, book.top_ask
+            value = intrinsic(inst.option_type, inst.strike, self.observations[-1][0])
+            if not (bid and ask and min(bid.quantity, ask.quantity) >= inst.lot_size and ask.price + inst.tick_size <= value):
+                self.streaks.pop(inst.security_id, None)
 
     def _allocation(self, funds, active=None):
         ledger, mandate = self.runtime.ledger, self.runtime.mandate
@@ -193,11 +221,8 @@ class SessionEngine:
                     runtime.status.state="SETTLEMENT_PENDING"
                     runtime.status.reason="SETTLEMENT_CASH_NOT_YET_MATCHED"
                     if self.final_value and self.final_value.trading_date==active["session_id"]:
-                        gross=intrinsic(inst.option_type,inst.strike,self.final_value.value)*totals["quantity"]
                         receipt = None
-                        if gross==0:
-                            receipt=("OTM:"+active["lifecycle_id"],ZERO,{"final":asdict(self.final_value),"broker_positions":positions})
-                        elif hasattr(runtime.broker,"ledger_report"):
+                        if hasattr(runtime.broker,"ledger_report"):
                             from .settlement_cash import match_settlement
                             rows=await runtime.broker.ledger_report(inst.expiry,local_now.date())
                             receipt=match_settlement(rows,account=runtime.mandate.account_id,instrument=inst,final=self.final_value,quantity=totals["quantity"])
@@ -211,6 +236,10 @@ class SessionEngine:
                 if broker_qty != totals["quantity"]:
                     runtime.status.reason = "POSITION_RECONCILIATION_MISMATCH"
                     runtime.status.state = "RECOVERING"
+                    return False
+                if expired and totals["quantity"]:
+                    runtime.status.state = "SETTLEMENT_PENDING"
+                    runtime.status.reason = "EXPIRED_POSITION_AWAITING_BROKER_CLEARING"
                     return False
                 if totals["quantity"] == 0:
                     await runtime.broker.funds()  # cash snapshot follows terminal position reconciliation
@@ -295,7 +324,7 @@ class SessionEngine:
                         runtime.status.reason = reason
                         if book is None:
                             book = OptionBook(inst, (), (), self.market_epoch or "recovery", int(self.now().timestamp()*1e9))
-                        await self.exit_manager.reduce(inst, totals["quantity"], book, active["lifecycle_id"], emergency=reason in {"TIME_EXIT", "RECOVERY_OR_SIGNAL_UNAVAILABLE", "SIGNAL_UNAVAILABLE", "OPTION_BOOK_UNAVAILABLE"} or book.top_bid is None)
+                        await self.exit_manager.reduce(inst, totals["quantity"], book, active["lifecycle_id"], emergency=reason in {"TIME_EXIT", "RECOVERY_OR_SIGNAL_UNAVAILABLE", "SIGNAL_UNAVAILABLE", "OPTION_BOOK_UNAVAILABLE", "SAVED_SIGNAL_INVALID"} or book.top_bid is None)
                         runtime.status.state = "EXIT_PENDING"
                         return True
                     runtime.status.state = "POSITION_OPEN"
@@ -313,7 +342,10 @@ class SessionEngine:
             return False
         if not self.market_connected or not self.status or self.status.trading_date != local_now.date() or (not final_entry and (not self.signal_connected or self.status.phase not in {CasPhase.CAS_LM_START, CasPhase.CAS_M_STOP})):
             return False
+        admitted_status, admitted_final = self.status, self.final_value
         funds = await runtime.broker.funds()
+        if self.status != admitted_status or self.final_value != admitted_final or not runtime.permit_entry(settlement_add=settlement_add):
+            return False
         runtime.status.current_account_funded = funds.spendable_cash > 0 and funds.broker_account == runtime.mandate.account_id
         allocation = self._allocation(funds, active)
         choices = []
@@ -354,8 +386,11 @@ class SessionEngine:
         def current_inputs():
             current_book = self.books.get(candidate.instrument.security_id)
             return (runtime.permit_entry(settlement_add=settlement_add) and self.market_connected and self.status == status_identity
+                    and self.final_value == admitted_final
+                    and (final_entry or (self.signal_connected and self.status.phase in {CasPhase.CAS_LM_START, CasPhase.CAS_M_STOP}))
                     and (self.observations[-1] if self.observations else None) == signal_identity
                     and current_book is not None and f"{current_book.epoch}:{candidate.instrument.security_id}:{current_book.received_ns}" == book_id
+                    and self.now().astimezone(IST).date().isoformat() == self.session_id
                     and self.now().astimezone(IST).time() < (time(15,38,30) if final_entry else time(15,30)))
         await runtime.orders.submit(intent, reserved_cash=reserve_cash(worst_case_entry_cash(quantity, candidate.limit_price)), pre_dispatch=current_inputs)
         runtime.status.state = "ENTRY_PENDING"
