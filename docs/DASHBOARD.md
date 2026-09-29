@@ -55,9 +55,11 @@ user-selected low-entropy password. All assets and account routes require login.
 
 The page polls every five seconds. The account collector runs fifteen seconds
 after its previous run completes (up to twenty seconds for a failed broker read).
-Runtime snapshots older than fifteen seconds, account snapshots older than sixty
+Runtime snapshots older than forty-five seconds, account snapshots older than sixty
 seconds and explicit connection checks older than fifteen minutes are marked
-stale. Broker errors retain the previous observation with a failure indication.
+stale. The heartbeat window covers the collector’s normal 20s read timeout plus
+15s scheduling gap; it is an observation-age threshold, not an execution guard.
+Broker errors retain the previous observation with a failure indication.
 An empty verified response and an unavailable response have different displays.
 
 Connection checks are historical observations, not a continuously sampled socket

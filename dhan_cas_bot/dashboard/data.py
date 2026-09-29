@@ -11,6 +11,9 @@ import sqlite3
 from urllib.parse import quote
 
 UTC = timezone.utc
+# The collector can spend 20s reading Dhan, then waits 15s before its next run.
+# Allow that normal cycle plus scheduling/network margin, not a 15s flicker.
+RUNTIME_TTL_SECONDS = 45
 STATES = {'DISARMED', 'RECOVERING', 'ARMED_WAITING_SESSION', 'ARMED_WAITING_SIGNAL',
           'ENTRY_HALTED', 'NO_TRADE_DAY', 'SETTLEMENT_PENDING', 'POSITION_OPEN'}
 ORDER_STATES = {'PENDING_SEND', 'SEND_UNKNOWN', 'SENT', 'TRANSIT', 'PENDING', 'CLOSED',
@@ -105,7 +108,7 @@ def read_json(path, limit=2_000_000):
 
 def runtime_view(raw, now):
     raw = raw or {}
-    timing = freshness(raw.get('observed_at'), now, 15)
+    timing = freshness(raw.get('observed_at'), now, RUNTIME_TTL_SECONDS)
     authority = 'UNKNOWN'
     if timing['fresh']:
         if raw.get('writes') is False:

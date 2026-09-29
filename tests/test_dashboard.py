@@ -103,6 +103,16 @@ def test_current_and_failed_snapshot_recomputed_on_every_read(tmp_path):
     assert not failed['account']['fresh'] and failed['account']['available_cash']=='9411.18'
 
 
+def test_heartbeat_freshness_covers_collector_cycle_but_expires(tmp_path):
+    runtime=runtime_view({'observed_at':NOW.isoformat(),'writes':False,'auto_live_armed':False},NOW)
+    path=write(tmp_path/'s',{'schema':1,'collector_observed_at':NOW.isoformat(),'runtime':runtime})
+    # 20s broker timeout plus 15s scheduling gap must not manufacture an outage.
+    normal=view_snapshot(path,NOW+timedelta(seconds=36))
+    assert normal['runtime']['fresh'] and normal['runtime']['authority']=='DISABLED'
+    expired=view_snapshot(path,NOW+timedelta(seconds=46))
+    assert not expired['runtime']['fresh'] and expired['runtime']['authority']=='UNKNOWN'
+
+
 def test_running_does_not_imply_authority_and_raw_errors_never_exported():
     assert runtime_view({'observed_at':NOW.isoformat(),'writes':True},NOW)['authority']=='UNKNOWN'
     assert runtime_view({'observed_at':NOW.isoformat(),'writes':True,'auto_live_armed':'false'},NOW)['authority']=='UNKNOWN'

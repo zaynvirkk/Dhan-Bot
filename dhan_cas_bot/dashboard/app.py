@@ -8,7 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
-from .data import freshness, read_json, utcnow
+from .data import RUNTIME_TTL_SECONDS, freshness, read_json, utcnow
 
 STATIC = Path(__file__).with_name('static')
 ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
@@ -28,7 +28,7 @@ def view_snapshot(path, now=None):
     # Recompute age at request time; a stopped collector cannot remain green.
     data = dict(data)
     data.update(available=True, server_time=now.isoformat(), collector=freshness(data.get('collector_observed_at'), now, 60))
-    for section, ttl in (('runtime',15), ('connections',900), ('account',60)):
+    for section, ttl in (('runtime',RUNTIME_TTL_SECONDS), ('connections',900), ('account',60)):
         value = data.get(section)
         if not isinstance(value, dict):
             data[section] = None
