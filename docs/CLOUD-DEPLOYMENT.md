@@ -13,21 +13,27 @@ Source: `/opt/sablestone-dhan-cas-bot`. Configuration:
 `/var/lib/sablestone-dhan` (0700 sablestone). Broker secrets and account reports
 must never be committed.
 
-## Current readiness — 21 September 2026
+## Current readiness — 29 September 2026
 
-F&O is approved and verified through Dhan. Available cash is INR 9,411.18,
-with no orders, trades or positions. The VM primary IP is **34.100.255.111**.
-Its running daemon is read-only and RECOVERING with an invalid cached token;
-an ephemeral check with the active credential succeeds from the same VM.
-No source or credential update was deployed during this audit.
+Runtime release `884178a` is published and deployed on the existing VM.
+All 276 tests and 15 mutation checks pass both locally and on the installed
+source. The restarted service was observed running with configuration/mandate authority
+false and `DHAN_BROKER_READ_ONLY=1`; broker orders remain disabled.
 
-**Funded activation is withheld: no research strategy qualifies.** The
-operator requested approval only after strategy and deployment review.
-The existing CAS_LAG_V1 helper checks engineering/account prerequisites;
-it does not certify a profitable strategy or implement the new research rules.
-See [current evidence](RELEASE-READINESS.md) before using this runbook.
+Dhan authentication, derivatives permissions, account reads, static egress,
+contract metadata and the Upstox index feed pass. Available cash is
+INR 9,411.18 with no positions, orders or trades at 07:42 IST. Dhan's options
+socket opened but its connection check failed with ContractError while awaiting
+depth; the cause remains unresolved. Session permissions changed again at
+19:37 IST, blocking further remote inspection and publication. See the
+[deployment report](DEPLOYMENT-2026-09-29.md) for the last verified state.
 
-## Future activation reference — requires the requested separate approval
+No research strategy has a funded qualification. The CAS_LAG_V1 helper checks
+engineering/account prerequisites; it does not certify profitability or
+implement the later research candidates. [Research evidence](RELEASE-READINESS.md)
+remains distinct from software deployment.
+
+## Operator-run activation reference
 
 Connect to the existing VM:
 
