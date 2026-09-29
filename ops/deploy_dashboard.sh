@@ -34,17 +34,7 @@ DASH_STAGE=$(gcloud compute ssh "$DASH_VM" --project="$DASH_PROJECT" --zone="$DA
 gcloud compute scp "$DASH_TEMP/source.bundle" "$DASH_VM:$DASH_STAGE/source.bundle" --project="$DASH_PROJECT" --zone="$DASH_ZONE" --tunnel-through-iap
 # Public HTTPS only; the WSGI server never binds a public interface.
 gcloud compute firewall-rules list --project="$DASH_PROJECT" --filter="name=$DASH_RULE" --format=json > "$DASH_TEMP/firewall.json"
-python3 - "$DASH_TEMP/firewall.json" "$DASH_NETWORK" <<'PY'
-import json,sys
-rules=json.load(open(sys.argv[1]))
-if rules:
-    r=rules[0]
-    assert r['network'].rsplit('/',1)[-1]==sys.argv[2]
-    assert r.get('direction')=='INGRESS' and not r.get('disabled',False)
-    assert r.get('targetTags')==['dhan-private-dashboard']
-    assert r.get('sourceRanges')==['0.0.0.0/0']
-    assert r.get('allowed')==[{'IPProtocol':'tcp','ports':['80','443']}], 'Existing firewall rule differs; not replacing it'
-PY
+python3 -m dhan_cas_bot.dashboard.deploy "$DASH_TEMP/firewall.json" "$DASH_NETWORK"
 if [[ $(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$DASH_TEMP/firewall.json") = 0 ]]; then
   gcloud compute firewall-rules create "$DASH_RULE" --project="$DASH_PROJECT" --network="$DASH_NETWORK" --direction=INGRESS --action=ALLOW --rules=tcp:80,tcp:443 --source-ranges=0.0.0.0/0 --target-tags="$DASH_TAG"
 fi

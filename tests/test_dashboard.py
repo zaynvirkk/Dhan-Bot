@@ -15,6 +15,7 @@ import pytest
 from dhan_cas_bot.dashboard import collect as collector
 from dhan_cas_bot.dashboard.app import ASSETS, Dashboard, view_snapshot
 from dhan_cas_bot.dashboard.data import account_view, connections_view, freshness, ledger_view, money, runtime_view
+from dhan_cas_bot.dashboard.deploy import validate_firewall
 from dhan_cas_bot.ledger import SCHEMA
 
 NOW = datetime(2026, 9, 29, 5, 0, tzinfo=timezone.utc)
@@ -223,3 +224,28 @@ def test_web_service_is_separated_from_trader_keys():
     assert 'activate-live.py' not in installer and 'restart dhan-cas' not in installer
     html=(root/'dhan_cas_bot/dashboard/static/index.html').read_text()
     assert 'activate-live.py --capital available --check-only' in html
+
+
+@pytest.mark.parametrize('allowed', [
+    [{'IPProtocol':'tcp','ports':['80','443']}],
+    [{'IPProtocol':'tcp','ports':['80']},{'IPProtocol':'tcp','ports':['443']}],
+])
+def test_firewall_equivalent_port_groupings(allowed):
+    validate_firewall([{'network':'projects/p/networks/n','direction':'INGRESS','disabled':False,
+                       'targetTags':['dhan-private-dashboard'],'sourceRanges':['0.0.0.0/0'],
+                       'allowed':allowed}], 'n')
+
+
+@pytest.mark.parametrize('change', [
+    {'allowed':[{'IPProtocol':'tcp'}]},
+    {'allowed':[{'IPProtocol':'tcp','ports':['80-443']}]},
+    {'allowed':[{'IPProtocol':'tcp','ports':['80','443','8088']}]},
+    {'allowed':[{'IPProtocol':'udp','ports':['443']}]},
+    {'targetTags':[]}, {'sourceServiceAccounts':['unexpected']}, {'network':'wrong'},
+])
+def test_firewall_broader_or_different_scope_rejected(change):
+    rule={'network':'projects/p/networks/n','direction':'INGRESS','disabled':False,
+          'targetTags':['dhan-private-dashboard'],'sourceRanges':['0.0.0.0/0'],
+          'allowed':[{'IPProtocol':'tcp','ports':['80','443']}]}
+    rule.update(change)
+    with pytest.raises(ValueError): validate_firewall([rule], 'n')
