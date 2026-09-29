@@ -7,8 +7,8 @@ DASH_HOST=${2:-dhan.34.100.255.111.sslip.io}
 [[ $DASH_SHA =~ ^[0-9a-f]{40}$ ]] || exit 2
 [[ $DASH_HOST = dhan.34.100.255.111.sslip.io ]] || { echo 'Unexpected dashboard hostname.' >&2; exit 2; }
 DASH_SOURCE=$(cd "$(dirname "$0")/.." && pwd -P)
-[[ $(git -C "$DASH_SOURCE" rev-parse HEAD) = "$DASH_SHA" ]] || exit 2
-git -C "$DASH_SOURCE" diff --quiet HEAD -- || { echo 'Source has tracked modifications.' >&2; exit 2; }
+[[ $(git -c safe.directory="$DASH_SOURCE" -C "$DASH_SOURCE" rev-parse HEAD) = "$DASH_SHA" ]] || exit 2
+git -c safe.directory="$DASH_SOURCE" -C "$DASH_SOURCE" diff --quiet HEAD -- || { echo 'Source has tracked modifications.' >&2; exit 2; }
 id sablestone >/dev/null
 [[ -f /etc/sablestone-dhan/production.toml ]] || { echo 'Existing trader configuration missing.' >&2; exit 2; }
 # Do not replace an unrelated web server or an existing Caddy installation.
@@ -35,7 +35,7 @@ install -d -m 0755 /opt/sablestone-dhan-dashboard/releases
 DASH_RELEASE=/opt/sablestone-dhan-dashboard/releases/$DASH_SHA
 if [[ ! -f "$DASH_RELEASE/.ready" ]]; then
   install -d -m 0755 "$DASH_RELEASE"
-  git -C "$DASH_SOURCE" archive "$DASH_SHA" | tar -x -C "$DASH_RELEASE"
+  git -c safe.directory="$DASH_SOURCE" -C "$DASH_SOURCE" archive "$DASH_SHA" | tar -x -C "$DASH_RELEASE"
   python3 -m venv "$DASH_RELEASE/.venv"
   "$DASH_RELEASE/.venv/bin/pip" install --disable-pip-version-check -q -r "$DASH_RELEASE/requirements-dashboard.lock"
   "$DASH_RELEASE/.venv/bin/pip" install --disable-pip-version-check -q --no-deps "$DASH_RELEASE"
