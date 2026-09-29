@@ -1,0 +1,25 @@
+[Unit]
+Description=Private Dhan monitoring dashboard (no broker access)
+After=network.target
+
+[Service]
+User=dhan-dashboard
+Group=dhan-dashboard
+WorkingDirectory=/opt/sablestone-dhan-dashboard/current
+ExecStart=/opt/sablestone-dhan-dashboard/current/.venv/bin/gunicorn --bind 127.0.0.1:8088 --workers 2 --threads 2 --timeout 15 --error-logfile - dhan_cas_bot.dashboard.app:create_app()
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONDONTWRITEBYTECODE=1
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+InaccessiblePaths=/etc/sablestone-dhan /var/lib/sablestone-dhan
+RestrictAddressFamilies=AF_INET AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+CapabilityBoundingSet=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

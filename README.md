@@ -118,3 +118,13 @@ Secrets belong only in `.env` locally or `/etc/sablestone-dhan/secrets.env` on
 the VM, never in Git. Dhan authentication uses PIN/TOTP to obtain the access
 token required by its REST and WebSocket APIs; a manually supplied token is
 supported for development but not unattended activation.
+
+## Private monitoring dashboard
+
+The authenticated dashboard shows account observations, entry authority, connection
+checks, positions, orders and persisted fills. Deployment and operator activation
+instructions are in [the dashboard guide](docs/DASHBOARD.md). Install it separately
+with `./ops/deploy_dashboard.sh`; the script leaves the trader's release and
+trading authority unchanged. The target URL is
+`https://dhan.34.100.255.111.sslip.io`; publication is still pending from this
+restricted development session.

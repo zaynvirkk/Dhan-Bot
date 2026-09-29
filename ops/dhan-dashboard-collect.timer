@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh read-only dashboard observations
+
+[Timer]
+OnBootSec=5
+OnUnitInactiveSec=15
+AccuracySec=1
+Unit=dhan-dashboard-collect.service
+
+[Install]
+WantedBy=timers.target

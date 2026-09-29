@@ -15,12 +15,16 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest==8.3.5"]
+dashboard = ["gunicorn==26.2.0"]
 
 [project.scripts]
 dhan-cas = "dhan_cas_bot.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["dhan_cas_bot*"]
+
+[tool.setuptools.package-data]
+"dhan_cas_bot.dashboard" = ["static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
