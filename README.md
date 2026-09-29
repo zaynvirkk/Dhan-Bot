@@ -126,5 +126,5 @@ checks, positions, orders and persisted fills. Deployment and operator activatio
 instructions are in [the dashboard guide](docs/DASHBOARD.md). Install it separately
 with `./ops/deploy_dashboard.sh`; the script leaves the trader's release and
 trading authority unchanged. The target URL is
-`https://dhan.34.100.255.111.sslip.io`; publication is still pending from this
-restricted development session.
+`https://dhan.34.100.255.111.sslip.io`; HTTPS, login and live account observations
+were verified on 30 September 2026. See the [deployment receipt](docs/DASHBOARD-DEPLOYMENT-2026-09-30.md).

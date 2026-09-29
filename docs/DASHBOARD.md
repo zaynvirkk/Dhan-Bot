@@ -1,13 +1,12 @@
 # Private dashboard
 
-The dashboard implementation is ready for deployment. The HTTPS endpoint has
-**not yet been published or verified** from this development session: GitHub
-network access, local browser sockets and writable GCP credentials are unavailable.
+The dashboard is **deployed and verified live** as of 30 September 2026.
+See the [deployment verification](DASHBOARD-DEPLOYMENT-2026-09-30.md).
 
-Target: **https://dhan.34.100.255.111.sslip.io** on the existing
+URL: **https://dhan.34.100.255.111.sslip.io** on the existing
 `sablestone-dhan-cas` VM in `asia-south1-a`, project
-`project-cead8bae-10ea-4ea9-875`. Do not treat this target as a working dashboard
-until the deployment command completes and login is verified.
+`project-cead8bae-10ea-4ea9-875`. HTTPS certificate validation, mandatory login,
+authenticated data and desktop/mobile behavior have been verified.
 
 ## Publish and deploy
 
@@ -63,8 +62,9 @@ Broker errors retain the previous observation with a failure indication.
 An empty verified response and an unavailable response have different displays.
 
 Connection checks are historical observations, not a continuously sampled socket
-health claim. The last known Dhan depth check failed; this dashboard does not fix
-or conceal that failure. Empty broker position lists do not prove zero lifetime
+health claim. The 30 September 02:57 IST checks passed all seven connections,
+including 50 decoded Dhan depth packets. The order-update socket was connected;
+no funded order-route execution was performed. Empty broker position lists do not prove zero lifetime
 P&L. Recorded fill fees may omit later contract-note adjustments. There is no
 invented equity curve and no claim that CAS_LAG_V1 is proven profitable.
 
@@ -136,14 +136,23 @@ Dashboard development and tests have not executed these activation commands.
 
 ## Validation
 
-`python3 -m pytest tests/test_dashboard.py` passes 27 authentication, projection,
-staleness, decimal, read-only ledger and read-only broker tests. The broker test
-uses an HTTP mock and verifies GET-only calls; it is not live provider evidence.
-The full suite reports 297 passed and 6 failed; all six failures require local
-HTTP/WebSocket listeners which this sandbox denies. No full-suite verification
-receipt was issued. JavaScript and shell syntax checks pass. Desktop/mobile browser rendering and
-public TLS/login checks still require an unrestricted environment: Chromium
-cannot launch and the browser bridge cannot be reached in this session.
+`python3 -m pytest tests/test_dashboard.py` passes 37 authentication, projection,
+staleness, decimal, read-only ledger/broker and firewall-scope tests. The complete
+suite passes 313 tests with networking available. The installed dashboard release
+also passed its 37 tests. JavaScript/shell syntax and packaged assets are verified.
+
+The real HTTPS site was tested in Chromium at 1440px desktop and 390px mobile:
+mandatory authentication, account data, tabs, keyboard navigation, filtering,
+activation-guide disclosure and mobile overflow checks passed with no JavaScript
+errors. A browser-only failed-fetch fixture correctly marked data historical and
+removed health badges. Desktop/mobile screenshots were inspected. The collector
+uses genuine read-only account calls; the negative fixture never alters the broker.
+
+The first deployment exposed a timing mismatch between the collector cadence and
+heartbeat expiry. The heartbeat threshold is now 45 seconds, tested across the
+normal 35-second collection interval and expired at 46 seconds. Repeat deployment
+also validates equivalent GCP representations of TCP 80/443 without widening the
+allowed ports, network, sources or VM target tag.
 
 Source references: [Caddy automatic HTTPS](https://caddyserver.com/docs/automatic-https),
 [Gunicorn 26.2.0](https://pypi.org/project/gunicorn/26.2.0/),

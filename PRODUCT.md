@@ -38,8 +38,9 @@ Private single-owner monitoring during and outside Indian market hours.
 Desktop and phone support are implementation assumptions. A hostname based on
 the existing VM IP and a separate dashboard password were confirmed by the user.
 The chosen hostname is dhan.34.100.255.111.sslip.io.
-The current session cannot access GitHub/GCP or bind local sockets; delivery
-must distinguish implemented code from a verified public URL.
+The dashboard was published to GitHub and the existing VM on 30 September 2026.
+HTTPS, authenticated live data and desktop/mobile operation are verified;
+real-money trading remains an independent operator-run action.
 
 ## Evidence on Hand
 

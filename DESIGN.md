@@ -30,7 +30,11 @@ a regular notice outline and neutral rule. No charts or illustrative trading dat
 were added. Authority copy was corrected to distinguish disabled new entries from
 ongoing exit handling.
 
-Verdict: source ready for deployment; visual/browser verification remains UNKNOWN.
-Chromium launch is denied in this session and the existing browser bridge is
-unreachable. No screenshot or live rendering success is claimed. Public HTTPS,
-login and real observation freshness must be checked after deployment.
+Verdict: verified on the live authenticated HTTPS endpoint on 30 September 2026.
+Chromium screenshots at 1440px desktop and 390px mobile were inspected. No document
+overflow or JavaScript errors; tab filtering, keyboard selection and disclosure
+controls work. A browser-only disconnected-fetch test removed health badges and
+changed authority to unknown. Real account observations were separately verified.
+The initial 15-second heartbeat threshold was corrected to 45 seconds to cover the
+collector's normal 20-second timeout and 15-second scheduling gap. The displayed
+observation timestamps make the monitoring delay explicit.
