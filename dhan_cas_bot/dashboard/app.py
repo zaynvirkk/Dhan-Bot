@@ -24,7 +24,9 @@ COOKIE = '__Host-dhan_dashboard'
 SESSION_SECONDS = 8 * 60 * 60
 PUBLIC_ASSETS = {'/login.css': ('login.css', 'text/css; charset=utf-8')}
 HEADERS = [('Cache-Control', 'no-store'), ('X-Content-Type-Options', 'nosniff'),
-           ('X-Frame-Options', 'DENY'), ('Referrer-Policy', 'no-referrer'),
+           # no-referrer makes HTML form POST Origin null in Chromium. Keep
+           # same-origin form provenance while suppressing cross-origin referrers.
+           ('X-Frame-Options', 'DENY'), ('Referrer-Policy', 'same-origin'),
            ('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")]
 
 

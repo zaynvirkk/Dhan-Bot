@@ -74,6 +74,7 @@ def test_browser_gets_login_without_http_auth_challenge(dashboard):
     assert b'form method="post" action="/login"' in body
     assert 'WWW-Authenticate' not in headers and headers['Cache-Control']=='no-store'
     assert b'9411' not in body and SECRET.encode() not in body
+    assert headers['Referrer-Policy']=='same-origin'  # form POST must retain its Origin
     assert request(dashboard, '/login.css')[0].startswith('200')
     assert not request(dashboard, '/login', method='HEAD')[2]
 
