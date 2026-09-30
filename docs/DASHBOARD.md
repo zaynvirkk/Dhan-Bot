@@ -18,8 +18,8 @@ From this repository in a normal terminal with working GitHub and gcloud login:
 
 This checks the existing VM/IP, pushes the committed `main` branch, transfers a
 Git bundle, installs an isolated dashboard release, opens 80/443 for the targeted
-VM, starts Caddy HTTPS and verifies that an unauthenticated public request returns
-401 with a valid TLS certificate. It creates no new VM and never activates or
+VM, starts Caddy HTTPS and verifies that an unauthenticated account API request
+returns 401 with a valid TLS certificate. It creates no new VM and never activates or
 restarts the trading service. It refuses an unexpected IP, conflicting listener,
 modified source or incompatible existing firewall rule.
 
@@ -41,7 +41,14 @@ Open the target HTTPS URL and use `operator` with the separate generated passwor
 Retrieve the password privately in your SSH terminal; do not paste it into public
 logs. Installation preserves it on later releases. There is no default password.
 The server stores a SHA-256 verifier for a generated 256-bit random secret, not a
-user-selected low-entropy password. All assets and account routes require login.
+user-selected low-entropy password. The sign-in page and its stylesheet are public;
+account data and dashboard assets require authentication. Browser sign-in uses an
+8-hour signed, Secure, HttpOnly, SameSite=Strict cookie. Login and logout accept
+only same-origin form submissions. Password rotation invalidates existing sessions.
+Signing out clears this browser’s cookie and leaves the trading service running.
+Explicit Basic headers still work for monitoring scripts, but the server never
+sends a browser HTTP-authentication challenge: a VPN extension answering every
+challenge caused Brave to fail with ERR_TOO_MANY_RETRIES.
 
 ## What the page shows
 
@@ -136,7 +143,7 @@ Dashboard development and tests have not executed these activation commands.
 
 ## Validation
 
-`python3 -m pytest tests/test_dashboard.py` passes 37 authentication, projection,
+`python3 -m pytest tests/test_dashboard.py` passes 50 authentication, projection,
 staleness, decimal, read-only ledger/broker and firewall-scope tests. The complete
 suite passes 313 tests with networking available. The installed dashboard release
 also passed its 37 tests. JavaScript/shell syntax and packaged assets are verified.

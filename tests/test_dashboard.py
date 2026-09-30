@@ -5,15 +5,17 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import hashlib
 import json
+import io
 from pathlib import Path
 import sqlite3
 from types import SimpleNamespace
+from urllib.parse import urlencode
 
 import httpx
 import pytest
 
 from dhan_cas_bot.dashboard import collect as collector
-from dhan_cas_bot.dashboard.app import ASSETS, Dashboard, view_snapshot
+from dhan_cas_bot.dashboard.app import ASSETS, COOKIE, ORIGIN, SESSION_SECONDS, Dashboard, view_snapshot
 from dhan_cas_bot.dashboard.data import account_view, connections_view, freshness, ledger_view, money, runtime_view
 from dhan_cas_bot.dashboard.deploy import validate_firewall
 from dhan_cas_bot.ledger import SCHEMA
@@ -33,28 +35,111 @@ def dashboard(tmp_path):
     return Dashboard(tmp_path/'snapshot.json', auth)
 
 
-def request(app, path='/', method='GET', credentials=None, raw=None):
+def request(app, path='/', method='GET', credentials=None, raw=None, cookie=None, form=None, origin=ORIGIN, overrides=None):
     headers = {}
     def start(status, values): headers.update(status=status, headers=dict(values))
     env = {'PATH_INFO':path, 'REQUEST_METHOD':method}
     if credentials is not None:
         env['HTTP_AUTHORIZATION'] = 'Basic '+base64.b64encode(credentials.encode()).decode()
     if raw is not None: env['HTTP_AUTHORIZATION'] = raw
+    if cookie is not None: env['HTTP_COOKIE'] = cookie
+    if origin is not None: env['HTTP_ORIGIN'] = origin
+    if form is not None:
+        body = urlencode(form).encode()
+        env.update({'CONTENT_TYPE':'application/x-www-form-urlencoded', 'CONTENT_LENGTH':str(len(body)), 'wsgi.input':io.BytesIO(body)})
+    env.update(overrides or {})
     body = b''.join(app(env, start))
     return headers['status'], headers['headers'], body
 
 
-@pytest.mark.parametrize('path', ['/', '/api/status', '/app.js', '/app.css', '/favicon.svg', '/../../secrets.env'])
+@pytest.mark.parametrize('path', ['/api/status', '/app.js', '/app.css', '/favicon.svg', '/../../secrets.env'])
 def test_every_route_requires_authentication(dashboard, path):
     status, headers, body = request(dashboard, path)
     assert status.startswith('401')
-    assert 'WWW-Authenticate' in headers and headers['Cache-Control']=='no-store'
+    assert 'WWW-Authenticate' not in headers and headers['Cache-Control']=='no-store'
     assert b'9411' not in body
 
 
 @pytest.mark.parametrize('raw', ['Basic !!!!', 'Bearer secret', 'Basic '+base64.b64encode('öperator:wrong'.encode()).decode(), 'Basic '+base64.b64encode(b'operator:wrong').decode(), 'Basic '+('a'*600)])
 def test_malformed_and_incorrect_auth_rejected(dashboard, raw):
-    assert request(dashboard, raw=raw)[0].startswith('401')
+    status, headers, _ = request(dashboard, '/api/status', raw=raw)
+    assert status.startswith('401') and 'WWW-Authenticate' not in headers
+
+
+def test_browser_gets_login_without_http_auth_challenge(dashboard):
+    status, headers, body = request(dashboard)
+    assert status.startswith('303') and headers['Location']=='/login' and not body
+    status, headers, body = request(dashboard, '/login')
+    assert status.startswith('200') and b'type="password"' in body
+    assert b'form method="post" action="/login"' in body
+    assert 'WWW-Authenticate' not in headers and headers['Cache-Control']=='no-store'
+    assert b'9411' not in body and SECRET.encode() not in body
+    assert request(dashboard, '/login.css')[0].startswith('200')
+    assert not request(dashboard, '/login', method='HEAD')[2]
+
+
+def browser_signin(dashboard):
+    status, headers, body = request(dashboard, '/login', 'POST', form={'username':'operator','password':SECRET})
+    assert status.startswith('303') and headers['Location']=='/' and not body
+    value=headers['Set-Cookie']
+    for flag in ['Path=/','Secure','HttpOnly','SameSite=Strict',f'Max-Age={SESSION_SECONDS}']:
+        assert flag in value
+    assert SECRET not in value and dashboard.auth['password_sha256'] not in value
+    return value.split(';',1)[0]
+
+
+def test_browser_session_cross_worker_and_rotation(dashboard):
+    cookie=browser_signin(dashboard)
+    assert request(dashboard,cookie=cookie)[0].startswith('200')
+    assert request(dashboard,'/api/status',cookie=cookie)[0].startswith('503')  # authenticated, no snapshot
+    other=Dashboard(dashboard.snapshot, dashboard.snapshot.parent/'auth.json')
+    assert request(other,cookie=cookie)[0].startswith('200')
+    assert request(other,'/login',cookie=cookie)[1]['Location']=='/'
+    other.auth['password_sha256']=hashlib.sha256(b'rotated-secret').hexdigest()
+    assert request(other,'/api/status',cookie=cookie)[0].startswith('401')
+
+
+def test_tampered_expired_future_and_malformed_cookie_rejected(dashboard,monkeypatch):
+    monkeypatch.setattr('dhan_cas_bot.dashboard.app.time.time',lambda:1800000000)
+    cookie=browser_signin(dashboard)
+    changed=cookie[:-1]+('a' if cookie[-1]!='a' else 'b')
+    for invalid in [changed, COOKIE+'=junk', COOKIE+'="bad', 'a'*4097, COOKIE+'=v1.1800000000.'+'a'*32+'.'+'0'*64]:
+        assert request(dashboard,'/api/status',cookie=invalid)[0].startswith('401')
+    for now in [1800000000-1,1800000000+SESSION_SECONDS]:
+        monkeypatch.setattr('dhan_cas_bot.dashboard.app.time.time',lambda:now)
+        assert request(dashboard,'/api/status',cookie=cookie)[0].startswith('401')
+
+
+@pytest.mark.parametrize('origin',[None,'null','https://evil.example',ORIGIN+'.evil.example'])
+def test_cross_origin_login_and_logout_rejected(dashboard,origin):
+    for path in ['/login','/logout']:
+        status,headers,_=request(dashboard,path,'POST',form={'username':'operator','password':SECRET},origin=origin)
+        assert status.startswith('403') and 'Set-Cookie' not in headers
+
+
+def test_bad_password_has_recoverable_error_without_challenge_or_echo(dashboard):
+    status,headers,body=request(dashboard,'/login','POST',form={'username':'operator','password':'wrong-private-input'})
+    assert status.startswith('401') and b'Please try again' in body
+    assert 'WWW-Authenticate' not in headers and 'Set-Cookie' not in headers
+    assert b'wrong-private-input' not in body
+
+
+@pytest.mark.parametrize('overrides',[
+    {'CONTENT_LENGTH':'1025'}, {'CONTENT_LENGTH':'-1'}, {'CONTENT_LENGTH':'oops'},
+    {'CONTENT_TYPE':'application/json'}, {'wsgi.input':io.BytesIO(b'')},
+])
+def test_login_input_is_bounded_and_validated(dashboard,overrides):
+    status,headers,_=request(dashboard,'/login','POST',form={'username':'operator','password':SECRET},overrides=overrides)
+    assert status.startswith('400') and 'Set-Cookie' not in headers
+
+
+def test_duplicate_fields_rejected_and_logout_clears_browser_session(dashboard):
+    status,_,_=request(dashboard,'/login','POST',form=[('username','operator'),('password',SECRET),('password','wrong')])
+    assert status.startswith('400')
+    cookie=browser_signin(dashboard)
+    status,headers,_=request(dashboard,'/logout','POST',cookie=cookie)
+    assert status.startswith('303') and headers['Location']=='/login'
+    assert 'Max-Age=0' in headers['Set-Cookie'] and f'{COOKIE}=;' in headers['Set-Cookie']
 
 
 def test_no_mutating_endpoints_and_no_traversal(dashboard):

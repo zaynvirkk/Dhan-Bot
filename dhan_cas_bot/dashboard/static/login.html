@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light"><title>Sign in · Dhan dashboard</title>
+  <link rel="stylesheet" href="/login.css">
+</head>
+<body>
+  <header><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 7h20v6H12v6h14v6H6v-6h14v-6H6z"/></svg><span>SableStone <span class="divider">/</span> <strong>Dhan</strong></span></header>
+  <main>
+    <h1>Your trading dashboard.</h1>
+    <p>Sign in to see account balances, bot status and order activity.</p>
+    <form method="post" action="/login">
+      <!-- error -->
+      <label for="username">Username</label>
+      <input id="username" name="username" value="operator" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" required>
+      <label for="password">Dashboard password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" maxlength="256" aria-describedby="password-help" required autofocus>
+      <p id="password-help" class="help">Use the separate password in your dashboard login file.</p>
+      <button type="submit">Sign in</button>
+    </form>
+    <p class="session-note">Your sign-in lasts 8 hours. Signing out of this dashboard leaves the trading bot running.</p>
+  </main>
+</body>
+</html>

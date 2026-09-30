@@ -95,7 +95,7 @@ from pathlib import Path
 password=next(line.split('Password: ',1)[1] for line in Path('/etc/sablestone-dhan-dashboard/login.txt').read_text().splitlines() if line.startswith('Password: '))
 for attempt in range(10):
     try:
-        urllib.request.urlopen('http://127.0.0.1:8088/',timeout=2)
+        urllib.request.urlopen('http://127.0.0.1:8088/api/status',timeout=2)
     except urllib.error.HTTPError as e:
         if e.code != 401: raise
         break

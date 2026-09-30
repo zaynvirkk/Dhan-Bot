@@ -41,7 +41,13 @@ fi
 gcloud compute instances add-tags "$DASH_VM" --project="$DASH_PROJECT" --zone="$DASH_ZONE" --tags="$DASH_TAG"
 gcloud compute ssh "$DASH_VM" --project="$DASH_PROJECT" --zone="$DASH_ZONE" --tunnel-through-iap --command="set -eu; git clone '$DASH_STAGE/source.bundle' '$DASH_STAGE/source'; git -C '$DASH_STAGE/source' checkout --detach '$DASH_SHA'; sudo bash '$DASH_STAGE/source/ops/install_dashboard.sh' '$DASH_SHA' '$DASH_HOST'"
 # Verify the certificate and mandatory authentication from outside the VM.
-DASH_HTTP=$(curl --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors --max-time 15 -o "$DASH_TEMP/response" -w '%{http_code}' "https://$DASH_HOST/")
+DASH_HTTP=$(curl --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors --max-time 15 -o "$DASH_TEMP/response" -w '%{http_code}' "https://$DASH_HOST/api/status")
 [[ $DASH_HTTP = 401 ]] || { echo "Unexpected HTTPS status: $DASH_HTTP" >&2; exit 1; }
+curl --fail --silent --show-error --max-time 15 "https://$DASH_HOST/login" > "$DASH_TEMP/login"
+python3 - "$DASH_TEMP/login" <<'PY'
+from pathlib import Path
+import sys
+assert '<form method="post" action="/login">' in Path(sys.argv[1]).read_text(), 'Sign-in page missing'
+PY
 echo "Verified public HTTPS authentication at https://$DASH_HOST/ (commit $DASH_SHA)."
 echo 'Sign in with the private login file on the VM, then verify that observations are current.'
