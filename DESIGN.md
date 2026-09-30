@@ -38,3 +38,11 @@ changed authority to unknown. Real account observations were separately verified
 The initial 15-second heartbeat threshold was corrected to 45 seconds to cover the
 collector's normal 20-second timeout and 15-second scheduling gap. The displayed
 observation timestamps make the monitoring delay explicit.
+
+Browser access repair, 30 September: added an ordinary password form in the same
+visual system, replacing native HTTP-authentication challenges that conflicted
+with the owner’s VPN extension. Login has visible labels, password-manager
+autocomplete, keyboard submission and recoverable errors. Added dashboard sign
+out; session expiry returns to login. Tested real form login/logout on the public
+HTTPS site, mobile at 390px, and the owner’s actual Brave browser. No browser
+JavaScript errors or mobile overflow. Password and trading authority are unchanged.

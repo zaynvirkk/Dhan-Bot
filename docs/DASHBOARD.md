@@ -1,7 +1,8 @@
 # Private dashboard
 
 The dashboard is **deployed and verified live** as of 30 September 2026.
-See the [deployment verification](DASHBOARD-DEPLOYMENT-2026-09-30.md).
+See the [deployment verification](DASHBOARD-DEPLOYMENT-2026-09-30.md) and
+[browser access fix](DASHBOARD-ACCESS-2026-09-30.md).
 
 URL: **https://dhan.34.100.255.111.sslip.io** on the existing
 `sablestone-dhan-cas` VM in `asia-south1-a`, project
@@ -145,8 +146,8 @@ Dashboard development and tests have not executed these activation commands.
 
 `python3 -m pytest tests/test_dashboard.py` passes 50 authentication, projection,
 staleness, decimal, read-only ledger/broker and firewall-scope tests. The complete
-suite passes 313 tests with networking available. The installed dashboard release
-also passed its 37 tests. JavaScript/shell syntax and packaged assets are verified.
+suite passed 326 tests with networking available during this access fix. The final
+installed dashboard release passed all 50 dashboard tests. JavaScript/shell syntax and packaged assets are verified.
 
 The real HTTPS site was tested in Chromium at 1440px desktop and 390px mobile:
 mandatory authentication, account data, tabs, keyboard navigation, filtering,
