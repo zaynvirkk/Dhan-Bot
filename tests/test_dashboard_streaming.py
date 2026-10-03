@@ -133,3 +133,26 @@ def test_browser_stream_push_fallback_visibility_and_auth():
     root = Path(__file__).resolve().parents[1]
     result = subprocess.run(['node', str(root/'tests/dashboard_stream_test.cjs')], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+def test_sse_sends_small_pulse_until_source_evidence_or_freshness_changes(dashboard, monkeypatch):
+    now = datetime.now(timezone.utc)
+    write(dashboard.snapshot, {'schema':1,'collector_observed_at':now.isoformat(),
+          'runtime':{'observed_at':now.isoformat(),'authority':'ENABLED','feed_health':{'market':{'connected':True}}}})
+    monkeypatch.setattr(app_module.time,'sleep',lambda seconds:None)
+    monkeypatch.setattr(app_module,'utcnow',lambda:now)
+    stream,_=open_stream(dashboard)
+    try:
+        assert next(stream).startswith(b'retry:')
+        monkeypatch.setattr(app_module,'utcnow',lambda:now+timedelta(seconds=1))
+        assert next(stream).startswith(b'event: pulse')
+        advanced=(now+timedelta(seconds=1)).isoformat()
+        write(dashboard.snapshot, {'schema':1,'collector_observed_at':advanced,
+              'runtime':{'observed_at':advanced,'authority':'ENABLED','feed_health':{'market':{'connected':True}}}})
+        pulse=next(stream)
+        assert pulse.startswith(b'event: pulse') and advanced.encode() in pulse
+        monkeypatch.setattr(app_module,'utcnow',lambda:now+timedelta(seconds=48))
+        expired=next(stream)
+        assert b'"authority": "UNKNOWN"' in expired
+        assert not expired.startswith(b'event: pulse')
+    finally: stream.close()

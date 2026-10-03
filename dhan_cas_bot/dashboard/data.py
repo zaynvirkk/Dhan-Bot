@@ -127,7 +127,25 @@ def runtime_view(raw, now):
             'books_observed': integer(raw.get('books_observed')),
             'contract_count': integer(raw.get('contract_count')),
             'clock_uncertainty_ms': integer(raw.get('clock_uncertainty_ms')),
+            'monitoring_mode': choice(raw.get('monitoring_mode'), {'IDLE', 'ACTIVE'}, 'UNKNOWN'),
+            'feed_health': feed_health_view(raw.get('feed_health')),
+            'recorder_pending': integer(raw.get('recorder_pending')),
             'telemetry': telemetry_view(raw.get('telemetry'))}
+
+
+def feed_health_view(raw):
+    raw = raw if isinstance(raw, dict) else {}
+    result = {}
+    for name in ('signal', 'market', 'order'):
+        item = raw.get(name)
+        if not isinstance(item, dict):
+            continue
+        result[name] = {'connected': item.get('connected') if type(item.get('connected')) is bool else None,
+                        **{key: timestamp(item.get(key)) for key in ('last_received_at', 'last_processed_at', 'last_usable_at')},
+                        **{key: integer(item.get(key)) for key in ('reconnects', 'pending_messages', 'queue_high_water', 'processed_messages')},
+                        **{key: money(item.get(key)) for key in ('oldest_pending_ms', 'queue_delay_ms', 'processing_ms')},
+                        'last_error': choice(item.get('last_error'), {'ContractError', 'OSError', 'TimeoutError', 'ConnectionClosedError', 'InvalidHandshake', 'HTTPStatusError'})}
+    return result
 
 
 def telemetry_view(raw):

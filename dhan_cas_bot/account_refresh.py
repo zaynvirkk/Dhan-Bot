@@ -9,6 +9,7 @@ import json
 import time
 
 from .orders import ReconciliationChanged, account_changed
+from .read_scheduler import read_priority
 
 
 class AccountRefresh:
@@ -60,19 +61,44 @@ class AccountRefresh:
         started = self.clock()
         observed_at = datetime.now(timezone.utc)
         revision = runtime.ledger.account_revision
-        funds = None
+        async def read_cash():
+            try:
+                with read_priority(10):
+                    funds = await runtime.broker.funds()
+                if funds.broker_account == runtime.mandate.account_id and funds.spendable_cash > 0:
+                    return funds
+            except Exception:
+                funds = None
+            # A failed/empty/foreign cash observation blocks entries immediately,
+            # even if an execution concurrently supersedes the position batch.
+            runtime.status.current_account_funded = False
+            return funds if funds and funds.broker_account == runtime.mandate.account_id else None
+        cash_task = asyncio.create_task(read_cash())
         try:
-            funds = await runtime.broker.funds()
-            if funds.broker_account != runtime.mandate.account_id:
-                raise ValueError('account mismatch')
-        except Exception:
-            funds = None
-        # A cash endpoint failure must not suppress management of held longs.
-        positions_started = self.clock()
-        snapshot = await runtime.orders.reconcile(expected_revision=revision)
-        runtime.reconciled = snapshot
-        self.revision = snapshot['revision']
-        self.observed, self.healthy = positions_started, True
+            positions_started = self.clock()
+            with read_priority(2):
+                snapshot = await runtime.orders.reconcile(expected_revision=revision)
+            runtime.reconciled = snapshot
+            self.revision = snapshot['revision']
+            self.observed, self.healthy = positions_started, True
+            # Position management may proceed even while a cash GET is stalled.
+            self.wake.set()
+            funds = await cash_task
+            if self.revision != runtime.ledger.account_revision:
+                raise ReconciliationChanged('account changed during cash read')
+            if self.clock()-positions_started > self.MAX_AGE:
+                # Slow cash must not certify an aged position batch as fresh.
+                positions_started = self.clock()
+                with read_priority(2):
+                    snapshot = await runtime.orders.reconcile(expected_revision=self.revision)
+                runtime.reconciled = snapshot
+                self.revision = snapshot['revision']
+                self.observed = positions_started
+        finally:
+            cash_task.cancel()
+            await asyncio.gather(cash_task, return_exceptions=True)
+        if self.revision != runtime.ledger.account_revision:
+            raise ReconciliationChanged('account changed before publishing observations')
         runtime.status.current_account_funded = bool(funds and funds.spendable_cash > 0)
         if funds is None:
             runtime.status.reason = 'ACCOUNT_FUNDS_UNAVAILABLE'

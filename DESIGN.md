@@ -55,3 +55,11 @@ pause, failures fall back to polling, and stale/unknown states remain explicit.
 DOM and stream lifecycle tests pass. The mechanical detector reports only the
 existing em-dash placeholders advisory. This pass has no new browser screenshot
 or deployed visual verification because the execution environment blocks sockets.
+
+4 October live-health refinement: preserved the journal design and split current
+socket observations from dated diagnostics in a native disclosure. Idle silence,
+missing telemetry, disconnected feeds and delayed decoding have distinct copy.
+The generic diagnostic-age banner is removed. Push pulses update source ages
+without replacing unchanged tables; freshness and unknown states remain explicit.
+DOM/lifecycle checks pass; real browser inspection is blocked by EPERM and no
+new deployed visual verification is claimed.

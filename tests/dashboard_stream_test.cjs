@@ -55,3 +55,41 @@ vm.runInContext(`render({available:true,server_time:'2026-10-01T09:00:01Z',colle
 const authority=ids.authority.textContent;
 failFetch(new Error('Delayed GET failure'));
 setImmediate(()=>{assert.equal(ids.authority.textContent,authority);console.log('Page rendering and out-of-order status recovery verified');});
+setImmediate(()=>{
+// Historical diagnostics must not be mistaken for live feed health.
+const stamp='2026-10-01T09:01:00Z';
+const current={available:true,server_time:stamp,collector:{fresh:true},account_read_ok:true,
+ runtime:{fresh:true,authority:'ENABLED',monitoring_mode:'IDLE',feed_health:{}},
+ connections:{fresh:false,observed_at:'2026-09-29T09:20:00Z',checks:[{name:'dhan_market_feed',status:'FAIL'}]}};
+for(const name of ['signal','market','order'])current.runtime.feed_health[name]={connected:true,reconnects:0,pending_messages:0,last_received_at:null,last_usable_at:null};
+let viewTime=Date.parse(stamp);
+function show(value){viewTime+=1000;browser.fixture={...value,server_time:new Date(viewTime).toISOString()};vm.runInContext('render(fixture)',browser);}
+show(current);
+assert.match(ids.notice.textContent,/idle session/);
+assert.ok(!ids.notice.textContent.includes('Connection checks are old'));
+assert.equal(ids['live-connections'].children.length,3);
+const diagnostics=ids.connections.children[0];
+show({...current,server_time:'2026-10-01T09:01:01Z'});
+assert.equal(ids.connections.children[0],diagnostics,'Unchanged diagnostics preserve DOM');
+show({...current,runtime:{...current.runtime,monitoring_mode:'ACTIVE'}});
+assert.match(ids.notice.textContent,/Waiting for fresh usable market data/);
+const disconnected=structuredClone(current);disconnected.runtime.feed_health.order.connected=false;show(disconnected);
+assert.match(ids.notice.textContent,/live feed is disconnected/);
+const delayed=structuredClone(current);delayed.runtime.feed_health.market.oldest_pending_ms=1500;show(delayed);
+assert.match(ids.notice.textContent,/processing is delayed/);
+show({...current,runtime:{fresh:true,authority:'ENABLED'}});
+assert.match(ids.notice.textContent,/unavailable from the deployed version/);
+show({...current,collector:{fresh:false}});
+assert.match(ids.notice.textContent,/stale/);
+assert.equal(ids.authority.textContent,'Trading status unknown');
+// Pulse marks the dashboard stream alive without rerendering financial data.
+let pulses=0;
+const pulseStream=new Stream({source,now:()=>now,refresh:()=>{},signIn:()=>{},onData:()=>{},onTime:()=>pulses++});
+pulseStream.start();const pulseConnection=connections.at(-1);
+pulseConnection.pulse({data:JSON.stringify({server_time:stamp})});
+assert.equal(pulses,1);
+pulseStream.stop();pulseConnection.pulse({data:JSON.stringify({server_time:stamp})});
+assert.equal(pulses,1,'Closed connections cannot refresh health');
+console.log('Live health, idle silence, diagnostics, stale sources and stable DOM verified');
+
+});

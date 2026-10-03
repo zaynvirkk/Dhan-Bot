@@ -1,9 +1,10 @@
 'use strict';
 // A one-way status stream. The browser never connects to either broker.
 class DashboardStream {
- constructor({onData, refresh, signIn, source = url => new EventSource(url), now = () => Date.now()}) {
+ constructor({onData, refresh, signIn, onTime = () => {}, source = url => new EventSource(url), now = () => Date.now()}) {
   this.onData=onData; this.refresh=refresh; this.signIn=signIn; this.source=source; this.now=now;
   this.connection=null; this.lastPush=null; this.lastFallback=null; this.running=false;
+  this.onTime=onTime;
  }
  start() {
   if(this.running)return;
@@ -20,7 +21,12 @@ class DashboardStream {
     } catch { this.lastPush=null; this.fallback(); }
    };
    connection.onerror=()=>{if(this.connection===connection){this.lastPush=null;this.fallback();}};
-   connection.addEventListener('auth-required',()=>{this.stop();this.signIn();});
+   connection.addEventListener('pulse',event=>{
+    if(this.connection!==connection)return;
+    try {const data=JSON.parse(event.data);if(!Number.isFinite(Date.parse(data.server_time)))throw new Error('Invalid time');this.lastPush=this.now();this.onTime(data.server_time,data.observations);}
+    catch {this.lastPush=null;this.fallback();}
+   });
+   connection.addEventListener('auth-required',()=>{if(this.connection===connection){this.stop();this.signIn();}});
   } catch { this.connection=null; }
  }
  fallback() {

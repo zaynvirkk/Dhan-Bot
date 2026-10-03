@@ -37,7 +37,7 @@ from .profile import require_derivatives_profile
 from .route import RouteQualifier
 from .rules import RuleSource, DHAN_MASTER_URL, NSE_FREEZE_URL
 from .runtime import AutoLive
-from .transport import WebSocketRunner
+from .transport import WebSocketRunner, message_received_ns, message_received_monotonic_ns
 from .upstox_signal import decode_binary, extract_status, observation, NIFTY_KEY
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -109,6 +109,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     runtime.status.auto_live_armed = broker.allow_writes and not ledger.metadata("disarmed", False)
     tasks = []
     runners = []
+    feed_runners = {}
     wake = asyncio.Event()
     records = asyncio.Queue(maxsize=4096)
     recorder_failed = False
@@ -152,6 +153,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         upstox = UpstoxFeedClient(upstox_token) if upstox_token else None
         market = DhanMarketClient(token)
         orders = DhanOrderUpdateClient(token)
+        usable_at = {}
         received_seq = 0
         echoed = {}
         uncertainty = await clock_uncertainty()
@@ -173,7 +175,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             if kind != "ORDER_FRAME" and not (time(15,5) <= now().astimezone(IST).time() <= time(15,45)) and engine.active is None:
                 return identity
             try:
-                records.put_nowait((identity, kind, {"epoch": epoch, "received_ns": monotime.time_ns(), "monotonic_ns": monotime.monotonic_ns(), "data_b64": base64.b64encode(payload).decode()}))
+                records.put_nowait((identity, kind, {"epoch": epoch, "received_ns": message_received_ns(monotime.time_ns()), "monotonic_ns": monotime.monotonic_ns(), "received_monotonic_ns": message_received_monotonic_ns(monotime.monotonic_ns()), "data_b64": base64.b64encode(payload).decode()}))
             except asyncio.QueueFull:
                 recorder_failed = True
             return identity
@@ -226,11 +228,12 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
 
         async def record_upstox(payload):
             nonlocal received_seq
-            runtime.telemetry.received("signal")
-            received_ns = int(now().timestamp()*1_000_000_000)
+            received_ns = message_received_ns(int(now().timestamp()*1_000_000_000))
             value = decode_binary(payload)
             epoch = upstox.protocol.epoch.id
             record_frame("UPSTOX_FRAME", epoch, payload)
+            if not upstox.protocol.epoch.connected:
+                return
             received_seq += 1
             status = extract_status(value, trading_date=today, epoch=epoch)
             if status:
@@ -253,11 +256,18 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             identity = f"{epoch}:{value.currentTs}:{hashlib.sha256(raw).hexdigest()}"
             try:
                 sample = observation(value, received_ns=received_ns, provider_ts_ms=int(value.currentTs), epoch=epoch, receiver_seq=received_seq, raw_identity=identity, ltp=engine.reference is None)
+                accepted = False
                 if engine.reference is None:
                     if now().astimezone(IST).time() < time(15,15):
                         engine.on_ltp(sample)
+                        accepted = True
                 else:
+                    already_seen = identity in engine.identities
                     await engine.on_iep(sample, dispatch=False)
+                    accepted = not already_seen and identity in engine.identities
+                if accepted:
+                    usable_at["signal"] = datetime.fromtimestamp(received_ns/1e9, timezone.utc).isoformat()
+                    runtime.telemetry.received("signal")
             except ContractError:
                 if engine.reference is not None and engine.status and engine.status.phase in {CasPhase.CAS_LM_START, CasPhase.CAS_M_STOP}:
                     engine.streaks.clear()
@@ -266,10 +276,11 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
 
         last_packets = {}
         async def record_dhan(payload):
-            runtime.telemetry.received("market")
-            received_ns = int(now().timestamp()*1_000_000_000)
+            received_ns = message_received_ns(int(now().timestamp()*1_000_000_000))
             epoch = market.protocol.epoch.id
             record_frame("DHAN_FRAME", epoch, payload)
+            if not market.protocol.epoch.connected:
+                return
             for packet in packets(payload):
                 inst = instrument_by_id.get(str(int.from_bytes(packet[4:8], "little")))
                 if packet[0] != 8 or inst is None:
@@ -280,6 +291,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                 last_packets[inst.security_id] = (epoch,identity)
                 decoded = decode_full_binary(packet, inst)
                 engine.on_book(book_from_packet(decoded, inst, epoch, received_ns))
+                usable_at["market"] = datetime.fromtimestamp(received_ns/1e9, timezone.utc).isoformat()
+                runtime.telemetry.received("market")
             wake.set()
 
         async def record_order(payload):
@@ -299,6 +312,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                 correlation = str(data.get("CorrelationId") or data.get("correlationId") or "")
                 state = str(data.get("Status") or data.get("OrderStatus") or data.get("orderStatus") or "").upper()
                 if identity or correlation:
+                    usable_at["order"] = datetime.fromtimestamp(message_received_ns(int(now().timestamp()*1e9))/1e9, timezone.utc).isoformat()
                     runtime.telemetry.received("order")
                     account_refresh.order_event(epoch, data)
                 if identity:
@@ -310,6 +324,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             wake.set()
 
         def signal_connect():
+            usable_at.pop("signal", None)
             upstox.protocol.on_connect()
             engine.signal_reconnect(upstox.protocol.epoch.id)
         def signal_disconnect():
@@ -317,6 +332,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             engine.signal_reconnect(None)
             wake.set()
         def market_connect():
+            usable_at.pop("market", None)
             market.protocol.on_connect()
             engine.market_reconnect(market.protocol.epoch.id)
         def market_disconnect():
@@ -324,6 +340,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             engine.market_reconnect(None)
             wake.set()
         def order_connect():
+            usable_at.pop("order", None)
             orders.protocol.on_connect()
             account_refresh.invalidate()
         def order_disconnect():
@@ -334,14 +351,21 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             wake.set()
         if upstox:
             runners.append(WebSocketRunner(upstox_endpoint, {}, record_upstox, subscribe=upstox.subscription_messages([NIFTY_KEY]), binary=True, on_connect=signal_connect, on_disconnect=signal_disconnect))
+            feed_runners["signal"] = runners[-1]
         else:
             engine.signal_reconnect(None)
         if instrument_by_id:
             market_url = config.get("dhan_market_ws_url") or "wss://api-feed.dhan.co?" + urlencode({"version": "2", "token": token, "clientId": broker.account_id, "authType": "2"})
             runners.append(WebSocketRunner(market_url, {}, record_dhan, subscribe=market.subscription_messages(instrument_by_id), on_connect=market_connect, on_disconnect=market_disconnect))
+            feed_runners["market"] = runners[-1]
         else:
             engine.market_reconnect(None)
         runners.append(WebSocketRunner(config.get("dhan_order_ws_url") or "wss://api-order-update.dhan.co", {}, record_order, connect_messages=[{"LoginReq":{"MsgCode":42,"ClientId":broker.account_id,"Token":token},"UserType":"SELF"}], on_connect=order_connect, on_disconnect=order_disconnect))
+        feed_runners["order"] = runners[-1]
+        for runner in runners:
+            # Receipt and strategy timestamps share the same clock, including
+            # deterministic session replay through real localhost transports.
+            runner.wall_clock = lambda: int(now().timestamp()*1_000_000_000)
         tasks = [asyncio.create_task(runner.run()) for runner in runners]
         last_status = 0.0
         metadata_retry_at = monotime.monotonic()+30
@@ -424,7 +448,20 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                     if not 0 <= age < 20*3600:
                         return
             if monotonic - last_status >= 1:
-                write_status(state_dir, runtime, session=today.isoformat(), contract_count=len(instruments), books_observed=len(engine.books), clock_uncertainty_ms=uncertainty, metadata_error=metadata_error, recorder_failed=recorder_failed, final_input="VERIFIED" if engine.final_value else "UNQUALIFIED", final_source_error=final_error, telemetry=runtime.telemetry.snapshot(), account_snapshot_fresh=account_refresh.fresh)
+                feed_health = {key: {**runner.snapshot(), "last_usable_at": usable_at.get(key)}
+                               for key, runner in feed_runners.items() if hasattr(runner, "snapshot")}
+                for key in ('signal', 'market', 'order'):
+                    if key not in feed_runners:
+                        feed_health[key] = {'connected': False}
+                idle = (engine.active is None and not ledger.pending_intents()
+                        and (runtime.status.state == "NO_TRADE_DAY" or not time(15,5) <= current.time() <= time(15,40)))
+                write_status(state_dir, runtime, session=today.isoformat(), contract_count=len(instruments),
+                             books_observed=len(engine.books), clock_uncertainty_ms=uncertainty,
+                             metadata_error=metadata_error, recorder_failed=recorder_failed,
+                             final_input="VERIFIED" if engine.final_value else "UNQUALIFIED",
+                             final_source_error=final_error, telemetry=runtime.telemetry.snapshot(),
+                             account_snapshot_fresh=account_refresh.fresh, feed_health=feed_health,
+                             monitoring_mode="IDLE" if idle else "ACTIVE", recorder_pending=records.qsize())
                 last_status = monotonic
             wait_started = monotime.monotonic()
             try:

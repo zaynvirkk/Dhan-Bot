@@ -1,7 +1,8 @@
 # Private dashboard
 
-The 30 September dashboard release is deployed. The 1 October streaming
-optimizations described below are implemented locally and are **not deployed**.
+The 30 September dashboard release is deployed. The streaming and
+live-health optimizations described below are implemented locally; deployment is
+**not verified**. See [the live-health update](LIVE-HEALTH-2026-10-04.md).
 Live behavior was last verified on 30 September 2026.
 See the [deployment verification](DASHBOARD-DEPLOYMENT-2026-09-30.md) and
 [browser access fix](DASHBOARD-ACCESS-2026-09-30.md).
@@ -56,8 +57,9 @@ challenge caused Brave to fail with ERR_TOO_MANY_RETRIES.
 ## What the page shows
 
 - Available cash and P&L fields actually returned by the broker; missing is unknown.
-- Freshness of the bot heartbeat and its reported entry authority.
-- Last explicit Dhan/Upstox/metadata/IP/route connection checks and their dates.
+- Freshness of the bot status and its reported entry authority.
+- Live socket state, accepted-message age and processing backlog when the trader supplies them.
+- Separate dated Dhan/Upstox/metadata/IP/route diagnostic results.
 - Open broker positions and recent broker orders.
 - Persisted order intents, fills and incident timestamps from the bot's ledger.
 - Copyable operator commands for preflight, activation and pausing new entries.

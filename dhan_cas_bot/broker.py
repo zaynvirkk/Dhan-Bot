@@ -4,11 +4,11 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 import os
-import asyncio
 import json
 import time
 
 from .domain import ContractError, FundsSnapshot
+from .read_scheduler import account_reads
 
 
 class DhanBroker:
@@ -20,8 +20,6 @@ class DhanBroker:
         self.base_url = base_url.rstrip("/")
         self.allow_writes = allow_writes and os.environ.get("DHAN_BROKER_READ_ONLY", "").lower() not in {"1", "true"}
         self.client = None
-        self.read_lock = asyncio.Lock()
-        self.last_read = 0.0
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         import httpx
@@ -29,9 +27,7 @@ class DhanBroker:
         if self.client is None:
             self.client = httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=3.0), follow_redirects=False)
         if method == "GET":
-            async with self.read_lock:
-                await asyncio.sleep(max(0, .11 - (time.monotonic() - self.last_read)))
-                self.last_read = time.monotonic()
+            await account_reads(self.account_id, self.base_url).acquire()
         if "json" in kwargs:
             value = kwargs.pop("json")
             # Dhan expects a JSON number for price; emit the exact decimal

@@ -186,6 +186,7 @@ class EventStream:
         self.app, self.environ = app, dict(environ)
         self.deadline = time.monotonic() + 20
         self.first, self.closed = True, False
+        self.previous = None
 
     def __iter__(self):
         return self
@@ -204,6 +205,23 @@ class EventStream:
             raise StopIteration
         try:
             data = view_snapshot(self.app.snapshot)
+            # Unchanged observations need only a small timestamp update. Freshness
+            # transitions and actual feed/account changes still send full data.
+            def stable(value):
+                if isinstance(value, dict):
+                    return {k: stable(v) for k, v in value.items() if k not in {'server_time', 'age_seconds', 'collector_observed_at', 'observed_at'}}
+                if isinstance(value, list):
+                    return [stable(v) for v in value]
+                return value
+            evidence = stable(data)
+            evidence.pop('collector', None)
+            evidence['collector_fresh'] = data.get('collector', {}).get('fresh')
+            digest = json.dumps(evidence, sort_keys=True, allow_nan=False)
+            if digest == self.previous:
+                times = {key: value.get('observed_at') for key in ('collector', 'runtime', 'account', 'connections')
+                         if isinstance(value := data.get(key), dict)}
+                return ('event: pulse\ndata: '+json.dumps({'server_time': data['server_time'], 'observations': times})+'\n\n').encode()
+            self.previous = digest
             return ('retry: 1000\ndata: '+json.dumps(data, allow_nan=False)+'\n\n').encode()
         except Exception:
             self.close()
