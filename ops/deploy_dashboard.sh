@@ -15,8 +15,9 @@ DASH_TAG=dhan-private-dashboard
 DASH_RULE=dhan-private-dashboard-https
 DASH_TEMP=$(mktemp -d)
 trap 'rm -rf "$DASH_TEMP"' EXIT
-python3 -m pytest tests/test_dashboard.py
+python3 -m pytest tests/test_dashboard.py tests/test_dashboard_streaming.py
 node --check dhan_cas_bot/dashboard/static/app.js
+node --check dhan_cas_bot/dashboard/static/stream.js
 # Prove account/project reachability before publishing.
 gcloud compute instances describe "$DASH_VM" --project="$DASH_PROJECT" --zone="$DASH_ZONE" --format=json > "$DASH_TEMP/vm.json"
 python3 - "$DASH_TEMP/vm.json" <<'PY'

@@ -203,6 +203,11 @@ class SessionEngine:
             ledger, runtime = self.runtime.ledger, self.runtime
             if reconcile:
                 runtime.reconciled = await runtime.orders.reconcile()
+            if runtime.account_refresh is not None and not runtime.account_refresh.fresh:
+                runtime.account_refresh.request()
+                runtime.status.state = "RECOVERING"
+                runtime.telemetry.reason("ACCOUNT_REFRESH_REQUIRED")
+                return False
             snapshot = getattr(runtime, "reconciled", None)
             if snapshot is None:
                 return False
@@ -332,19 +337,25 @@ class SessionEngine:
 
     async def _enter(self, snapshot, active, positions, local_now, *, settlement_add=False):
         ledger, runtime = self.runtime.ledger, self.runtime
+        telemetry = runtime.telemetry
         if snapshot["unresolved"] or ledger.pending_intents() or not runtime.permit_entry(settlement_add=settlement_add):
+            telemetry.reason("ENTRY_NOT_PERMITTED")
             return False
         if any(int(row.get("netQty", row.get("netQuantity", 0))) and (active is None or str(row.get("securityId")) != active["security_id"]) for row in positions):
+            telemetry.reason("UNMANAGED_POSITION")
             runtime.status.reason = "UNMANAGED_ACCOUNT_POSITION"
             return False
         final_entry = self.final_value is not None and self.status is not None and self.status.phase is CasPhase.CAS_STOP
         if local_now.date().isoformat() != self.session_id or not time(15, 20) <= local_now.time() < (time(15,38,30) if final_entry else time(15,30)):
+            telemetry.reason("OUTSIDE_ENTRY_WINDOW")
             return False
         if not self.market_connected or not self.status or self.status.trading_date != local_now.date() or (not final_entry and (not self.signal_connected or self.status.phase not in {CasPhase.CAS_LM_START, CasPhase.CAS_M_STOP})):
+            telemetry.reason("FEED_NOT_READY")
             return False
         admitted_status, admitted_final = self.status, self.final_value
         funds = await runtime.broker.funds()
         if self.status != admitted_status or self.final_value != admitted_final or not runtime.permit_entry(settlement_add=settlement_add):
+            telemetry.reason("INPUTS_CHANGED")
             return False
         runtime.status.current_account_funded = funds.spendable_cash > 0 and funds.broker_account == runtime.mandate.account_id
         allocation = self._allocation(funds, active)
@@ -363,10 +374,11 @@ class SessionEngine:
                 if level.quantity > taken:
                     asks.append(Level(level.price,level.quantity-taken))
             book = replace(book,asks=tuple(asks))
-            candidate = find_final_opportunity(self.final_value,[book],allocation) if final_entry else find_opportunity(self.reference, history, [book], allocation)
+            candidate = find_final_opportunity(self.final_value,[book],allocation,reject=telemetry.reason) if final_entry else find_opportunity(self.reference, history, [book], allocation,reject=telemetry.reason)
             if candidate:
                 choices.append((candidate, book_id))
         if not choices:
+            telemetry.reason("NO_EXECUTABLE_CANDIDATE")
             runtime.status.reason = "NO_EXECUTABLE_LAG_OR_REMAINING_ALLOWANCE"
             return False
         candidate, book_id = max(choices, key=lambda item: (item[0].score, -int(item[0].instrument.security_id), -item[0].limit_price))
@@ -392,7 +404,9 @@ class SessionEngine:
                     and current_book is not None and f"{current_book.epoch}:{candidate.instrument.security_id}:{current_book.received_ns}" == book_id
                     and self.now().astimezone(IST).date().isoformat() == self.session_id
                     and self.now().astimezone(IST).time() < (time(15,38,30) if final_entry else time(15,30)))
+        telemetry.sample("book_age_ms", max(0, self.now().timestamp()*1000-self.books[candidate.instrument.security_id].received_ns/1_000_000))
         await runtime.orders.submit(intent, reserved_cash=reserve_cash(worst_case_entry_cash(quantity, candidate.limit_price)), pre_dispatch=current_inputs)
+        telemetry.reason("ENTRY_SUBMITTED")
         runtime.status.state = "ENTRY_PENDING"
         runtime.status.reason = candidate.reason
         return True

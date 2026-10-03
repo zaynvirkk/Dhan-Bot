@@ -41,11 +41,24 @@ def order_request(intent: Intent, account_id: str) -> dict[str, Any]:
             "price": str(intent.limit_price), "afterMarketOrder": False}
 
 
+class ReconciliationChanged(ContractError):
+    """An order changed during REST reads; discard the batch and read again."""
+
+
+def account_changed(ledger):
+    ledger.account_revision += 1
+    callback = getattr(ledger, "account_refresh", None)
+    if callback:
+        callback()
+
+
 class OrderManager:
     def __init__(self, ledger: Ledger, broker: Broker):
         self.ledger, self.broker = ledger, broker
         if not hasattr(ledger, "order_lock"):
             ledger.order_lock = asyncio.Lock()
+            ledger.reconcile_lock = asyncio.Lock()
+            ledger.account_revision = 0
         self.lock = ledger.order_lock
 
     def _rate_attempt(self, intent: Intent, attempt_id: str) -> None:
@@ -85,11 +98,18 @@ class OrderManager:
                 self.ledger.set_intent_state(intent.intent_id, "ABORTED")
                 raise
             self.ledger.record_attempt(attempt_id, intent.intent_id, "STARTED", {})
+            account_changed(self.ledger)
+            telemetry = getattr(self.ledger, "telemetry", None)
+            sent_at = telemetry.submitted(intent.intent_id) if telemetry else None
             try:
                 response = await self.broker.submit_order(request)
             except BaseException as exc:
                 self.ledger.record_attempt(attempt_id, intent.intent_id, "UNKNOWN", {"error": type(exc).__name__})
                 raise
+            finally:
+                account_changed(self.ledger)
+            if telemetry:
+                telemetry.sample("http_ack_ms", (telemetry.clock()-sent_at)*1000)
             if not isinstance(response, dict) or not response.get("orderId"):
                 self.ledger.record_attempt(attempt_id, intent.intent_id, "UNKNOWN", {"error": "ambiguous_response"})
                 raise ContractError("broker response is ambiguous; reconciliation required")
@@ -97,8 +117,9 @@ class OrderManager:
             self.ledger.record_order(str(response["orderId"]), intent.intent_id, self.broker.account_id, str(response.get("orderStatus", "TRANSIT")), response)
             return response
 
-    async def reconcile(self) -> dict[str, Any]:
-        async with self.lock:
+    async def reconcile(self, *, expected_revision=None) -> dict[str, Any]:
+        async with self.ledger.reconcile_lock:
+            revision = self.ledger.account_revision if expected_revision is None else expected_revision
             orders = await self.broker.orders()
             trades = await self.broker.trades()
             positions = await self.broker.positions()
@@ -114,6 +135,7 @@ class OrderManager:
                 trades = trades + await historical(min(previous_dates), today)
             by_corr = {str(x.get("correlationId")): x for x in orders if x.get("correlationId")}
             by_id = {str(x.get("orderId")): x for x in orders}
+            resolved = {}
             for row in intent_rows:
                 saved = self.ledger.db.execute("SELECT * FROM orders WHERE intent_id=?", (row["intent_id"],)).fetchone()
                 broker_order = by_corr.get(row["client_order_id"]) or (by_id.get(saved["order_id"]) if saved else None)
@@ -122,37 +144,47 @@ class OrderManager:
                 lookup = getattr(self.broker, "order_by_correlation", None)
                 if broker_order is None and lookup and row["state"] not in {"FILLED","CANCELLED","REJECTED","EXPIRED","ABORTED","PENDING_SEND"}:
                     broker_order = await lookup(row["client_order_id"])
-                if broker_order is None:
-                    attempts = self.ledger.db.execute("SELECT COUNT(*) FROM attempts WHERE intent_id=?", (row["intent_id"],)).fetchone()[0]
-                    if row["state"] == "PENDING_SEND" and not attempts:
-                        self.ledger.set_intent_state(row["intent_id"], "ABORTED")
-                    # A missing broker order is UNKNOWN, never safe to resubmit.
-                    continue
-                order_id = str(broker_order.get("orderId", ""))
-                if not order_id:
-                    raise ContractError("broker order has no identity")
-                for key, expected in (("dhanClientId", self.broker.account_id), ("securityId", row["security_id"]), ("transactionType", row["side"]), ("exchangeSegment", "NSE_FNO"), ("productType", "MARGIN")):
-                    if key in broker_order and str(broker_order[key]) != expected:
-                        raise ContractError("foreign or contradictory broker order")
-                state = str(broker_order.get("orderStatus", "UNKNOWN"))
-                self.ledger.record_order(order_id, row["intent_id"], self.broker.account_id, state, broker_order)
-                for trade in trades:
-                    if str(trade.get("orderId")) != order_id:
+                resolved[row["intent_id"]] = broker_order
+            async with self.lock:
+                if revision != self.ledger.account_revision:
+                    raise ReconciliationChanged("order state changed while reading account")
+                self.ledger.account_revision += 1
+                for row in intent_rows:
+                    broker_order = resolved[row["intent_id"]]
+                    if broker_order is None:
+                        attempts = self.ledger.db.execute("SELECT COUNT(*) FROM attempts WHERE intent_id=?", (row["intent_id"],)).fetchone()[0]
+                        if row["state"] == "PENDING_SEND" and not attempts:
+                            self.ledger.set_intent_state(row["intent_id"], "ABORTED")
+                        # A missing broker order is UNKNOWN, never safe to resubmit.
                         continue
+                    order_id = str(broker_order.get("orderId", ""))
+                    if not order_id:
+                        raise ContractError("broker order has no identity")
                     for key, expected in (("dhanClientId", self.broker.account_id), ("securityId", row["security_id"]), ("transactionType", row["side"]), ("exchangeSegment", "NSE_FNO"), ("productType", "MARGIN")):
-                        if key in trade and str(trade[key]) != expected:
-                            raise ContractError("foreign or contradictory broker fill")
-                    trade_id = str(trade.get("exchangeTradeId") or trade.get("tradeId") or "")
-                    fees = Decimal(str(trade.get("fees", "0")))
-                    components = ("sebiTax","stt","brokerageCharges","serviceTax","exchangeTransactionCharges","stampDuty")
-                    fees = max(fees, sum((Decimal(str(trade.get(key, "0"))) for key in components), Decimal("0")))
-                    fill = Fill(trade_id, order_id, row["security_id"], int(trade["tradedQuantity"]), Decimal(str(trade["tradedPrice"])), fees, datetime.now(timezone.utc))
-                    self.ledger.record_fill_once(fill, row["intent_id"], trade)
-                filled = self.ledger.db.execute("SELECT COALESCE(SUM(quantity),0) FROM fills WHERE intent_id=?", (row["intent_id"],)).fetchone()[0]
-                state = self.ledger.db.execute("SELECT state FROM orders WHERE order_id=?", (order_id,)).fetchone()[0]
-                expected = int(broker_order.get("filledQty", broker_order.get("filledQuantity", row["quantity"] if state == "TRADED" else filled)))
-                if expected > row["quantity"] or filled > row["quantity"]:
-                    raise ContractError("broker fill exceeds submitted quantity")
-                if state in TERMINAL and filled >= expected:
-                    self.ledger.set_intent_state(row["intent_id"], "FILLED" if filled == row["quantity"] else state)
-            return {"orders": orders, "trades": trades, "positions": positions, "unresolved": bool(self.ledger.pending_intents())}
+                        if key in broker_order and str(broker_order[key]) != expected:
+                            raise ContractError("foreign or contradictory broker order")
+                    state = str(broker_order.get("orderStatus", "UNKNOWN"))
+                    self.ledger.record_order(order_id, row["intent_id"], self.broker.account_id, state, broker_order)
+                    for trade in trades:
+                        if str(trade.get("orderId")) != order_id:
+                            continue
+                        for key, expected in (("dhanClientId", self.broker.account_id), ("securityId", row["security_id"]), ("transactionType", row["side"]), ("exchangeSegment", "NSE_FNO"), ("productType", "MARGIN")):
+                            if key in trade and str(trade[key]) != expected:
+                                raise ContractError("foreign or contradictory broker fill")
+                        trade_id = str(trade.get("exchangeTradeId") or trade.get("tradeId") or "")
+                        fees = Decimal(str(trade.get("fees", "0")))
+                        components = ("sebiTax","stt","brokerageCharges","serviceTax","exchangeTransactionCharges","stampDuty")
+                        fees = max(fees, sum((Decimal(str(trade.get(key, "0"))) for key in components), Decimal("0")))
+                        fill = Fill(trade_id, order_id, row["security_id"], int(trade["tradedQuantity"]), Decimal(str(trade["tradedPrice"])), fees, datetime.now(timezone.utc))
+                        self.ledger.record_fill_once(fill, row["intent_id"], trade)
+                        telemetry = getattr(self.ledger, "telemetry", None)
+                        if telemetry:
+                            telemetry.filled(row["intent_id"])
+                    filled = self.ledger.db.execute("SELECT COALESCE(SUM(quantity),0) FROM fills WHERE intent_id=?", (row["intent_id"],)).fetchone()[0]
+                    state = self.ledger.db.execute("SELECT state FROM orders WHERE order_id=?", (order_id,)).fetchone()[0]
+                    expected = int(broker_order.get("filledQty", broker_order.get("filledQuantity", row["quantity"] if state == "TRADED" else filled)))
+                    if expected > row["quantity"] or filled > row["quantity"]:
+                        raise ContractError("broker fill exceeds submitted quantity")
+                    if state in TERMINAL and filled >= expected:
+                        self.ledger.set_intent_state(row["intent_id"], "FILLED" if filled == row["quantity"] else state)
+                return {"revision": self.ledger.account_revision, "orders": orders, "trades": trades, "positions": positions, "unresolved": bool(self.ledger.pending_intents())}

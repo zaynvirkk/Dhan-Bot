@@ -128,3 +128,9 @@ with `./ops/deploy_dashboard.sh`; the script leaves the trader's release and
 trading authority unchanged. The target URL is
 `https://dhan.34.100.255.111.sslip.io`; HTTPS, login and live account observations
 were verified on 30 September 2026. See the [deployment receipt](docs/DASHBOARD-DEPLOYMENT-2026-09-30.md).
+
+
+The 1 October streaming optimization changes are local pending a network-capable
+verification run. See [implementation and validation](docs/STREAMING-OPTIMIZATIONS-2026-10-04.md).
+The frontend lifecycle tests require Node.js 18+ in addition to the Python test
+environment; the VM/dashboard installers include the `nodejs` package.

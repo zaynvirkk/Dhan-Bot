@@ -9,13 +9,14 @@ from pathlib import Path
 import re
 import sqlite3
 from urllib.parse import quote
+from dhan_cas_bot.telemetry import METRICS, REASONS as TIMING_REASONS
 
 UTC = timezone.utc
 # The collector can spend 20s reading Dhan, then waits 15s before its next run.
 # Allow that normal cycle plus scheduling/network margin, not a 15s flicker.
 RUNTIME_TTL_SECONDS = 45
 STATES = {'DISARMED', 'RECOVERING', 'ARMED_WAITING_SESSION', 'ARMED_WAITING_SIGNAL',
-          'ENTRY_HALTED', 'NO_TRADE_DAY', 'SETTLEMENT_PENDING', 'POSITION_OPEN'}
+          'ENTRY_HALTED', 'NO_TRADE_DAY', 'SETTLEMENT_PENDING', 'POSITION_OPEN', 'ENTRY_PENDING', 'EXIT_PENDING'}
 ORDER_STATES = {'PENDING_SEND', 'SEND_UNKNOWN', 'SENT', 'TRANSIT', 'PENDING', 'CLOSED',
                 'TRIGGERED', 'REJECTED', 'CANCELLED', 'PART_TRADED', 'TRADED', 'FILLED',
                 'EXPIRED', 'ABORTED'}
@@ -125,7 +126,59 @@ def runtime_view(raw, now):
             'session': timestamp(str(raw.get('session', '')) + 'T00:00:00+05:30'),
             'books_observed': integer(raw.get('books_observed')),
             'contract_count': integer(raw.get('contract_count')),
-            'clock_uncertainty_ms': integer(raw.get('clock_uncertainty_ms'))}
+            'clock_uncertainty_ms': integer(raw.get('clock_uncertainty_ms')),
+            'telemetry': telemetry_view(raw.get('telemetry'))}
+
+
+def telemetry_view(raw):
+    raw = raw if isinstance(raw, dict) else {}
+    latency, counts = raw.get('latency', {}), raw.get('decision_counts', {})
+    latency = latency if isinstance(latency, dict) else {}
+    counts = counts if isinstance(counts, dict) else {}
+    return {'scope': 'current_process_rolling_512',
+            'latency': {key: {field: money(value.get(field)) for field in ('p50', 'p95', 'p99')}
+                        | {'samples': integer(value.get('samples'))}
+                        for key, value in latency.items() if key in METRICS and isinstance(value, dict)},
+            'decision_counts': {key: integer(value) for key, value in counts.items() if key in TIMING_REASONS}}
+
+
+def shared_account(raw, now):
+    """Re-allowlist the trader's read model at the sidecar boundary."""
+    if not isinstance(raw, dict) or raw.get('schema') != 1:
+        return None
+    stamp = freshness(raw.get('observed_at'), now, 60)
+    if not stamp['fresh']:
+        return None
+    account = raw.get('account')
+    if raw.get('account_read_ok') is not True or not isinstance(account, dict):
+        return {'account': None, 'account_read_ok': False}
+    if account.get('observed_at') != raw.get('observed_at'):
+        return None
+    positions, orders = account.get('positions'), account.get('orders')
+    if not isinstance(positions, list) or not isinstance(orders, list):
+        return None
+    clean = {'observed_at': stamp['observed_at']}
+    for key in ('available_cash', 'realised_pnl', 'unrealised_pnl'):
+        clean[key] = money(account.get(key))
+    if clean['available_cash'] is None:
+        return None
+    for key in ('open_position_count', 'order_count'):
+        clean[key] = integer(account.get(key))
+    for key in ('positions_truncated', 'orders_truncated'):
+        clean[key] = account.get(key) is True
+    clean['positions'] = [{
+        'symbol': label(row.get('symbol')), 'security_id': label(row.get('security_id')),
+        'quantity': integer(row.get('quantity')), 'average_price': money(row.get('average_price')),
+        'realised': money(row.get('realised')), 'unrealised': money(row.get('unrealised')),
+        'product': choice(row.get('product'), {'MARGIN', 'INTRADAY', 'CNC'})
+    } for row in positions[:100] if isinstance(row, dict)]
+    clean['orders'] = [{
+        'symbol': label(row.get('symbol')), 'security_id': label(row.get('security_id')),
+        'quantity': integer(row.get('quantity')), 'filled_quantity': integer(row.get('filled_quantity')),
+        'price': money(row.get('price')), 'side': choice(row.get('side'), {'BUY', 'SELL'}),
+        'state': choice(row.get('state'), ORDER_STATES, 'UNKNOWN')
+    } for row in orders[:100] if isinstance(row, dict)]
+    return {'account': clean, 'account_read_ok': True}
 
 
 def connections_view(raw, now):

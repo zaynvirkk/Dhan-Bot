@@ -1,6 +1,8 @@
 # Private dashboard
 
-The dashboard is **deployed and verified live** as of 30 September 2026.
+The 30 September dashboard release is deployed. The 1 October streaming
+optimizations described below are implemented locally and are **not deployed**.
+Live behavior was last verified on 30 September 2026.
 See the [deployment verification](DASHBOARD-DEPLOYMENT-2026-09-30.md) and
 [browser access fix](DASHBOARD-ACCESS-2026-09-30.md).
 
@@ -60,14 +62,31 @@ challenge caused Brave to fail with ERR_TOO_MANY_RETRIES.
 - Persisted order intents, fills and incident timestamps from the bot's ledger.
 - Copyable operator commands for preflight, activation and pausing new entries.
 
-The page polls every five seconds. The account collector runs fifteen seconds
-after its previous run completes (up to twenty seconds for a failed broker read).
-Runtime snapshots older than forty-five seconds, account snapshots older than sixty
-seconds and explicit connection checks older than fifteen minutes are marked
-stale. The heartbeat window covers the collector’s normal 20s read timeout plus
-15s scheduling gap; it is an observation-age threshold, not an execution guard.
-Broker errors retain the previous observation with a failure indication.
-An empty verified response and an unavailable response have different displays.
+The updated page receives authenticated server-sent events once a second,
+with a five-second polling fallback if the stream stops. Hidden tabs disconnect;
+visible tabs reconnect and fetch a current snapshot. A finite 20-second stream
+renews authentication, emits an expiry event when a cookie expires, and leaves
+worker capacity for normal requests. Observation ages are recalculated each time.
+A delayed failed poll cannot overwrite a newer pushed observation.
+
+The collector is now a persistent, separately supervised service. It projects
+local status each second and reads the trader's sanitized
+`account-observation.json`, retaining the actual observation timestamp. It checks
+the broker independently every five minutes when shared observations exist.
+That check cannot stall local publication. With an older trader that does not
+publish shared observations, the collector falls back to independent broker
+reads fifteen seconds after completion. The installer disables the old timer.
+
+Runtime snapshots older than forty-five seconds, account snapshots older than
+sixty seconds and explicit connection checks older than fifteen minutes are
+marked stale. These dashboard thresholds describe observation age; they are
+not execution guards. Broker errors retain earlier values with a failure label.
+Missing observations remain different from verified empty responses.
+
+The Timing and entry checks disclosure shows rolling p95 timings, sample counts,
+and the current process's decision-evaluation counters. These are operational
+measurements, not win rates or evidence that rejected candidates were profitable.
+See [streaming implementation and validation](STREAMING-OPTIMIZATIONS-2026-10-04.md).
 
 Connection checks are historical observations, not a continuously sampled socket
 health claim. The 30 September 02:57 IST checks passed all seven connections,
@@ -93,7 +112,7 @@ identifiers, tokens or raw incident text are exported. Existing trader startup,
 verification, allocation, exit management and authority remain independent.
 
 ```bash
-sudo systemctl status dhan-dashboard dhan-dashboard-collect.timer dhan-dashboard-caddy
+sudo systemctl status dhan-dashboard dhan-dashboard-collect dhan-dashboard-caddy
 sudo journalctl -u dhan-dashboard-collect -u dhan-dashboard -u dhan-dashboard-caddy -n 40
 ```
 
@@ -142,7 +161,7 @@ sudo -u sablestone /opt/sablestone-dhan-cas-bot/.venv/bin/dhan-cas \
 
 Dashboard development and tests have not executed these activation commands.
 
-## Validation
+## Historical validation of the deployed 30 September release
 
 `python3 -m pytest tests/test_dashboard.py` passes 50 authentication, projection,
 staleness, decimal, read-only ledger/broker and firewall-scope tests. The complete
@@ -165,3 +184,5 @@ allowed ports, network, sources or VM target tag.
 Source references: [Caddy automatic HTTPS](https://caddyserver.com/docs/automatic-https),
 [Gunicorn 26.2.0](https://pypi.org/project/gunicorn/26.2.0/),
 [IP-based DNS](https://sslip.io/).
+
+For the pending streaming release, see [publication and operator update steps](RELEASE-2026-10-04.md).

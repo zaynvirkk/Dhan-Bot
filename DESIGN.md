@@ -46,3 +46,12 @@ autocomplete, keyboard submission and recoverable errors. Added dashboard sign
 out; session expiry returns to login. Tested real form login/logout on the public
 HTTPS site, mobile at 390px, and the owner’s actual Brave browser. No browser
 JavaScript errors or mobile overflow. Password and trading authority are unchanged.
+
+
+1 October implementation: retained the existing visual system and read-only
+interaction model. Added a collapsible Timing and entry checks view using the
+existing facts layout. Authenticated SSE carries status snapshots; hidden tabs
+pause, failures fall back to polling, and stale/unknown states remain explicit.
+DOM and stream lifecycle tests pass. The mechanical detector reports only the
+existing em-dash placeholders advisory. This pass has no new browser screenshot
+or deployed visual verification because the execution environment blocks sockets.

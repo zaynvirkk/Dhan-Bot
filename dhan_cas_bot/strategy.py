@@ -79,18 +79,21 @@ def _same_direction(option_type: OptionType, current: Decimal, reference: Decima
     return (current > reference and option_type is OptionType.CE) or (current < reference and option_type is OptionType.PE)
 
 
-def find_opportunity(reference: Reference, observations: list[tuple[Decimal, str]], books: Iterable[OptionBook], allocation: Allocation, fees: FeeSchedule | None = None) -> Opportunity | None:
+def find_opportunity(reference: Reference, observations: list[tuple[Decimal, str]], books: Iterable[OptionBook], allocation: Allocation, fees: FeeSchedule | None = None, *, reject=None) -> Opportunity | None:
     """Find the deterministic best single-contract CAS lag.
 
     `observations` is a sequence of (official IEP, observation identity).
     Future data is deliberately not accepted by this function.
     """
+    note = reject or (lambda reason: None)
     fees = fees or FeeSchedule()
     if len(observations) < 2:
+        note("CONFIRMATION_MISSING")
         return None
     current = observations[-1][0]
     previous = observations[-2][0]
     if current == reference.value or len({identity for _, identity in observations}) < 2:
+        note("CONFIRMATION_MISSING")
         return None
     direction = OptionType.CE if current > reference.value else OptionType.PE
     contiguous = []
@@ -99,22 +102,29 @@ def find_opportunity(reference: Reference, observations: list[tuple[Decimal, str
             break
         contiguous.append(value)
     if len(contiguous) < 2:
+        note("CONFIRMATION_MISSING")
         return None
     eligible: list[Opportunity] = []
     for book in books:
         inst = book.instrument
         if inst.option_type is not direction:
+            note("DIRECTION_MISMATCH")
             continue
         ask = book.top_ask
         bid = book.top_bid
         if ask is None or bid is None:
+            note("EMPTY_BOOK")
             continue
         if ask.quantity < inst.lot_size or bid.quantity < inst.lot_size:
+            note("INSUFFICIENT_DEPTH")
             continue
         target = min(intrinsic(direction, inst.strike, value) for value in contiguous)
         if ask.price + inst.tick_size > target:
+            note("INTRINSIC_GAP_MISSING")
             continue
         limits = sorted({level.price for level in book.asks if level.price < target and level.quantity > 0 and permitted_limit(inst, level.price)})
+        if not limits:
+            note("PRICE_BAND_REJECTED")
         for limit in limits:
             available = (ladder_capacity(book, limit) // inst.lot_size) * inst.lot_size
             available = min(available, int(min(allocation.remaining,allocation.spendable_cash) / limit) // inst.lot_size * inst.lot_size)
@@ -128,6 +138,8 @@ def find_opportunity(reference: Reference, observations: list[tuple[Decimal, str
                 else:
                     high = middle-1
             maximum = low*inst.lot_size
+            if not maximum:
+                note("CASH_OR_CAP_TOO_SMALL")
             quantities = {inst.lot_size,maximum}
             for boundary in range(child_size,maximum+child_size,child_size):
                 quantities.update((boundary,boundary-inst.lot_size))
@@ -139,6 +151,7 @@ def find_opportunity(reference: Reference, observations: list[tuple[Decimal, str
                 sale = conditional_sale_cash(quantity, target, children, fees)
                 edge = sale - entry
                 if edge <= 0:
+                    note("NET_EDGE_NONPOSITIVE")
                     continue
                 score = (edge / entry, edge, quantity)
                 eligible.append(Opportunity(inst, "BUY", quantity, limit, edge, score, "CAS_LAG_V1"))
@@ -147,8 +160,9 @@ def find_opportunity(reference: Reference, observations: list[tuple[Decimal, str
     return max(eligible, key=lambda x: (x.score, -int(x.instrument.security_id), -x.limit_price))
 
 
-def find_final_opportunity(final, books, allocation):
+def find_final_opportunity(final, books, allocation, *, reject=None):
     """Confirmed final input needs no manufactured sequence of IEP observations."""
+    note = reject or (lambda reason: None)
     final.validate()
     fees = FeeSchedule()
     choices = []
@@ -166,7 +180,9 @@ def find_final_opportunity(final, books, allocation):
                 if allocation.permits(reserve_cash(worst_case_entry_cash(quantity,limit,(quantity+child-1)//child,fees))): low=middle
                 else: high=middle-1
             quantity=low*inst.lot_size
-            if not quantity: continue
+            if not quantity:
+                note("CASH_OR_CAP_TOO_SMALL")
+                continue
             children=(quantity+child-1)//child
             entry=reserve_cash(worst_case_entry_cash(quantity,limit,children,fees))
             edge=conditional_sale_cash(quantity,target,children,fees)-entry

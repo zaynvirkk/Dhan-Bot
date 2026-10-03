@@ -27,7 +27,7 @@ if ips != {'34.100.255.111'}: raise SystemExit('Dashboard DNS does not resolve e
 PY
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq python3-venv caddy
+apt-get install -y -qq python3-venv caddy nodejs
 # The package may auto-start its default site. The dedicated dashboard unit owns HTTPS.
 systemctl disable --now caddy.service
 id dhan-dashboard >/dev/null 2>&1 || useradd --system --home /nonexistent --shell /usr/sbin/nologin dhan-dashboard
@@ -39,7 +39,7 @@ if [[ ! -f "$DASH_RELEASE/.ready" ]]; then
   python3 -m venv "$DASH_RELEASE/.venv"
   "$DASH_RELEASE/.venv/bin/pip" install --disable-pip-version-check -q -r "$DASH_RELEASE/requirements-dashboard.lock"
   "$DASH_RELEASE/.venv/bin/pip" install --disable-pip-version-check -q --no-deps "$DASH_RELEASE"
-  (cd "$DASH_RELEASE" && .venv/bin/python -m pytest tests/test_dashboard.py)
+  (cd "$DASH_RELEASE" && .venv/bin/python -m pytest tests/test_dashboard.py tests/test_dashboard_streaming.py)
   touch "$DASH_RELEASE/.ready"
 fi
 install -d -m 0755 -o root -g root /etc/sablestone-dhan-dashboard
@@ -84,11 +84,12 @@ DASH_PREVIOUS=$(readlink /opt/sablestone-dhan-dashboard/current || true)
 ln -s "$DASH_RELEASE" /opt/sablestone-dhan-dashboard/current.next
 mv -Tf /opt/sablestone-dhan-dashboard/current.next /opt/sablestone-dhan-dashboard/current
 systemctl daemon-reload
-systemctl enable dhan-dashboard.service dhan-dashboard-collect.timer dhan-dashboard-caddy.service
+systemctl disable --now dhan-dashboard-collect.timer
+systemctl enable dhan-dashboard.service dhan-dashboard-collect.service dhan-dashboard-caddy.service
 systemctl restart dhan-dashboard.service
 # Record a projection even if the cached broker token has expired.
-systemctl start dhan-dashboard-collect.service
-systemctl restart dhan-dashboard-collect.timer dhan-dashboard-caddy.service
+systemctl restart dhan-dashboard-collect.service
+systemctl restart dhan-dashboard-caddy.service
 python3 - <<'PY'
 import base64,json,time,urllib.error,urllib.request
 from pathlib import Path
@@ -104,8 +105,15 @@ for attempt in range(10):
         time.sleep(1)
     else: raise SystemExit('Dashboard must require authentication')
 headers={'Authorization':'Basic '+base64.b64encode(('operator:'+password).encode()).decode()}
-with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8088/api/status',headers=headers),timeout=5) as response:
-    snapshot=json.load(response)
+for attempt in range(15):
+    try:
+        with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8088/api/status',headers=headers),timeout=5) as response:
+            snapshot=json.load(response)
+        if snapshot.get('collector', {}).get('fresh'): break
+    except (urllib.error.HTTPError, urllib.error.URLError):
+        pass
+    if attempt == 14: raise SystemExit('Dashboard collector did not publish a fresh snapshot')
+    time.sleep(1)
 assert snapshot['available'] and snapshot['writes_to_broker'] is False
 print('Authenticated local status verified; broker account current:',snapshot['account_read_ok'])
 PY

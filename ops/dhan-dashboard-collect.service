@@ -4,15 +4,16 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=oneshot
+Type=simple
 User=sablestone
 Group=dhan-dashboard
 SupplementaryGroups=sablestone
 WorkingDirectory=/opt/sablestone-dhan-dashboard/current
-ExecStart=/opt/sablestone-dhan-dashboard/current/.venv/bin/python -m dhan_cas_bot.dashboard.collect
+ExecStart=/opt/sablestone-dhan-dashboard/current/.venv/bin/python -m dhan_cas_bot.dashboard.collect --watch
 Environment=DHAN_BROKER_READ_ONLY=1
 Environment=PYTHONDONTWRITEBYTECODE=1
-TimeoutStartSec=30
+Restart=on-failure
+RestartSec=5
 Nice=10
 NoNewPrivileges=true
 PrivateTmp=true
@@ -22,3 +23,6 @@ ReadWritePaths=/var/lib/sablestone-dhan-dashboard
 InaccessiblePaths=/etc/sablestone-dhan/secrets.env
 CapabilityBoundingSet=
 UMask=0027
+
+[Install]
+WantedBy=multi-user.target

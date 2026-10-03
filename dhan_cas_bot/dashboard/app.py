@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import secrets
 import time
+import threading
 from urllib.parse import parse_qs
 from .data import RUNTIME_TTL_SECONDS, freshness, read_json, utcnow
 
@@ -18,6 +19,7 @@ STATIC = Path(__file__).with_name('static')
 ASSETS = {'/': ('index.html', 'text/html; charset=utf-8'),
           '/app.css': ('app.css', 'text/css; charset=utf-8'),
           '/app.js': ('app.js', 'text/javascript; charset=utf-8'),
+          '/stream.js': ('stream.js', 'text/javascript; charset=utf-8'),
           '/favicon.svg': ('favicon.svg', 'image/svg+xml')}
 ORIGIN = 'https://dhan.34.100.255.111.sslip.io'
 COOKIE = '__Host-dhan_dashboard'
@@ -55,6 +57,8 @@ class Dashboard:
     def __init__(self, snapshot, auth):
         self.snapshot = Path(snapshot)
         self.auth = read_json(auth, 4096)
+        # Six streams per eight-thread worker leave room for login/status.
+        self.stream_slots = threading.BoundedSemaphore(6)
         if (not self.auth or self.auth.get('username') != 'operator'
                 or not re.fullmatch('[0-9a-f]{64}', str(self.auth.get('password_sha256', '')))):
             raise ValueError('Dashboard credential file is missing or invalid')
@@ -150,6 +154,16 @@ class Dashboard:
             status, body, extra = '303 See Other', b'', [('Location', '/login')]
         elif not self.authorized(environ):
             status, body = '401 Unauthorized', b'{"error":"SIGN_IN_REQUIRED"}'
+        elif path == '/api/events':
+            headers = HEADERS + [('Content-Type', 'text/event-stream'), ('X-Accel-Buffering', 'no')]
+            if method == 'HEAD':
+                start_response('200 OK', headers)
+                return [b'']
+            if not self.stream_slots.acquire(blocking=False):
+                start_response('503 Service Unavailable', HEADERS + [('Retry-After', '5')])
+                return [b'']
+            start_response('200 OK', headers)
+            return EventStream(self, environ)
         elif path == '/api/status':
             try:
                 data = view_snapshot(self.snapshot)
@@ -164,6 +178,41 @@ class Dashboard:
             status, body = '404 Not Found', b'{"error":"NOT_FOUND"}'
         start_response(status, HEADERS + [('Content-Type', content_type), ('Content-Length', str(len(body)))] + extra)
         return [b'' if method == 'HEAD' else body]
+
+
+class EventStream:
+    """Finite streams renew auth; close() also handles disconnect-before-first-read."""
+    def __init__(self, app, environ):
+        self.app, self.environ = app, dict(environ)
+        self.deadline = time.monotonic() + 20
+        self.first, self.closed = True, False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.closed:
+            raise StopIteration
+        if not self.first:
+            time.sleep(1)
+        self.first = False
+        if not self.app.authorized(self.environ):
+            self.close()
+            return b'event: auth-required\ndata: {}\n\n'
+        if time.monotonic() >= self.deadline:
+            self.close()
+            raise StopIteration
+        try:
+            data = view_snapshot(self.app.snapshot)
+            return ('retry: 1000\ndata: '+json.dumps(data, allow_nan=False)+'\n\n').encode()
+        except Exception:
+            self.close()
+            return b'data: {"available":false,"error":"SNAPSHOT_UNAVAILABLE"}\n\n'
+
+    def close(self):
+        if not self.closed:
+            self.closed = True
+            self.app.stream_slots.release()
 
 
 def create_app():

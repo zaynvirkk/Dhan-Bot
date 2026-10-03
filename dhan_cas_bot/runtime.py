@@ -9,6 +9,7 @@ from .domain import CasPhase, ContractError, Mandate
 from .ledger import Ledger
 from .orders import Broker, OrderManager
 from .risk import Allocation, FeeSchedule
+from .telemetry import Telemetry
 
 
 @dataclass
@@ -36,6 +37,9 @@ class AutoLive:
         self.broker = broker
         self.mandate = mandate
         self.orders = OrderManager(ledger, broker)
+        self.telemetry = Telemetry()
+        ledger.telemetry = self.telemetry
+        self.account_refresh = None
         self.status = RuntimeStatus(software_verified=software_verified, auto_live_armed=mandate.live_order_authority, state="ARMED_WAITING_SESSION" if mandate.live_order_authority else "DISARMED")
 
     async def recover(self) -> dict[str, Any]:
@@ -56,6 +60,9 @@ class AutoLive:
             self.status.reason = "ACCOUNT_FUNDS_UNAVAILABLE:"+type(exc).__name__
 
     def permit_entry(self, *, settlement_add=False) -> bool:
+        if self.account_refresh is not None and not self.account_refresh.fresh:
+            self.account_refresh.request()
+            return False
         blocked = {"DISARMED", "RECOVERING"}
         if not settlement_add:
             blocked.add("SETTLEMENT_PENDING")
