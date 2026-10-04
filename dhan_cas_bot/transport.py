@@ -140,7 +140,7 @@ class WebSocketRunner:
                     await self.consume(socket)
             except asyncio.CancelledError:
                 raise
-            except (OSError, ConnectionClosed, InvalidHandshake, ContractError, httpx.HTTPError) as exc:
+            except (OSError, EOFError, ConnectionClosed, InvalidHandshake, ContractError, httpx.HTTPError) as exc:
                 self.last_error = type(exc).__name__
                 if self.stop.is_set():
                     return

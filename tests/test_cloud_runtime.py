@@ -82,6 +82,51 @@ def test_vm_readonly_boundary_blocks_even_authorized_broker(monkeypatch):
     assert not calls
 
 
+def test_incomplete_handshake_retries_and_resubscribes_without_process_restart():
+    async def exercise():
+        received, epochs, retries = [], [], []
+
+        async def truncated_handshake(reader, writer):
+            await reader.readuntil(b"\r\n\r\n")
+            writer.write(b"HTTP/1.1 101 Switching Protocols\r\n")
+            await writer.drain()
+            writer.close()
+            await writer.wait_closed()
+
+        async def healthy_socket(socket):
+            received.append(await socket.recv())
+            await socket.send(b"recovered")
+            await socket.wait_closed()
+
+        async with await asyncio.start_server(truncated_handshake, "127.0.0.1", 0) as broken:
+            async with serve(healthy_socket, "127.0.0.1", 0) as healthy:
+                endpoints = iter([broken.sockets[0].getsockname()[1], healthy.sockets[0].getsockname()[1]])
+
+                async def endpoint():
+                    return f"ws://127.0.0.1:{next(endpoints)}"
+
+                async def message(payload):
+                    assert payload == b"recovered"
+                    runner.close()
+
+                runner = WebSocketRunner(endpoint, {}, message, subscribe=[{"method": "sub"}],
+                    binary=True, on_connect=lambda: epochs.append("connect"),
+                    on_disconnect=lambda: epochs.append("disconnect"))
+
+                async def retry(delay):
+                    retries.append((runner.last_error, delay, runner.snapshot()["connected"]))
+
+                runner.wait_retry = retry
+                await asyncio.wait_for(runner.run(), 5)
+        assert len(retries) == 1 and retries[0][0] == "EOFError"
+        assert .75 <= retries[0][1] <= 1 and retries[0][2] is False
+        assert received == [b'{"method":"sub"}']
+        assert epochs == ["disconnect", "connect", "disconnect"]
+        assert runner.processed == 1 and runner.attempts == 2
+        assert runner.snapshot()["connected"] is False
+    asyncio.run(exercise())
+
+
 def test_malformed_orders_cannot_reconcile_as_empty(monkeypatch):
     broker = DhanBroker("TEST", "test-token")
     async def wrong(*args):

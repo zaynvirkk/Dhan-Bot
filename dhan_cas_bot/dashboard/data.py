@@ -144,7 +144,7 @@ def feed_health_view(raw):
                         **{key: timestamp(item.get(key)) for key in ('last_received_at', 'last_processed_at', 'last_usable_at')},
                         **{key: integer(item.get(key)) for key in ('reconnects', 'pending_messages', 'queue_high_water', 'processed_messages')},
                         **{key: money(item.get(key)) for key in ('oldest_pending_ms', 'queue_delay_ms', 'processing_ms')},
-                        'last_error': choice(item.get('last_error'), {'ContractError', 'OSError', 'TimeoutError', 'ConnectionClosedError', 'InvalidHandshake', 'HTTPStatusError'})}
+                        'last_error': choice(item.get('last_error'), {'ContractError', 'OSError', 'EOFError', 'TimeoutError', 'ConnectionClosedError', 'InvalidHandshake', 'HTTPStatusError'})}
     return result
 
 
