@@ -18,7 +18,7 @@ from .test_production_lifecycles import MatchingBroker
 from .acceptance.cas.support import mandate
 
 
-@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'message_burst', 'transport_reconnect'])
+@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames'])
 def test_background_reconciliation_through_production_session(tmp_path, monkeypatch, mode):
     async def run():
         ledger = Ledger(tmp_path/'ledger.sqlite3')
@@ -85,7 +85,7 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             raise AssertionError(path)
         real_client = httpx.AsyncClient
         monkeypatch.setattr(httpx, 'AsyncClient', lambda **kwargs: real_client(transport=httpx.MockTransport(handler), **kwargs))
-        if mode in {'message_burst', 'transport_reconnect'}:
+        if mode in {'message_burst', 'transport_reconnect', 'invalid_frames'}:
             # Replay official binary frames through the real transport queue,
             # parser and production execution loop. Only network I/O is a fixture.
             import websockets.asyncio.client
@@ -158,6 +158,30 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             await channels['market'].send(full_packet(100)+full_packet(200))
             await until(lambda: status_file().get('broker_route_verified'))
             assert len(broker.requests)==1
+            if mode=='invalid_frames':
+                import struct
+                initial=channels['market']
+                malformed=bytearray(full_packet(200))
+                struct.pack_into('<H',malformed,1,70)  # Live-observed 162-byte frame declaring 70.
+                await initial.send(full_packet(100)+bytes(malformed))
+                await until(lambda:status_file().get('books_observed')==0)
+                assert status_file()['feed_health']['market']['last_usable_at'] is None
+                assert len(broker.requests)==1
+                # Identical valid packets must be accepted again after invalidation.
+                await initial.send(full_packet(100)+full_packet(200))
+                await until(lambda:status_file().get('books_observed')==2)
+                malformed=bytearray(full_packet(200))
+                struct.pack_into('<f',malformed,50,float('nan'))
+                await initial.send(bytes(malformed))
+                await until(lambda:status_file().get('books_observed')==1)
+                assert len(broker.requests)==1
+                await initial.send(full_packet(200))
+                await until(lambda:status_file().get('books_observed')==2)
+                assert channels['market'] is initial
+                health=status_file()['feed_health']['market']
+                assert health['connected'] is True and health['reconnects']==0
+                counts=status_file()['telemetry']['decision_counts']
+                assert counts['MARKET_FRAME_REJECTED']==1 and counts['MARKET_BOOK_REJECTED']==1
             if mode=='transport_reconnect':
                 old=channels['market']
                 await old.disconnect()
@@ -213,7 +237,7 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             assert not any(broker.quantities.values())
             assert ledger.db.execute('SELECT COUNT(*) FROM fills').fetchone()[0]==2
             assert 'synthetic' not in (tmp_path/'account-observation.json').read_text()
-            if mode in {'message_burst','transport_reconnect'}:
+            if mode in {'message_burst','transport_reconnect','invalid_frames'}:
                 await until(lambda:bool(status_file().get('feed_health',{}).get('market',{}).get('last_usable_at')))
                 health=status_file()['feed_health']['market']
                 assert health['connected'] is True

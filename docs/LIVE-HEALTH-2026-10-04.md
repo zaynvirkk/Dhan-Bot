@@ -1,5 +1,9 @@
 # Live connection health and scheduling update
 
+The later [authorized deployment follow-up](RELEASE-2026-10-04.md) supersedes the
+original sandbox-blocked release status below. It records complete socket and
+mutation verification plus the live-discovered handshake and malformed-frame fixes.
+
 Implemented locally on 4 October 2026. This report does not establish deployment,
 current broker connectivity or profitable trading. The previous streaming release
 was committed as 015536b; this update builds on it.

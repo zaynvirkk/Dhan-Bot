@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pytest
 
-from dhan_cas_bot.dhan_feed import book_from_packet, decode_full_binary, packets
+from dhan_cas_bot.dhan_feed import InvalidDhanFrame, book_from_packet, decode_full_binary, packets
 from dhan_cas_bot.domain import ContractError, Instrument, OptionType, Segment
 from dhan_cas_bot.index_catalog import index_catalog
 
@@ -48,6 +48,17 @@ def test_obsolete_padded_frame_is_rejected():
     struct.pack_into("<H", raw, 1, 163)
     with pytest.raises(ContractError):
         decode_full_binary(bytes(raw), instrument())
+
+
+def test_bad_framing_is_rejected_but_server_disconnect_is_not_quarantined():
+    malformed = bytearray(sdk_frame())
+    struct.pack_into('<H', malformed, 1, 70)
+    with pytest.raises(InvalidDhanFrame):
+        list(packets(bytes(malformed)))
+    disconnect = struct.pack('<BHBIH', 50, 10, 2, 0, 805)
+    with pytest.raises(ContractError, match='disconnect') as error:
+        list(packets(disconnect))
+    assert not isinstance(error.value, InvalidDhanFrame)
 
 
 @pytest.mark.parametrize("offset", [8, 18, 46, 50, 54, 58])

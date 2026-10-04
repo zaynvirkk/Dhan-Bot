@@ -24,7 +24,7 @@ from .auth import session_token
 from .broker import DhanBroker
 from .commissioning import normalize_whitelist
 from .config import load_config, load_mandate
-from .dhan_feed import packets, decode_full_binary, book_from_packet
+from .dhan_feed import InvalidDhanFrame, packets, decode_full_binary, book_from_packet
 from .domain import CasPhase, ContractError
 from .egress import require_expected_egress
 from .engine import SessionEngine, restore_instrument
@@ -281,15 +281,36 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             record_frame("DHAN_FRAME", epoch, payload)
             if not market.protocol.epoch.connected:
                 return
-            for packet in packets(payload):
+            try:
+                # Validate the whole message before accepting any contained book.
+                batch = list(packets(payload))
+            except InvalidDhanFrame:
+                # Boundaries cannot identify every affected contract reliably.
+                # Discard all previous evidence, but keep reading the transport.
+                engine.books.clear()
+                engine.streaks.clear()
+                last_packets.clear()
+                usable_at.pop("market", None)
+                runtime.telemetry.reason("MARKET_FRAME_REJECTED")
+                wake.set()
+                return
+            for packet in batch:
                 inst = instrument_by_id.get(str(int.from_bytes(packet[4:8], "little")))
                 if packet[0] != 8 or inst is None:
                     continue
                 identity = hashlib.sha256(packet).digest()
                 if last_packets.get(inst.security_id) == (epoch,identity):
                     continue
+                try:
+                    decoded = decode_full_binary(packet, inst)
+                except ContractError:
+                    engine.books.pop(inst.security_id, None)
+                    engine.streaks.pop(inst.security_id, None)
+                    last_packets.pop(inst.security_id, None)
+                    usable_at.pop("market", None)
+                    runtime.telemetry.reason("MARKET_BOOK_REJECTED")
+                    continue
                 last_packets[inst.security_id] = (epoch,identity)
-                decoded = decode_full_binary(packet, inst)
                 engine.on_book(book_from_packet(decoded, inst, epoch, received_ns))
                 usable_at["market"] = datetime.fromtimestamp(received_ns/1e9, timezone.utc).isoformat()
                 runtime.telemetry.received("market")
