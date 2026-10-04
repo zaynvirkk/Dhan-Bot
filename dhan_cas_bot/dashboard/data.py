@@ -30,6 +30,20 @@ CHECK_FIELDS = {
     'dhan_order_socket': ('websocket_connected', 'route_verified'),
 }
 REASONS = {
+    'NO_EXECUTABLE_LAG_OR_REMAINING_ALLOWANCE': 'No contract passes the price, depth, fees and remaining capital checks.',
+    'UNMANAGED_ACCOUNT_POSITION': 'An account position is not managed by this bot. New entries are blocked.',
+    'CAS_LAG_V1': 'An auction-lag entry was submitted. Waiting for broker execution updates.',
+    'FINAL_RESIDUAL': 'A confirmed-final-value entry was submitted. Waiting for broker execution updates.',
+    'DIRECTION_REVERSAL': 'The auction direction reversed. The bot is reducing its position.',
+    'CONTRACT_LAG_INVALIDATED': 'The contract lost its qualifying price discrepancy. The bot is reducing its position.',
+    'LAG_CONVERGED': 'The option price caught up with the auction value. The bot is reducing its position.',
+    'JOINT_REVERSAL': 'Both intrinsic value and bid reversed. The bot is reducing its position.',
+    'TIME_EXIT': 'The exit deadline was reached. The bot is reducing its position.',
+    'OPTION_BOOK_UNAVAILABLE': 'The option book is unavailable. The bot is handling the open position.',
+    'RECOVERY_OR_SIGNAL_UNAVAILABLE': 'Signal or connection recovery is required. The bot is handling the open position.',
+    'SIGNAL_UNAVAILABLE': 'No usable auction state is available.',
+    'COLLECTION_STOPPED_NO_FINAL_INPUT': 'Auction collection stopped without a verified final value. The bot is reducing its position.',
+    'CONFIRMED_FINAL_EXERCISE_VALUE_EXCEEDS_FINITE_SALE': 'The recorded final exercise value exceeds the supported sale proceeds. Settlement is pending.',
     'ACCOUNT_FUNDS_UNAVAILABLE': 'The broker cash request failed. New entries are blocked.',
     'RECOVERY_REQUIRED': 'The bot is reconciling broker state before considering entries.',
     'OFFICIAL_INDEX_IEP_UNAVAILABLE': 'Waiting for an official indicative index value.',
@@ -130,7 +144,30 @@ def runtime_view(raw, now):
             'monitoring_mode': choice(raw.get('monitoring_mode'), {'IDLE', 'ACTIVE'}, 'UNKNOWN'),
             'feed_health': feed_health_view(raw.get('feed_health')),
             'recorder_pending': integer(raw.get('recorder_pending')),
-            'telemetry': telemetry_view(raw.get('telemetry'))}
+            'telemetry': telemetry_view(raw.get('telemetry')),
+            'observation': observation_projection(raw.get('observation'))}
+
+
+def observation_projection(raw):
+    if not isinstance(raw, dict):
+        return None
+    watch = raw.get('watchlist')
+    watch = watch if isinstance(watch, list) else []
+    return {
+        'phase': choice(raw.get('phase'), {'CTS_CLOSE', 'CAS_LM_START', 'CAS_M_STOP', 'CAS_STOP', 'UNKNOWN'}),
+        'phase_at': timestamp(raw.get('phase_at')), 'iep_at': timestamp(raw.get('iep_at')),
+        'direction': choice(raw.get('direction'), {'CE', 'PE'}),
+        'expiry': timestamp(str(raw.get('expiry', '')) + 'T00:00:00+05:30'),
+        **{key: money(raw.get(key)) for key in ('reference', 'iep', 'final_value')},
+        'watchlist': [{
+            'security_id': label(row.get('security_id')),
+            'option_type': choice(row.get('option_type'), {'CE', 'PE'}),
+            'expiry': timestamp(str(row.get('expiry', '')) + 'T00:00:00+05:30'),
+            'observed_at': timestamp(row.get('observed_at')),
+            **{key: money(row.get(key)) for key in ('strike', 'bid', 'ask', 'one_lot_cash', 'conditional_intrinsic')},
+            **{key: integer(row.get(key)) for key in ('lot_size', 'bid_quantity', 'ask_quantity', 'confirmations')},
+        } for row in watch[:5] if isinstance(row, dict)],
+    }
 
 
 def feed_health_view(raw):
@@ -287,7 +324,21 @@ def ledger_view(path):
             # Arbitrary incident payloads can contain credentials; never export them.
             incidents = [{'kind': 'Runtime incident', 'occurred_at': timestamp(r['created_at'])}
                          for r in db.execute('SELECT created_at FROM incidents ORDER BY created_at DESC LIMIT 30')]
-            return {'available': True, 'orders': orders, 'fills': fills, 'incidents': incidents, 'counts': counts}
+            decision = db.execute("SELECT o.received_at,o.payload FROM intents i JOIN observations o ON o.identity='decision:'||i.intent_id ORDER BY i.created_at DESC LIMIT 1").fetchone()
+            entry = None
+            if decision and len(decision['payload']) <= 100_000:
+                try:
+                    raw = json.loads(decision['payload'])
+                    inst = raw['book']['instrument']
+                    entry = {'occurred_at': timestamp(decision['received_at']),
+                             'security_id': label(inst.get('security_id')),
+                             'strike': money(inst.get('strike')), 'option_type': choice(inst.get('option_type'), {'CE', 'PE'}),
+                             'quantity': integer(raw.get('quantity')), 'limit': money(raw.get('limit')),
+                             'reference': money((raw.get('reference') or {}).get('value')),
+                             'confirmations': len(raw['history']) if isinstance(raw.get('history'), list) else None}
+                except (ValueError, KeyError, TypeError, AttributeError):
+                    entry = None
+            return {'available': True, 'orders': orders, 'fills': fills, 'incidents': incidents, 'counts': counts, 'last_entry': entry}
     except (sqlite3.Error, OSError, ValueError):
         return out
 

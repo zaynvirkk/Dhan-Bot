@@ -158,6 +158,9 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             await channels['market'].send(full_packet(100)+full_packet(200))
             await until(lambda: status_file().get('broker_route_verified'))
             assert len(broker.requests)==1
+            assert 'observation' in status_file()
+            assert status_file()['observation']['iep'] is None
+            assert len(status_file()['observation']['watchlist']) == 2
             if mode=='invalid_frames':
                 import struct
                 initial=channels['market']

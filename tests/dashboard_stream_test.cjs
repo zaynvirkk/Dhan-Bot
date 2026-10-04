@@ -82,6 +82,25 @@ assert.match(ids.notice.textContent,/unavailable from the deployed version/);
 show({...current,collector:{fresh:false}});
 assert.match(ids.notice.textContent,/stale/);
 assert.equal(ids.authority.textContent,'Trading status unknown');
+// Decision board reports actual state and never promotes missing inputs to zero.
+const inputs={phase:'CAS_LM_START',phase_at:stamp,iep:'24060.00',reference:'24000.00',direction:'CE',iep_at:stamp,expiry:'2026-10-06T00:00:00+05:30',watchlist:[]};
+show({...current,runtime:{...current.runtime,state:'NO_TRADE_DAY',observation:inputs}});
+assert.equal(ids['now-title'].textContent,'Waiting for an expiry session');
+assert.match(ids['next-step'].textContent,/06 Oct/);
+assert.equal(ids.notice.hidden,true,'Healthy routine notices do not occupy the overview');
+assert.equal(ids['watch-table'].hidden,true,'No empty table scaffolding');
+assert.equal(ids['reference-value'].textContent,'24,000.00');
+assert.match(ids['signal-direction'].textContent,/last observed/,'Old IEP is not presented as fresh direction');
+show({...current,runtime:{...current.runtime,state:'POSITION_OPEN',monitoring_mode:'ACTIVE',reason:'Holding the position',observation:inputs}});
+assert.equal(ids['now-title'].textContent,'Managing an open position');
+show({...current,collector:{fresh:false},runtime:{...current.runtime,state:'POSITION_OPEN',observation:inputs}});
+assert.equal(ids['now-title'].textContent,'Current bot state is unknown');
+assert.equal(ids.notice.hidden,false);
+show({...current,runtime:{...current.runtime,state:'ARMED_WAITING_SIGNAL',observation:null}});
+assert.equal(ids['signal-value'].textContent,'—');
+assert.equal(ids['signal-direction'].textContent,'Awaiting signal');
+assert.match(ids['watch-empty'].textContent,/not available/);
+console.log('Decision-first layout, stale signals and empty observations verified');
 // Pulse marks the dashboard stream alive without rerendering financial data.
 let pulses=0;
 const pulseStream=new Stream({source,now:()=>now,refresh:()=>{},signIn:()=>{},onData:()=>{},onTime:()=>pulses++});

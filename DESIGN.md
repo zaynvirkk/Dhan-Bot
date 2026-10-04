@@ -63,3 +63,23 @@ The generic diagnostic-age banner is removed. Push pulses update source ages
 without replacing unchanged tables; freshness and unknown states remain explicit.
 DOM/lifecycle checks pass; real browser inspection is blocked by EPERM and no
 new deployed visual verification is claimed.
+
+4 October decision-first refinement: retained the cool paper/navy/cobalt system,
+using a compact operating layout. The first screen now explains the current
+state and next prerequisite, then displays accepted auction inputs and six
+observed entry checks. Five retained option books expose bid/ask quantities,
+whole-lot cash including entry fees, conditional intrinsic and confirmation count.
+This is a watchlist, not a selected trade or confidence score. The last persisted
+entry decision is separately available alongside actual execution history.
+
+Removed routine healthy banners, decorative section numbers, empty position/order
+tables, and duplicate unknown P&L figures. Connections, diagnostics, timings and
+VM setup are available under System. Account failures, stale state and unavailable
+inputs remain explicit. The dashboard cannot place orders or change authority.
+
+Verification: two bounded desktop/mobile inspection passes on synthetic preview
+inputs; 1440px, 390px and 320px layouts, keyboard order tabs, disclosures, no JS
+errors and missing-data demotion passed. Narrow preview header overflow was fixed.
+The detector's sole advisory concerned deliberate unknown-value dash placeholders.
+Full automatic verification passes 365 tests and 15 source mutation checks.
+Deployment and real-observation verification are recorded in the session worklog.

@@ -39,6 +39,7 @@ from .rules import RuleSource, DHAN_MASTER_URL, NSE_FREEZE_URL
 from .runtime import AutoLive
 from .transport import WebSocketRunner, message_received_ns, message_received_monotonic_ns
 from .upstox_signal import decode_binary, extract_status, observation, NIFTY_KEY
+from .observation_view import observation_view
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -482,7 +483,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                              final_input="VERIFIED" if engine.final_value else "UNQUALIFIED",
                              final_source_error=final_error, telemetry=runtime.telemetry.snapshot(),
                              account_snapshot_fresh=account_refresh.fresh, feed_health=feed_health,
-                             monitoring_mode="IDLE" if idle else "ACTIVE", recorder_pending=records.qsize())
+                             monitoring_mode="IDLE" if idle else "ACTIVE", recorder_pending=records.qsize(),
+                             observation=observation_view(engine, instruments))
                 last_status = monotonic
             wait_started = monotime.monotonic()
             try:
