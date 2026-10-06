@@ -187,6 +187,7 @@ class EventStream:
         self.deadline = time.monotonic() + 20
         self.first, self.closed = True, False
         self.previous = None
+        self.previous_history = None
 
     def __iter__(self):
         return self
@@ -222,6 +223,13 @@ class EventStream:
                          if isinstance(value := data.get(key), dict)}
                 return ('event: pulse\ndata: '+json.dumps({'server_time': data['server_time'], 'observations': times})+'\n\n').encode()
             self.previous = digest
+            history = data.get('history')
+            if isinstance(history, dict) and history == self.previous_history:
+                # Quote changes must not retransmit the whole retained journal.
+                data.pop('history')
+                data['history_unchanged'] = True
+            else:
+                self.previous_history = history
             return ('retry: 1000\ndata: '+json.dumps(data, allow_nan=False)+'\n\n').encode()
         except Exception:
             self.close()

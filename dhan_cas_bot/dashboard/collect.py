@@ -11,6 +11,7 @@ import tempfile
 from dhan_cas_bot.broker import DhanBroker
 from dhan_cas_bot.config import load_config
 from .data import account_view, freshness, local_snapshot, read_json, shared_account, utcnow
+from .history import advance_history
 
 
 async def read_account(config):
@@ -52,7 +53,7 @@ def projection(config, previous, *, checked=None):
     return report
 
 
-def write_report(output, report):
+def atomic_json(output, report):
     target = Path(output)
     target.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix='.snapshot-', dir=target.parent)
@@ -65,6 +66,22 @@ def write_report(output, report):
     finally:
         if os.path.exists(temporary): os.unlink(temporary)
     return report
+
+
+def write_report(output, report):
+    """History failures cannot stop current monitoring or modify the trader."""
+    history_path = Path(output).with_name('history.json')
+    try:
+        previous = read_json(history_path)
+        if previous is None and history_path.exists():
+            raise ValueError('unreadable history; preserve existing evidence')
+        history = advance_history(previous, report, utcnow())
+        if history != previous:
+            atomic_json(history_path, history)
+        report = {**report, 'history': history}
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        report = {**report, 'history': {'status': 'UNAVAILABLE', 'days': [], 'events': []}}
+    return atomic_json(output, report)
 
 
 async def check_account(config):

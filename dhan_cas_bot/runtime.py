@@ -40,6 +40,7 @@ class AutoLive:
         self.telemetry = Telemetry()
         ledger.telemetry = self.telemetry
         self.account_refresh = None
+        self.enabled_strategies = frozenset({"CAS_LAG_V1"})
         self.status = RuntimeStatus(software_verified=software_verified, auto_live_armed=mandate.live_order_authority, state="ARMED_WAITING_SESSION" if mandate.live_order_authority else "DISARMED")
 
     async def recover(self) -> dict[str, Any]:
@@ -59,14 +60,17 @@ class AutoLive:
             # not skip management of an already broker-reconciled long.
             self.status.reason = "ACCOUNT_FUNDS_UNAVAILABLE:"+type(exc).__name__
 
-    def permit_entry(self, *, settlement_add=False) -> bool:
+    def permit_entry(self, *, settlement_add=False, strategy="CAS_LAG_V1") -> bool:
+        if strategy not in self.enabled_strategies or strategy not in {"CAS_LAG_V1", "GAP_FADE_DOUBLE", "NIFTY_SELLOFF_REBOUND_1510"}:
+            return False
         if self.account_refresh is not None and not self.account_refresh.fresh:
             self.account_refresh.request()
             return False
         blocked = {"DISARMED", "RECOVERING"}
         if not settlement_add:
             blocked.add("SETTLEMENT_PENDING")
-        return bool(self.mandate.live_order_authority and self.mandate.allocated_capital > 0 and self.status.software_verified and self.status.current_account_funded and self.status.broker_route_verified and self.status.official_cas_signal_seen and self.status.auto_live_armed and not self.ledger.metadata("disarmed", False) and self.status.state not in blocked)
+        signal_ready = self.status.official_cas_signal_seen if strategy == "CAS_LAG_V1" else True
+        return bool(self.mandate.live_order_authority and self.mandate.allocated_capital > 0 and self.status.software_verified and self.status.current_account_funded and self.status.broker_route_verified and signal_ready and self.status.auto_live_armed and not self.ledger.metadata("disarmed", False) and self.status.state not in blocked)
 
     def disarm_new_entries(self) -> None:
         self.status.auto_live_armed = False

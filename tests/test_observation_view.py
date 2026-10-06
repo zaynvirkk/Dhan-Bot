@@ -89,3 +89,30 @@ def test_ledger_entry_projection_is_bounded_and_never_returns_raw_payload(tmp_pa
     assert view['last_entry']['confirmations']==2 and view['last_entry']['limit']=='10.00'
     assert 'private' not in json.dumps(view) and 'secret' not in json.dumps(view)
     ledger.db.close()
+
+
+def test_preauction_index_is_visible_but_never_becomes_an_iep():
+    e=engine()
+    e.reference_observations=[SimpleNamespace(value=D('24090'),provider_ts_ms=int(NOW.timestamp()*1000),received_ns=int(NOW.timestamp()*1e9))]
+    view=observation_projection(observation_view(e,[]))
+    assert view['ltp']=='24090.00' and view['ltp_at']==NOW.isoformat()
+    assert view['iep'] is None and view['direction'] is None
+    e.reference_observations=[]
+    assert observation_view(e,[])['ltp'] is None
+
+
+def test_morning_watchlist_uses_known_index_proximity_and_projects_statistics():
+    from dhan_cas_bot.domain import MarketStatistics
+    e=engine()
+    e.reference_observations=[SimpleNamespace(value=D('24200'),provider_ts_ms=int(NOW.timestamp()*1000),received_ns=int(NOW.timestamp()*1e9))]
+    instruments=[]
+    for i in range(8):
+        inst=Instrument(str(i),'NIFTY',Segment.NSE_FNO,date(2026,10,6),OptionType.CE,D(24000+i*50),65,D('.05'),1800)
+        instruments.append(inst)
+        e.books[str(i)]=OptionBook(inst,(Level(D('9'),65),),(Level(D('10'),65),),'epoch',int(NOW.timestamp()*1e9),
+            statistics=MarketStatistics(D('9.5'),65,D('9.5'),650,130,195,1300,1400,1200,D('9'),None,D('10'),D('8')))
+    view=observation_projection(observation_view(e,instruments))
+    assert view['watchlist'][0]['strike']=='24200.00'
+    assert view['watchlist'][0]['last_price']=='9.50'
+    assert view['watchlist'][0]['volume']==650 and view['watchlist'][0]['open_interest']==1300
+    assert view['iep'] is None and view['watchlist'][0]['conditional_intrinsic'] is None

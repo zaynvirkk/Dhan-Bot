@@ -1,5 +1,11 @@
 # Private dashboard
 
+The 6 October monitoring-history and pre-auction visibility changes are
+**local and not deployed**. See [findings, validation and remaining access
+requirements](MONITORING-HISTORY-2026-10-06.md). They add daily recorded coverage
+without interpreting missing history as zero trades. The deployment notes below
+are historical; they do not establish today's live health.
+
 The 30 September dashboard release is deployed. The streaming and
 live-health optimizations described below are implemented locally; deployment is
 **not verified**. See [the live-health update](LIVE-HEALTH-2026-10-04.md).

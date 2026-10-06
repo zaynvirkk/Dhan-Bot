@@ -156,3 +156,23 @@ def test_sse_sends_small_pulse_until_source_evidence_or_freshness_changes(dashbo
         assert b'"authority": "UNKNOWN"' in expired
         assert not expired.startswith(b'event: pulse')
     finally: stream.close()
+
+
+def test_sse_quote_updates_do_not_resend_unchanged_history(dashboard, monkeypatch):
+    now=datetime.now(timezone.utc)
+    sample={'schema':1,'collector_observed_at':now.isoformat(),
+            'runtime':{'observed_at':now.isoformat(),'books_observed':1},
+            'history':{'status':'AVAILABLE','days':[],'events':[{'at':now.isoformat()}]}}
+    monkeypatch.setattr(app_module.time,'sleep',lambda seconds:None)
+    write(dashboard.snapshot,sample)
+    stream,_=open_stream(dashboard)
+    try:
+        assert b'"history":' in next(stream)
+        sample['runtime']['books_observed']=2
+        write(dashboard.snapshot,sample)
+        update=next(stream)
+        assert b'"history":' not in update and b'"history_unchanged": true' in update
+        sample['history']={'status':'UNAVAILABLE','days':[],'events':[]}
+        write(dashboard.snapshot,sample)
+        assert b'"status": "UNAVAILABLE"' in next(stream)
+    finally: stream.close()

@@ -1,5 +1,9 @@
 state_dir = "state"
 live_order_authority = false
+# Existing installations keep CAS unless strategies is explicitly set.
+# Other supported engines: GAP_FADE_DOUBLE, NIFTY_SELLOFF_REBOUND_1510.
+# These are experimental rules; see docs/SESSION-STRATEGIES-2026-10-06.md.
+strategies = ["CAS_LAG_V1"]
 account_id = "REQUIRED"
 dhan_api_base = "https://api.dhan.co/v2"
 dhan_auth_url = "https://auth.dhan.co/app/generateAccessToken"

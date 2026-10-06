@@ -29,6 +29,7 @@ class SessionEngine:
         self.runtime, self.books = runtime, books
         self.now = now_fn or (lambda: datetime.now(timezone.utc))
         self.lock = asyncio.Lock()
+        self.directional = None
         self.reference = None
         self.status = None
         self.observations = []
@@ -214,6 +215,12 @@ class SessionEngine:
             active = self.active
             local_now = self.now().astimezone(IST)
             positions = snapshot["positions"]
+            if active and json.loads(active["payload"]).get("strategy", "CAS_LAG_V1") != "CAS_LAG_V1":
+                if self.directional is None:
+                    runtime.status.state = "RECOVERING"
+                    runtime.status.reason = "POSITION_STRATEGY_MANAGER_UNAVAILABLE"
+                    return False
+                return await self.directional.manage_locked(active, snapshot)
             if active:
                 inst = restore_instrument(json.loads(active["payload"])["instrument"])
                 totals = ledger.lifecycle_totals(active["lifecycle_id"])
@@ -333,6 +340,8 @@ class SessionEngine:
                         runtime.status.state = "EXIT_PENDING"
                         return True
                     runtime.status.state = "POSITION_OPEN"
+            if active is None and self.directional and await self.directional.enter_locked(snapshot):
+                return True
             return await self._enter(snapshot, active, positions, local_now)
 
     async def _enter(self, snapshot, active, positions, local_now, *, settlement_add=False):

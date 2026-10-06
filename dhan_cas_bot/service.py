@@ -40,6 +40,9 @@ from .runtime import AutoLive
 from .transport import WebSocketRunner, message_received_ns, message_received_monotonic_ns
 from .upstox_signal import decode_binary, extract_status, observation, NIFTY_KEY
 from .observation_view import observation_view
+from .directional import DirectionalEngine
+from .strategy_inputs import strategy_names, selected_contracts, route_window, StrategyInputWorker
+from .session_strategies import CAS, GAP, REBOUND
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -99,7 +102,9 @@ async def clock_uncertainty() -> int:
 async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, now_fn=None):
     now = now_fn or (lambda: datetime.now(timezone.utc))
     today = now().astimezone(IST).date()
-    started_before_session = now().astimezone(IST).time() < time(15,5)
+    enabled = strategy_names(config)
+    has_directional = any(name in enabled for name in (GAP, REBOUND))
+    started_before_session = not has_directional and now().astimezone(IST).time() < time(15,5)
     state_dir = Path(config["state_dir"])
     mandate = load_mandate(state_dir / "mandate.json")
     if mandate.account_id != config["account_id"]:
@@ -107,6 +112,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     token = await session_token(config, state_dir)
     broker = DhanBroker(config["account_id"], token, config["dhan_api_base"], allow_writes=config["live_order_authority"] and mandate.live_order_authority)
     runtime = AutoLive(ledger, broker, mandate, software_verified=current_verification(Path(__file__).resolve().parents[1], state_dir))
+    runtime.enabled_strategies = frozenset(enabled)
     runtime.status.auto_live_armed = broker.allow_writes and not ledger.metadata("disarmed", False)
     tasks = []
     runners = []
@@ -118,29 +124,40 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     final_task = None
     final_error = ""
     account_task = clock_task = None
+    strategy_task = None
+    input_worker = None
     try:
         # Broker recovery precedes calendar, Upstox, egress admission and metadata.
         await runtime.recover()
         engine = SessionEngine(runtime, {}, now_fn=now)
+        engine.directional = DirectionalEngine(engine, enabled)
         await runtime.refresh_account()
         if broker.allow_writes:
             ledger.put_mandate(mandate)
         account_admitted = False
+        metadata_admitted = False
+        expiry_today = False
+        future_id = None
         instruments = []
         metadata_error = ""
         try:
             master, freeze = await asyncio.gather(RuleSource(timeout=15).fetch(config.get("dhan_master_url", DHAN_MASTER_URL)), RuleSource(timeout=15).fetch(config.get("nse_freeze_url", NSE_FREEZE_URL)))
             expiry = RuleSource.current_expiry(master.payload, today=today)
-            instruments = load_dhan_master(StringIO(master.payload.decode("utf-8-sig")), expiry=expiry, freeze_by_security={"__NIFTY__": RuleSource.parse_freeze(freeze.payload)["NIFTY"]})
+            if has_directional:
+                instruments, future_id = selected_contracts(master.payload, RuleSource.parse_freeze(freeze.payload), today)
+            else:
+                instruments = load_dhan_master(StringIO(master.payload.decode("utf-8-sig")), expiry=expiry, freeze_by_security={"__NIFTY__": RuleSource.parse_freeze(freeze.payload)["NIFTY"]})
             ledger.observe("master:"+master.digest, "MASTER", {"source": master.url, "retrieved_at": master.retrieved_at.isoformat(), "sha256": master.digest})
             ledger.observe("freeze:"+freeze.digest, "FREEZE", {"source": freeze.url, "retrieved_at": freeze.retrieved_at.isoformat(), "sha256": freeze.digest})
-            account_admitted = expiry == today
+            expiry_today = expiry == today
             if broker.allow_writes:
                 require_derivatives_profile(await broker._request("GET","/profile"),broker.account_id)
                 await require_expected_egress(config["expected_egress_ip"])
                 ips = normalize_whitelist(await broker._request("GET", "/ip/getIP"))
                 if config["expected_egress_ip"] not in {ips["primary_ip"], ips["secondary_ip"]}:
                     raise ContractError("Dhan whitelist does not contain this execution IP")
+            metadata_admitted = True
+            account_admitted = expiry_today and CAS in enabled
         except Exception as exc:
             metadata_error = type(exc).__name__
             account_admitted = False
@@ -149,6 +166,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         if active:
             inst = restore_instrument(json.loads(active["payload"])["instrument"])
             instrument_by_id.setdefault(inst.security_id, inst)
+        engine.instruments = instrument_by_id
         # A missing reference/feed can only remove entry permission, never recovery.
         upstox_token = os.environ.get("UPSTOX_ANALYTICS_TOKEN", "")
         upstox = UpstoxFeedClient(upstox_token) if upstox_token else None
@@ -161,6 +179,9 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         account_refresh = AccountRefresh(runtime, wake, busy=lambda: bool(engine.active or ledger.pending_intents()),
             publish=lambda funds, snapshot, stamp: write_account_observation(state_dir, funds, snapshot, stamp))
         account_task = asyncio.create_task(account_refresh.run())
+        if has_directional or (active and json.loads(active["payload"]).get("strategy", CAS) != CAS):
+            input_worker = StrategyInputWorker(engine.directional, upstox_token, future_id, wake=wake, stop=stop)
+            strategy_task = asyncio.create_task(input_worker.run())
 
         async def clock_worker():
             nonlocal uncertainty
@@ -205,6 +226,9 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             while not stop.is_set():
                 current = now().astimezone(IST)
                 held = engine.active
+                if held and json.loads(held["payload"]).get("strategy", CAS) != CAS:
+                    await asyncio.sleep(30)
+                    continue
                 expired_date = restore_instrument(json.loads(held["payload"])["instrument"]).expiry if held else None
                 stopped = engine.status and engine.status.phase is CasPhase.CAS_STOP
                 if stopped or (expired_date and current.date() > expired_date):
@@ -396,12 +420,17 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             # Clear at the start; feed/order arrivals during any await survive.
             wake.clear()
             current = now().astimezone(IST)
-            for task in [*tasks, account_task, clock_task]:
+            for task in [*tasks, account_task, clock_task, *([strategy_task] if strategy_task else [])]:
                 if task.done():
                     task.result()
                     raise ContractError("a required transport stopped")
             monotonic = monotime.monotonic()
             runtime.status.auto_live_armed = broker.allow_writes and not ledger.metadata("disarmed", False)
+            calendar = input_worker.calendar if input_worker else None
+            account_admitted = metadata_admitted and ((CAS in enabled and expiry_today)
+                or (has_directional and calendar is not None and calendar.is_open(now())))
+            if input_worker and (calendar is None or not calendar.is_open(now())):
+                account_admitted = False
             try:
                 if ledger.metadata("reconcile_requested", False):
                     account_refresh.invalidate()
@@ -422,9 +451,9 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         if evidence and evidence[0] == orders.protocol.epoch.id and evidence[1] not in {"REJECTED", ""} and saved["state"] != "REJECTED" and not totals["unresolved"]:
                             if totals["quantity"] == 0:
                                 runtime.status.broker_route_verified = True
-                may_probe = (account_refresh.fresh and account_admitted and broker.allow_writes and runtime.status.auto_live_armed and runtime.status.software_verified and uncertainty <= 100 and not runtime.status.broker_route_verified and engine.active is None and not ledger.pending_intents() and orders.protocol.epoch.connected and orders.protocol.epoch.id not in route_failed_epochs and time(15,5) <= current.time() < time(15,19,30))
+                may_probe = (account_refresh.fresh and account_admitted and broker.allow_writes and runtime.status.auto_live_armed and runtime.status.software_verified and uncertainty <= 100 and not runtime.status.broker_route_verified and engine.active is None and not ledger.pending_intents() and orders.protocol.epoch.connected and orders.protocol.epoch.id not in route_failed_epochs and route_window(enabled, current, calendar, expiry_today))
                 if may_probe:
-                    choices = [book for book in engine.books.values() if book.instrument.expiry == today and book.top_bid and book.top_bid.quantity >= book.instrument.lot_size and book.top_bid.price > max(book.instrument.tick_size, book.instrument.lower_limit or 0)]
+                    choices = [book for book in engine.books.values() if (book.instrument.expiry >= today if has_directional else book.instrument.expiry == today) and book.top_bid and book.top_bid.quantity >= book.instrument.lot_size and book.top_bid.price > max(book.instrument.tick_size, book.instrument.lower_limit or 0)]
                     choices.sort(key=lambda book: (book.instrument.lot_size*max(book.instrument.tick_size,book.instrument.lower_limit or 0), int(book.instrument.security_id)))
                     if choices:
                         qualifier = RouteQualifier(ledger, broker, session_id=today.isoformat(), max_attempts=mandate.probe_max_attempts_per_session, debit_cap=mandate.probe_entry_debit_cap_per_session, mandate_spend_cap=mandate.probe_spending_cap_per_mandate)
@@ -447,7 +476,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         runtime.telemetry.sample("decision_ms", (runtime.telemetry.clock()-decision_at)*1000)
                 runtime.status.auto_live_armed = armed
                 if not account_admitted and engine.active is None:
-                    runtime.status.state = "NO_TRADE_DAY" if not metadata_error else "ENTRY_HALTED"
+                    runtime.status.state = ("WAITING_EXCHANGE_SESSION" if has_directional else "NO_TRADE_DAY") if not metadata_error else "ENTRY_HALTED"
             except Exception as exc:
                 runtime.status.reason = f"RECOVERY_REQUIRED:{type(exc).__name__}"
                 runtime.status.state = "RECOVERING"
@@ -475,8 +504,9 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                 for key in ('signal', 'market', 'order'):
                     if key not in feed_runners:
                         feed_health[key] = {'connected': False}
+                monitoring_open = (calendar.is_open(now()) if has_directional and calendar else False) if has_directional else time(15,5) <= current.time() <= time(15,40)
                 idle = (engine.active is None and not ledger.pending_intents()
-                        and (runtime.status.state == "NO_TRADE_DAY" or not time(15,5) <= current.time() <= time(15,40)))
+                        and (runtime.status.state == "NO_TRADE_DAY" or not monitoring_open))
                 write_status(state_dir, runtime, session=today.isoformat(), contract_count=len(instruments),
                              books_observed=len(engine.books), clock_uncertainty_ms=uncertainty,
                              metadata_error=metadata_error, recorder_failed=recorder_failed,
@@ -484,6 +514,9 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                              final_source_error=final_error, telemetry=runtime.telemetry.snapshot(),
                              account_snapshot_fresh=account_refresh.fresh, feed_health=feed_health,
                              monitoring_mode="IDLE" if idle else "ACTIVE", recorder_pending=records.qsize(),
+                             strategies=list(enabled), strategy_evaluations=engine.directional.view(),
+                             calendar_checked_at=calendar.checked_at.isoformat() if calendar else None,
+                             expiry_today=expiry_today if metadata_admitted else None,
                              observation=observation_view(engine, instruments))
                 last_status = monotonic
             wait_started = monotime.monotonic()
@@ -492,10 +525,10 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             except asyncio.TimeoutError:
                 runtime.telemetry.sample("loop_lag_ms", max(0, monotime.monotonic()-wait_started-.25)*1000)
     finally:
-        for task in (account_task, clock_task):
+        for task in (account_task, clock_task, strategy_task):
             if task:
                 task.cancel()
-        await asyncio.gather(*(task for task in (account_task, clock_task) if task), return_exceptions=True)
+        await asyncio.gather(*(task for task in (account_task, clock_task, strategy_task) if task), return_exceptions=True)
         ledger.account_refresh = None
         if final_task:
             final_task.cancel()

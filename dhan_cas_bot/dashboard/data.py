@@ -16,7 +16,18 @@ UTC = timezone.utc
 # Allow that normal cycle plus scheduling/network margin, not a 15s flicker.
 RUNTIME_TTL_SECONDS = 45
 STATES = {'DISARMED', 'RECOVERING', 'ARMED_WAITING_SESSION', 'ARMED_WAITING_SIGNAL',
-          'ENTRY_HALTED', 'NO_TRADE_DAY', 'SETTLEMENT_PENDING', 'POSITION_OPEN', 'ENTRY_PENDING', 'EXIT_PENDING'}
+          'ENTRY_HALTED', 'NO_TRADE_DAY', 'SETTLEMENT_PENDING', 'POSITION_OPEN', 'ENTRY_PENDING', 'EXIT_PENDING',
+          'WAITING_EXCHANGE_SESSION', 'RECONCILING_DIRECTIONAL_POSITION'}
+STRATEGY_NAMES = {'CAS_LAG_V1', 'GAP_FADE_DOUBLE', 'NIFTY_SELLOFF_REBOUND_1510'}
+STRATEGY_REASONS = {
+    'INPUTS_NOT_RECEIVED', 'CALENDAR_UNAVAILABLE', 'EXCHANGE_CLOSED', 'CONTRACT_CALENDAR_UNAVAILABLE',
+    'EXPIRY_SESSION_OUTSIDE_RESEARCH_SCOPE', 'OUTSIDE_STRATEGY_WINDOW', 'SPECIAL_SESSION_OUTSIDE_RESEARCH_SCOPE',
+    'NEXT_SESSION_EXIT_UNAVAILABLE', 'SELLOFF_THRESHOLD_MET', 'SELLOFF_BELOW_THRESHOLD',
+    'GAP_FADE_CONFIRMED', 'GAP_FADE_CONDITIONS_NOT_MET', 'COMPLETED_INPUT_MISSING_OR_INVALID',
+    'NOT_CONFIGURED', 'STRATEGY_INPUTS_STALE', 'STRATEGY_INPUT_UNAVAILABLE', 'ENTRY_DEADLINE_MISSED',
+    'ENTRY_NOT_PERMITTED', 'OPTION_MINUTES_UNAVAILABLE', 'OPTION_BOOK_UNAVAILABLE_OR_STALE',
+    'FIXED_LIMIT_ALREADY_MISSED', 'NO_AFFORDABLE_LIQUID_CONTRACT', 'UNMANAGED_ACCOUNT_POSITION',
+}
 ORDER_STATES = {'PENDING_SEND', 'SEND_UNKNOWN', 'SENT', 'TRANSIT', 'PENDING', 'CLOSED',
                 'TRIGGERED', 'REJECTED', 'CANCELLED', 'PART_TRADED', 'TRADED', 'FILLED',
                 'EXPIRED', 'ABORTED'}
@@ -51,6 +62,10 @@ REASONS = {
     'INVALID_ORDER_EVENT': 'An order event failed validation.',
     'ROUTE_PROBE': 'The order-route qualification has not completed.',
     'operator_disarmed_new_entries': 'New entries were disabled by the operator.',
+    'GAP_FADE_DOUBLE': 'The gap-fade engine is handling this position. See orders and fills for execution.',
+    'NIFTY_SELLOFF_REBOUND_1510': 'The rebound engine is handling this position. See orders and fills for execution.',
+    'EXIT_LATCHED_WAITING_EXCHANGE_SESSION': 'An exit is due. Waiting for a verified open exchange session.',
+    'EXIT_LATCHED_WAITING_CURRENT_BOOK': 'An exit is due. Waiting for a current option book.',
 }
 
 
@@ -142,10 +157,34 @@ def runtime_view(raw, now):
             'contract_count': integer(raw.get('contract_count')),
             'clock_uncertainty_ms': integer(raw.get('clock_uncertainty_ms')),
             'monitoring_mode': choice(raw.get('monitoring_mode'), {'IDLE', 'ACTIVE'}, 'UNKNOWN'),
+            'strategies': [s for s in raw.get('strategies', []) if isinstance(s, str) and s in STRATEGY_NAMES] if isinstance(raw.get('strategies'), list) else [],
+            'strategy_evaluations': strategy_projection(raw.get('strategy_evaluations')),
+            'expiry_today': raw.get('expiry_today') if type(raw.get('expiry_today')) is bool else None,
+            'calendar_checked_at': timestamp(raw.get('calendar_checked_at')),
             'feed_health': feed_health_view(raw.get('feed_health')),
             'recorder_pending': integer(raw.get('recorder_pending')),
             'telemetry': telemetry_view(raw.get('telemetry')),
             'observation': observation_projection(raw.get('observation'))}
+
+
+def strategy_projection(raw):
+    result=[]
+    for row in raw[:3] if isinstance(raw, list) else []:
+        if not isinstance(row, dict) or choice(row.get('strategy'), STRATEGY_NAMES) is None:
+            continue
+        details={}
+        for key in ('gap', 'fraction_filled', 'future_5m_return', 'open_return'):
+            value=(row.get('details') or {}).get(key) if isinstance(row.get('details'), dict) else None
+            if money(value) is not None:
+                details[key]=str(Decimal(str(value)))
+        result.append({'strategy':row['strategy'],
+            'enabled':row.get('enabled') if type(row.get('enabled')) is bool else None,
+            'state':choice(row.get('state'), {'UNKNOWN','WAITING','SIGNAL','NO_SIGNAL','NOT_APPLICABLE','DISABLED'},'UNKNOWN'),
+            'reason':choice(str(row.get('reason','')).split(':')[0],STRATEGY_REASONS,'UNKNOWN'),
+            'evaluated_at':timestamp(row.get('evaluated_at')), 'side':choice(row.get('side'), {'CE','PE'}),
+            'spot':money(row.get('spot')), 'exit_at':timestamp(row.get('exit_at')), 'details':details,
+            'last_execution_reason':choice(str(row.get('last_execution_reason','')).split(':')[0],STRATEGY_REASONS,'UNKNOWN')})
+    return result
 
 
 def observation_projection(raw):
@@ -156,16 +195,17 @@ def observation_projection(raw):
     return {
         'phase': choice(raw.get('phase'), {'CTS_CLOSE', 'CAS_LM_START', 'CAS_M_STOP', 'CAS_STOP', 'UNKNOWN'}),
         'phase_at': timestamp(raw.get('phase_at')), 'iep_at': timestamp(raw.get('iep_at')),
+        'ltp_at': timestamp(raw.get('ltp_at')), 'ltp_received_at': timestamp(raw.get('ltp_received_at')),
         'direction': choice(raw.get('direction'), {'CE', 'PE'}),
         'expiry': timestamp(str(raw.get('expiry', '')) + 'T00:00:00+05:30'),
-        **{key: money(raw.get(key)) for key in ('reference', 'iep', 'final_value')},
+        **{key: money(raw.get(key)) for key in ('reference', 'iep', 'final_value', 'ltp')},
         'watchlist': [{
             'security_id': label(row.get('security_id')),
             'option_type': choice(row.get('option_type'), {'CE', 'PE'}),
             'expiry': timestamp(str(row.get('expiry', '')) + 'T00:00:00+05:30'),
             'observed_at': timestamp(row.get('observed_at')),
-            **{key: money(row.get(key)) for key in ('strike', 'bid', 'ask', 'one_lot_cash', 'conditional_intrinsic')},
-            **{key: integer(row.get(key)) for key in ('lot_size', 'bid_quantity', 'ask_quantity', 'confirmations')},
+            **{key: money(row.get(key)) for key in ('strike', 'bid', 'ask', 'one_lot_cash', 'conditional_intrinsic', 'last_price')},
+            **{key: integer(row.get(key)) for key in ('lot_size', 'bid_quantity', 'ask_quantity', 'confirmations', 'volume', 'open_interest')},
         } for row in watch[:5] if isinstance(row, dict)],
     }
 
@@ -331,6 +371,7 @@ def ledger_view(path):
                     raw = json.loads(decision['payload'])
                     inst = raw['book']['instrument']
                     entry = {'occurred_at': timestamp(decision['received_at']),
+                             'strategy':choice(raw.get('strategy', 'CAS_LAG_V1'), STRATEGY_NAMES),
                              'security_id': label(inst.get('security_id')),
                              'strike': money(inst.get('strike')), 'option_type': choice(inst.get('option_type'), {'CE', 'PE'}),
                              'quantity': integer(raw.get('quantity')), 'limit': money(raw.get('limit')),

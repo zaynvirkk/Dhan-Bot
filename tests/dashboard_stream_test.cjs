@@ -101,6 +101,35 @@ assert.equal(ids['signal-value'].textContent,'—');
 assert.equal(ids['signal-direction'].textContent,'Awaiting signal');
 assert.match(ids['watch-empty'].textContent,/not available/);
 console.log('Decision-first layout, stale signals and empty observations verified');
+// Pre-auction prices are visible without becoming auction values or a trade signal.
+const preAuction={...inputs,iep:null,iep_at:null,direction:null,reference:null,phase:null,ltp:'24123.50',ltp_at:stamp,ltp_received_at:stamp};
+show({...current,runtime:{...current.runtime,state:'ARMED_WAITING_SESSION',observation:preAuction}});
+assert.equal(ids['index-value'].textContent,'24,123.50');
+assert.equal(ids['signal-value'].textContent,'—');
+assert.equal(ids['signal-direction'].textContent,'Awaiting signal');
+assert.match(ids['index-age'].textContent,/Last observed/);
+assert.match(ids['next-step'].textContent,/15:05/);
+assert.match(ids['input-feeds'].textContent,/no message observed/);
+show({...current,runtime:{...current.runtime,state:'POSITION_OPEN',observation:preAuction}});
+assert.equal(ids['now-title'].textContent,'Managing an open position','Idle monitoring cannot hide position management');
+show({...current,collector:{fresh:false},runtime:{...current.runtime,observation:preAuction}});
+assert.match(ids['input-feeds'].textContent,/unknown/);
+assert.match(ids['history-summary'].textContent,/no monitoring history/);
+// A recorded no-trade-day is not proof of zero fills; missing days stay unknown.
+const history={status:'AVAILABLE',started_at:stamp,days:[{date:'2026-10-01',first_at:stamp,last_at:stamp,samples:1,unknown_samples:0,gaps:0,states:['NO_TRADE_DAY']}],events:[{at:stamp,state:'NO_TRADE_DAY',source_current:true,ltp:'24123.50',ltp_at:stamp,iep:null,books:2,feeds:{signal:true,market:true,order:true}}]};
+show({...current,history});
+assert.equal(ids['history-events'].children.length,1);
+assert.match(ids['history-summary'].textContent,/1 monitoring samples/);
+assert.match(ids['history-coverage'].textContent,/Not an eligible expiry session/);
+show({...current,history_unchanged:true});
+assert.equal(ids['history-events'].children.length,1,'Compact quote updates retain existing history');
+vm.runInContext("state.historyDate='2026-09-30'; renderHistory(state.data)",browser);
+assert.match(ids['history-summary'].textContent,/No recorded monitoring coverage/);
+assert.match(ids['history-summary'].textContent,/does not establish that no trades/);
+assert.equal(ids['history-events'].children.length,0);
+show({...current,history:{status:'UNAVAILABLE',days:[],events:[]}});
+assert.match(ids['history-summary'].textContent,/could not be read/);
+console.log('Pre-auction values, receipt ages, retained history and unknown days verified');
 // Pulse marks the dashboard stream alive without rerendering financial data.
 let pulses=0;
 const pulseStream=new Stream({source,now:()=>now,refresh:()=>{},signIn:()=>{},onData:()=>{},onTime:()=>pulses++});
@@ -111,4 +140,20 @@ pulseStream.stop();pulseConnection.pulse({data:JSON.stringify({server_time:stamp
 assert.equal(pulses,1,'Closed connections cannot refresh health');
 console.log('Live health, idle silence, diagnostics, stale sources and stable DOM verified');
 
+});
+
+setImmediate(()=>{
+ const f={available:true,server_time:'2026-10-06T05:00:00Z',collector:{fresh:true},
+ runtime:{fresh:true,authority:'ENABLED',state:'ARMED_WAITING_SIGNAL',monitoring_mode:'ACTIVE',
+ strategies:['GAP_FADE_DOUBLE','NIFTY_SELLOFF_REBOUND_1510','CAS_LAG_V1'],expiry_today:true,
+ strategy_evaluations:[{strategy:'GAP_FADE_DOUBLE',state:'NOT_APPLICABLE',enabled:true,reason:'EXPIRY_SESSION_OUTSIDE_RESEARCH_SCOPE'},
+ {strategy:'NIFTY_SELLOFF_REBOUND_1510',state:'WAITING',enabled:true,reason:'OUTSIDE_STRATEGY_WINDOW'}]}};
+ browser.strategiesFixture=f;vm.runInContext('render(strategiesFixture)',browser);
+ assert.equal(ids['strategy-checks'].children.length,3);
+ assert.equal(ids['now-title'].textContent,'Watching configured strategies');
+ assert.ok(!ids['next-step'].textContent.includes('auction value'));
+ f.server_time='2026-10-06T05:00:01Z';f.runtime.fresh=false;
+ vm.runInContext('render(strategiesFixture)',browser);
+ for(const row of ids['strategy-checks'].children)assert.equal(row.children[1].textContent,'Unknown');
+ console.log('Multiple strategy checks and stale demotion verified');
 });

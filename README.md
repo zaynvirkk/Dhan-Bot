@@ -1,5 +1,13 @@
 # SableStone Dhan CAS bot
 
+**6 October: explicit session engines added.** Gap-fade and overnight rebound
+now have separate runtime rules and persistent position ownership beside CAS,
+with a shared bankroll and order manager. Date-specific exchange calendars and
+contract metadata govern eligibility; the dashboard shows each engine's checks
+and sampled history. Existing installations still default to CAS. These remain
+experimental strategies, and no new live deployment is claimed. See the
+[integration and verification notes](docs/SESSION-STRATEGIES-2026-10-06.md).
+
 **28 September: execution and capital search expanded.** Tested resting-limit
 policies, calls/puts in both directions, trend filters and three allocations:
 24 combinations / 504 scenario paths across three reused 90-day windows.

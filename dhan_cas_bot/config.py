@@ -18,6 +18,8 @@ def load_config(path: str | Path) -> dict:
         raise ContractError("live_order_authority must be boolean")
     if not raw["account_id"]:
         raise ContractError("account_id is required")
+    from .strategy_inputs import strategy_names
+    strategy_names(raw)
     return raw
 
 
