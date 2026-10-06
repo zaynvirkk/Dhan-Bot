@@ -90,14 +90,15 @@ Run the exact full verification before a source rollout:
 .venv/bin/dhan-cas verify --state-dir /tmp/dhan-strategies-verify
 ```
 
-This environment cannot bind localhost sockets. Full verification failed on
-seven transport/service socket tests; no new verification marker was written.
-The focused production, fixture-transport, calendar, strategy, observer and UI
-suite passed **117 tests**, including the expired-position guard. Exact receipts
-are reported in the portfolio worklog.
+The first restricted-environment attempt failed seven transport/service tests
+because localhost sockets could not bind. After access changed, full verification
+passed **403 tests and all 15 production mutation checks** on 6 October with
+`.venv/bin/dhan-cas verify --state-dir /tmp/dhan-deploy-verify-20261006`.
+The focused production/calendar/strategy/UI suite had previously passed 117 tests.
 
-GitHub publishing and VM deployment are separate. The GitHub app is available;
-shell DNS is blocked. Google Cloud/VM access and authenticated market-data reads
-have not been verified here. Before an operator starts the updated service,
-the full socket suite and real read-only calendar/minute/contract checks must
-pass on the intended host. This document is not a deployment or trading receipt.
+Source `a40af75` is published to GitHub. The read-only dashboard/collector are
+deployed, but the funded trader remains on `5596c5d` and CAS only. Its existing
+authority was observed enabled and armed; it was not changed. No new strategy
+was activated or live order submitted by this work. Authenticated calendar/minute
+adapter alignment still needs read-only verification before an operator rollout.
+See the [deployment and current status receipt](DASHBOARD-DEPLOYMENT-2026-10-07.md).

@@ -1,8 +1,11 @@
 # Monitoring history and pre-auction visibility
 
-Status: implemented locally on 6 October; **not deployed or verified on the VM**.
-Last recorded deployment remains `5596c5d`. This note does not establish the
-current broker account, live authority, feed health or Monday's actual activity.
+Update, 7 October: the dashboard and history collector were deployed as
+`a40af75` on 6 October at 18:51 IST. The funded trader still runs `5596c5d`;
+new quote fields requiring its newer projection remain unavailable. History
+records observed coverage from installation, including the midnight transition;
+it does not reconstruct Monday. See the [deployment receipt](DASHBOARD-DEPLOYMENT-2026-10-07.md).
+The original local findings and access failures below are historical.
 
 ## Findings
 

@@ -1,17 +1,11 @@
 # Private dashboard
 
-The 6 October monitoring-history and pre-auction visibility changes are
-**local and not deployed**. See [findings, validation and remaining access
-requirements](MONITORING-HISTORY-2026-10-06.md). They add daily recorded coverage
-without interpreting missing history as zero trades. The deployment notes below
-are historical; they do not establish today's live health.
-
-The 30 September dashboard release is deployed. The streaming and
-live-health optimizations described below are implemented locally; deployment is
-**not verified**. See [the live-health update](LIVE-HEALTH-2026-10-04.md).
-Live behavior was last verified on 30 September 2026.
-See the [deployment verification](DASHBOARD-DEPLOYMENT-2026-09-30.md) and
-[browser access fix](DASHBOARD-ACCESS-2026-09-30.md).
+The read-only dashboard and collector are deployed as `a40af75`, verified on
+6 October and rechecked on 7 October. History records observed coverage from
+6 October 18:51 IST; earlier dates are not reconstructed. The funded trader
+remains on `5596c5d` (CAS only), so new strategy and quote fields that require
+the newer trader stay unknown. See the [current deployment receipt](DASHBOARD-DEPLOYMENT-2026-10-07.md).
+Older sections below describe their dated checks and operation procedures.
 
 URL: **https://dhan.34.100.255.111.sslip.io** on the existing
 `sablestone-dhan-cas` VM in `asia-south1-a`, project
