@@ -110,7 +110,7 @@ function renderStrategies(d){
  const rt=d.runtime,observer=d.daily_monitor,configured=rt?.strategies||[],checks=rt?.strategy_evaluations||[];
  const usingObserver=Boolean(observer),calendar=observer||rt;
  $('calendar-stamp').textContent=calendar?.calendar_checked_at?`Calendar checked ${at(calendar.calendar_checked_at)}`:'No exchange calendar observation';
- $('strategy-mode').textContent=usingObserver?'Daily checks use live market data in read-only mode. They cannot submit orders. Funded execution is shown separately below.':'The rows below describe the engines reported by the trading service. A signal is not an executed trade.';
+ $('strategy-mode').textContent=usingObserver?'Daily checks use live market data in read-only mode. They cannot submit orders. Funded execution is shown separately in the trading-service rows and account status.':'The rows below describe the engines reported by the trading service. A signal is not an executed trade.';
  const market=observer?.spot!=null?`NIFTY completed close ${points(observer.spot)} · ${at(observer.spot_at)}${observer.opening!=null?` · Session open ${points(observer.opening)}`:''}${observer.previous_close!=null?` · Previous close ${points(observer.previous_close)}`:''}`:'';
  $('strategy-market').textContent=market;
  const display=checks.map(row=>({...row,current:rt?.fresh===true,source:'Trading service'}));
@@ -204,7 +204,7 @@ function render(d){
  if(d.runtime&&!d.collector?.fresh)d.runtime.fresh=false;
  if(d.daily_monitor&&!d.collector?.fresh)d.daily_monitor.fresh=false;
  if(d.runtime&&!d.runtime.fresh)d.runtime.authority='UNKNOWN';
- state.generation++;state.data=d;const rt=d.runtime;renderTimings(rt);renderHistory(d);renderStrategies(d);const a=d.account;const cs=d.connections;const ledger=d.ledger;$('observation').textContent=rt?.observed_at?`${(rt.strategies||[]).map(s=>strategyNames[s]||s).join(' / ')||'Strategy not reported'} · ${rt.fresh?'Updated':'Last observed'} ${at(rt.observed_at)}`:'Waiting for a bot observation.';
+ state.generation++;state.data=d;const rt=d.runtime;renderTimings(rt);renderHistory(d);renderStrategies(d);const a=d.account;const cs=d.connections;const ledger=d.ledger;$('observation').textContent=rt?.observed_at?`${(rt.strategies||[]).map(s=>strategyNames[s]||s).join(' / ')||(rt.observation?.expiry?'Expiry auction service':'Strategy not reported')} · ${rt.fresh?'Updated':'Last observed'} ${at(rt.observed_at)}`:'Waiting for a bot observation.';
  const feedState=renderFeeds(rt,d.server_time);
  const notice=$('notice');notice.className='notice';const message=monitoringNotice(d,feedState);notice.textContent=message.text;if(message.kind)notice.classList.add(message.kind);notice.hidden=message.kind==='healthy';
  $('cash-label').textContent=a?.fresh?'Available cash':'Last observed cash';$('cash').textContent=cash(a?.available_cash);$('cash-age').textContent=a?`${age(a.age_seconds)} · ${a.fresh?'broker read':'historical observation'}`:'No broker observation';pnl('realised',a?.realised_pnl);pnl('unrealised',a?.unrealised_pnl);$('position-count').textContent=a?.open_position_count??'—';$('position-note').textContent=a?.fresh?'Current broker snapshot':a?'Last observed account':'Awaiting account data';
