@@ -1,9 +1,17 @@
 # SableStone Dhan CAS bot
 
+**7 October: dashboard diagnostics deployed; Data API subscription inactive.**
+Dashboard/collector `3e11b1c` now explain the inactive data subscription behind
+the unavailable Dhan options feed. Read-only checks show `dataPlan: Deactive`
+and HTTP 401 for market quotes, while profile/account authentication works.
+The existing funded CAS trader remains `5596c5d`, enabled/armed with its order
+route unverified. The subscription has not been renewed and feed recovery is
+unverified. [Current incident and deployment receipt](docs/FEED-DIAGNOSTICS-2026-10-07.md).
+
 **6 October: explicit session engines added.** Gap-fade and overnight rebound
 now have separate runtime rules and persistent position ownership beside CAS,
 with a shared bankroll and order manager. Date-specific exchange calendars and
-contract metadata govern eligibility. Source is published as `a40af75`; the
+contract metadata govern eligibility. That change was published as `a40af75`; the
 read-only dashboard and history collector were deployed on 6 October. The funded
 trader remains on `5596c5d`, running CAS only; gap-fade and rebound are not active.
 These remain experimental strategies. See the [deployment receipt](docs/DASHBOARD-DEPLOYMENT-2026-10-07.md) and

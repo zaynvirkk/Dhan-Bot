@@ -1,5 +1,9 @@
 # Dashboard deployment and trader status — 7 October 2026
 
+This is the earlier deployment receipt. The later 7 October dashboard release
+and unresolved market-feed failure are recorded in
+[feed diagnostics](FEED-DIAGNOSTICS-2026-10-07.md).
+
 The dashboard and read-only collector were deployed on 6 October at 13:21 UTC
 (18:51 IST) to the existing Google Cloud VM. The source commit is
 `a40af752832933366ffbd3a075c2e2975fe7ad8d`. GitHub `main` was verified at that
