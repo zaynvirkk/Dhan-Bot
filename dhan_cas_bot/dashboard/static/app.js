@@ -67,7 +67,12 @@ function monitoringNotice(d,feeds){
  if(!d.runtime?.fresh)return {text:'The bot status is stale or missing. Current trading authority cannot be confirmed.',kind:'error'};
  if(!d.account_read_ok)return {text:'The latest Dhan account read failed. Last observed balances and positions are shown where available.',kind:'error'};
  if(d.account&&!d.account.fresh)return {text:'Account observations are stale. Last observed balances and positions are shown; current account state is unknown.'};
- if(feeds.issues.includes('disconnected'))return {text:`${feeds.disconnected.join(' / ')} disconnected. Open System → Live connections for the latest error and reconnect count.`,kind:'error'};
+ if(feeds.issues.includes('disconnected')){
+  const plan=d.connections?.checks?.find(c=>c.name==='dhan_auth')?.facts?.data_plan;
+  let next='Open System → Live connections for the latest error and reconnect count.';
+  if(feeds.disconnected.includes('Dhan options feed')&&['Inactive','Expired'].includes(plan))next=`${d.connections.fresh?'Dhan reports':'Last Dhan check reported'} an ${plan.toLowerCase()} data subscription. Check Data APIs in DhanHQ${d.connections.fresh?'.':'; the check time is under System → Diagnostics.'}`;
+  return {text:`${feeds.disconnected.join(' / ')} disconnected. ${next}`,kind:'error'};
+ }
  if(feeds.issues.includes('delayed'))return {text:'Feed processing is delayed. Inspect pending messages in Live connections.'};
  if(feeds.known<3)return {text:'Account and bot updates are current. Live feed health is unavailable from the deployed version; dated diagnostics are shown separately.'};
  if(feeds.idle)return {text:'The bot reports an idle session. Account updates are current; live socket observations are shown below.',kind:'healthy'};

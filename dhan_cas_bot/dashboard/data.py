@@ -289,7 +289,7 @@ def connections_view(raw, now):
             v = item.get(field)
             if type(v) in (bool, int): facts[field] = v
             elif field == 'expiry': facts[field] = timestamp(str(v) + 'T00:00:00+05:30')
-            elif field == 'data_plan': facts[field] = choice(v, {'Active', 'Inactive', 'Expired'}, 'UNKNOWN')
+            elif field == 'data_plan': facts[field] = choice('Inactive' if v == 'Deactive' else v, {'Active', 'Inactive', 'Expired'}, 'UNKNOWN')
         error = item.get('error_type')
         result.append({'name': name, 'status': status,
                        'error_type': choice(error, {'ContractError', 'TimeoutError', 'HTTPStatusError', 'OSError', 'ConnectionClosedError'}),

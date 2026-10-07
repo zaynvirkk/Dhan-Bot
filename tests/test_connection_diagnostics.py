@@ -36,3 +36,15 @@ def test_sanitized_close_diagnostics_reach_dashboard_without_raw_reason():
     assert row['facts']['close_received_code'] == 1008
     assert row['facts']['keepalive_timeout'] is False
     assert 'PRIVATE_SECRET' not in json.dumps(view)
+
+
+def test_dhan_documented_deactive_data_plan_is_not_lost_as_unknown():
+    now = datetime.now(timezone.utc)
+    for provider_value, expected in [('Deactive', 'Inactive'), ('Active', 'Active'),
+                                     ('Expired', 'Expired'), ('token=SECRET', 'UNKNOWN')]:
+        raw = {'observed_at': now.isoformat(), 'checks': {'dhan_auth': {
+            'status': 'PASS', 'account_matches': True, 'data_plan': provider_value}}}
+        view = connections_view(raw, now)
+        auth = next(x for x in view['checks'] if x['name'] == 'dhan_auth')
+        assert auth['facts']['data_plan'] == expected
+        assert 'SECRET' not in json.dumps(view)
