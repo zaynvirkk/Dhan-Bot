@@ -26,12 +26,15 @@ def test_calendar_queries_holiday_and_weekend_instead_of_assuming_next_weekday()
         async def handler(request):
             day=request.url.path.rsplit("/",1)[1]; requested.append(day)
             opens = {"2026-10-05", "2026-10-01", "2026-10-08"}
-            rows=[{"exchange":"NFO","start_time":int(at(day,"09:15").timestamp()*1000),"end_time":int(at(day,"15:40").timestamp()*1000)}] if day in opens else []
+            rows=[{"exchange":"NFO","start_time":int(at(day,"09:15").timestamp()*1000),"end_time":int(at(day,"15:40").timestamp()*1000)},
+                  {"exchange":"NSE","start_time":int(at(day,"09:15").timestamp()*1000),"end_time":int(at(day,"15:30").timestamp()*1000)}] if day in opens else []
             return httpx.Response(200,json={"status":"success","data":rows})
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
             cal=await CalendarSource("fixture-token",client=client).fetch(at())
             assert cal.next_opens.date()==date(2026,10,8)
             assert cal.previous_opens.date()==date(2026,10,1)
+            assert cal.previous_spot_closes==at("2026-10-01","15:30")
+            assert cal.spot_closes==at("2026-10-05","15:30")
             assert {"2026-10-04","2026-10-06","2026-10-07"}<=set(requested)
     asyncio.run(run())
 
@@ -61,3 +64,16 @@ def test_route_window_requires_current_calendar_for_directional_engines():
     assert not route_window((CAS,),at(),calendar(),True)
     assert route_window((CAS,),at(clock="15:06"),calendar(),True)
     assert not route_window((CAS,),at(clock="15:06"),calendar(),False)
+
+
+def test_chart_adapter_overfetches_open_boundary_but_drops_outside_requested_times():
+    class Broker:
+        async def _request(self, method, path, **kw):
+            assert kw['json']['fromDate']=='2026-10-05 09:14:00'
+            stamps=[at(clock=t) for t in ('09:13','09:15','09:45')]
+            return {'timestamp':[int(t.timestamp()) for t in stamps],
+                    **{key:['10']*3 for key in ('open','high','low','close')},'volume':[0]*3}
+    async def run():
+        values=await MinuteSource(Broker(),now_fn=lambda:at(clock='10:00')).fetch('13','IDX_I','INDEX',at(clock='09:15'),at())
+        assert list(values)==[at(clock='09:16')]
+    asyncio.run(run())

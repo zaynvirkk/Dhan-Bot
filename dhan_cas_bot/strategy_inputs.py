@@ -60,10 +60,16 @@ class CalendarSource:
         day=now.astimezone(IST).date()
         own=self.client is None
         client=self.client or httpx.AsyncClient(timeout=5,follow_redirects=False)
+        cash_sessions={}
         async def session(day):
             response=await client.get("https://api.upstox.com/v2/market/timings/"+str(day),headers={"Authorization":"Bearer "+self.token})
             response.raise_for_status()
-            return parse_session(response.json(),day)
+            payload=response.json()
+            future=parse_session(payload,day)
+            cash_sessions[day]=parse_session(payload,day,exchange="NSE")
+            if future and not cash_sessions[day]:
+                raise ContractError("cash session calendar unavailable")
+            return future
         try:
             current=await session(day)
             adjacent=[]
@@ -76,7 +82,9 @@ class CalendarSource:
                 if not found:
                     raise ContractError("adjacent trading session unavailable")
                 adjacent.extend(found)
-            return Calendar(*(current or (None,None)),*adjacent,now,day)
+            return Calendar(*(current or (None,None)),*adjacent,now,day,
+                            spot_closes=cash_sessions[day][1] if cash_sessions[day] else None,
+                            previous_spot_closes=cash_sessions[adjacent[0].date()][1])
         finally:
             if own:
                 await client.aclose()
@@ -89,10 +97,12 @@ class MinuteSource:
 
     async def fetch(self, security, segment, instrument, start, end, *, oi=False):
         request={"securityId":security,"exchangeSegment":segment,"instrument":instrument,"interval":"1","oi":oi,
-                 "fromDate":start.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"),
+                 "fromDate":(start-timedelta(minutes=1)).astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"),
                  "toDate":end.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S")}
         raw=await self.broker._request("POST","/charts/intraday",json=request)
-        return parse_bars(raw,self.now(),require_oi=oi)
+        received=self.now()
+        return {t:bar for t,bar in parse_bars(raw,received,require_oi=oi).items()
+                if start<=t<=min(end,received)}
 
 
 class StrategyInputWorker:

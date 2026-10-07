@@ -10,7 +10,7 @@ import tempfile
 
 from dhan_cas_bot.broker import DhanBroker
 from dhan_cas_bot.config import load_config
-from .data import account_view, freshness, local_snapshot, read_json, shared_account, utcnow
+from .data import account_view, daily_monitor_view, freshness, local_snapshot, read_json, shared_account, utcnow
 from .history import advance_history
 
 
@@ -31,7 +31,7 @@ async def read_account(config):
         await broker.close()
 
 
-def projection(config, previous, *, checked=None):
+def projection(config, previous, *, checked=None, monitor=None):
     now = utcnow()
     primary = shared_account(read_json(Path(config['state_dir'])/'account-observation.json'), now)
     report = {'schema': 1, 'collector_observed_at': now.isoformat(), 'writes_to_broker': False,
@@ -50,6 +50,7 @@ def projection(config, previous, *, checked=None):
     if checked:
         report['independent_check'] = {'observed_at': checked['observed_at'], 'ok': checked['ok']}
     report.update(local_snapshot(config['state_dir'], now))
+    report['daily_monitor'] = daily_monitor_view(monitor, now)
     return report
 
 
@@ -96,7 +97,7 @@ async def collect(config, output):
     previous = read_json(output) or {}
     primary = shared_account(read_json(Path(config['state_dir'])/'account-observation.json'), utcnow())
     checked = await check_account(config) if primary is None else None
-    return write_report(output, projection(config, previous, checked=checked))
+    return write_report(output, projection(config, previous, checked=checked, monitor=read_json(Path(output).with_name('daily-monitor.json'))))
 
 
 async def watch(config, output):
@@ -113,7 +114,7 @@ async def watch(config, output):
     try:
         while True:
             previous = read_json(output) or {}
-            write_report(output, projection(config, previous, checked=checked))
+            write_report(output, projection(config, previous, checked=checked, monitor=read_json(Path(output).with_name('daily-monitor.json'))))
             await asyncio.sleep(1)
     finally:
         task.cancel()

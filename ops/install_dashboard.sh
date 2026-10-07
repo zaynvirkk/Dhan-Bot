@@ -39,7 +39,7 @@ if [[ ! -f "$DASH_RELEASE/.ready" ]]; then
   python3 -m venv "$DASH_RELEASE/.venv"
   "$DASH_RELEASE/.venv/bin/pip" install --disable-pip-version-check -q -r "$DASH_RELEASE/requirements-dashboard.lock"
   "$DASH_RELEASE/.venv/bin/pip" install --disable-pip-version-check -q --no-deps "$DASH_RELEASE"
-  (cd "$DASH_RELEASE" && .venv/bin/python -m pytest tests/test_dashboard.py tests/test_dashboard_streaming.py)
+  (cd "$DASH_RELEASE" && .venv/bin/python -m pytest tests/test_dashboard.py tests/test_dashboard_streaming.py tests/test_daily_monitor.py tests/test_strategy_dashboard.py tests/test_session_strategies.py)
   touch "$DASH_RELEASE/.ready"
 fi
 install -d -m 0755 -o root -g root /etc/sablestone-dhan-dashboard
@@ -75,7 +75,7 @@ dhan.34.100.255.111.sslip.io {
 CADDY
 chmod 0644 /etc/sablestone-dhan-dashboard/Caddyfile
 /usr/bin/caddy validate --config /etc/sablestone-dhan-dashboard/Caddyfile --adapter caddyfile
-for unit in dhan-dashboard.service dhan-dashboard-collect.service dhan-dashboard-collect.timer dhan-dashboard-caddy.service; do
+for unit in dhan-dashboard.service dhan-dashboard-collect.service dhan-dashboard-collect.timer dhan-dashboard-caddy.service dhan-daily-monitor.service; do
   install -m 0644 "$DASH_RELEASE/ops/$unit" "/etc/systemd/system/$unit"
 done
 # Check credentials before switching the web release. Broker secrets are never loaded.
@@ -90,6 +90,11 @@ systemctl restart dhan-dashboard.service
 # Record a projection even if the cached broker token has expired.
 systemctl restart dhan-dashboard-collect.service
 systemctl restart dhan-dashboard-caddy.service
+# Restart the observer on subsequent releases only when already enabled.
+# First deployment is an explicit separate operation; this unit cannot trade.
+if systemctl is-enabled --quiet dhan-daily-monitor.service; then
+  systemctl restart dhan-daily-monitor.service
+fi
 python3 - <<'PY'
 import base64,json,time,urllib.error,urllib.request
 from pathlib import Path

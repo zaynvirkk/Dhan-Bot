@@ -178,3 +178,19 @@ setImmediate(()=>{
  for(const row of ids['strategy-checks'].children)assert.equal(row.children[1].textContent,'Unknown');
  console.log('Multiple strategy checks and stale demotion verified');
 });
+
+setImmediate(()=>{
+ const stamp='2026-10-09T04:15:00Z';
+ browser.monitorFixture={available:true,server_time:stamp,collector:{fresh:true},account_read_ok:true,
+  runtime:{fresh:true,authority:'DISABLED',state:'NO_TRADE_DAY',strategies:[]},
+  daily_monitor:{fresh:true,observed_at:stamp,mode:'READ_ONLY',writes_to_broker:false,
+   strategy_evaluations:[{strategy:'GAP_FADE_DOUBLE',state:'SIGNAL',reason:'GAP_FADE_CONFIRMED',side:'CE',evaluated_at:stamp}]}};
+ vm.runInContext('render(monitorFixture)',browser);
+ assert.equal(ids.authority.textContent,'New entries disabled','Observer signal must not enable trading');
+ assert.match(ids['strategy-mode'].textContent,/cannot submit orders/);
+ assert.match(ids['strategy-checks'].children[0].children[0].children[1].textContent,/Read-only monitor/);
+ browser.monitorFixture.server_time='2026-10-09T04:17:00Z';
+ vm.runInContext('render(monitorFixture)',browser);
+ assert.equal(ids['strategy-checks'].children[0].children[1].textContent,'Unknown','Stale observer signal must be demoted');
+ console.log('Daily observer labels, authority isolation and stale signals verified');
+});

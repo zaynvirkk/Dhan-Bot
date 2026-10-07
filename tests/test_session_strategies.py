@@ -85,3 +85,24 @@ def test_rebound_uses_completed_1510_bar_and_next_actual_session():
     assert r.minimum_expiry == date(2026,10,9)
     assert evaluate(REBOUND, now+timedelta(minutes=1), cal, spot, {}, {date(2026,10,13)}).side is None
 
+
+
+def test_provider_integral_decimal_numbers_are_valid_but_fractional_or_boolean_are_not():
+    payload={'timestamp':[D(str(int(at(clock='09:44').timestamp())))],
+             'open':[D('10')],'high':[D('11')],'low':[D('9')],'close':[D('10')],
+             'volume':[D('100.0')],'open_interest':[D('1000.0')]}
+    result=parse_bars(payload,at(),require_oi=True)
+    assert result[at()].volume==100 and result[at()].oi==1000
+    for key,bad in [('timestamp',D('1.1')),('timestamp',True),('volume',D('1.5')),('volume',True),('open_interest',D('NaN')),('timestamp',D('Infinity'))]:
+        malformed={**payload,key:[bad]}
+        with pytest.raises(ContractError): parse_bars(malformed,at(),require_oi=True)
+
+
+def test_cash_index_close_is_separate_from_derivatives_close_and_must_exist():
+    from dataclasses import replace
+    cal=replace(calendar(),previous_spot_closes=at('2026-10-01','15:30'))
+    spot=bars()
+    spot[at('2026-10-01','15:30')]=spot.pop(at('2026-10-01','15:40'))
+    assert evaluate(GAP,at(),cal,spot,futures(),{date(2026,10,6)}).state=='SIGNAL'
+    spot.pop(at('2026-10-01','15:30'))
+    assert evaluate(GAP,at(),cal,spot,futures(),{date(2026,10,6)}).state=='UNKNOWN'

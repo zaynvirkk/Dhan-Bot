@@ -40,7 +40,7 @@ def view_snapshot(path, now=None):
     # Recompute age at request time; a stopped collector cannot remain green.
     data = dict(data)
     data.update(available=True, server_time=now.isoformat(), collector=freshness(data.get('collector_observed_at'), now, 60))
-    for section, ttl in (('runtime',RUNTIME_TTL_SECONDS), ('connections',900), ('account',60)):
+    for section, ttl in (('runtime',RUNTIME_TTL_SECONDS), ('connections',900), ('account',60), ('daily_monitor',90)):
         value = data.get(section)
         if not isinstance(value, dict):
             data[section] = None
@@ -219,7 +219,7 @@ class EventStream:
             evidence['collector_fresh'] = data.get('collector', {}).get('fresh')
             digest = json.dumps(evidence, sort_keys=True, allow_nan=False)
             if digest == self.previous:
-                times = {key: value.get('observed_at') for key in ('collector', 'runtime', 'account', 'connections')
+                times = {key: value.get('observed_at') for key in ('collector', 'runtime', 'account', 'connections', 'daily_monitor')
                          if isinstance(value := data.get(key), dict)}
                 return ('event: pulse\ndata: '+json.dumps({'server_time': data['server_time'], 'observations': times})+'\n\n').encode()
             self.previous = digest

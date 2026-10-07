@@ -38,6 +38,8 @@ class Calendar:
     next_closes: datetime
     checked_at: datetime
     day: date | None = None
+    spot_closes: datetime | None = None
+    previous_spot_closes: datetime | None = None
 
     def fresh(self, now):
         return (self.checked_at.tzinfo is not None
@@ -62,16 +64,16 @@ class Evaluation:
     details: dict = field(default_factory=dict)
 
 
-def parse_session(payload, day):
+def parse_session(payload, day, *, exchange="NFO"):
     if not isinstance(payload, dict) or payload.get("status") != "success" or not isinstance(payload.get("data"), list):
         raise ContractError("market calendar unavailable")
     if any(not isinstance(row, dict) or not row.get("exchange") for row in payload["data"]):
         raise ContractError("invalid market calendar row")
-    rows = [row for row in payload["data"] if row.get("exchange") == "NFO"]
+    rows = [row for row in payload["data"] if row.get("exchange") == exchange]
     if not rows:
         return None  # authoritative successful response, not a request failure
     if len(rows) != 1:
-        raise ContractError("ambiguous NFO trading session")
+        raise ContractError(f"ambiguous {exchange} trading session")
     try:
         stamps = [rows[0][name] for name in ("start_time", "end_time")]
         if any(type(value) is not int for value in stamps):
@@ -82,6 +84,17 @@ def parse_session(payload, day):
         return start, end
     except (KeyError, OverflowError, OSError) as exc:
         raise ContractError("invalid calendar timestamps") from exc
+
+
+def integral_number(value):
+    # Dhan emits e.g. 1.79125836E+9 timestamps and 100.0 quantities.
+    # Preserve exact values; never truncate a fractional or nonfinite number.
+    if type(value) not in (int, Decimal) or (isinstance(value, Decimal) and
+            (not value.is_finite() or value != value.to_integral_value())):
+        raise ContractError("invalid integral candle value")
+    if value < 0 or value > 2**53:
+        raise ContractError("integral candle value out of range")
+    return int(value)
 
 
 def parse_bars(payload, received_at, *, require_oi=False):
@@ -99,13 +112,14 @@ def parse_bars(payload, received_at, *, require_oi=False):
     result = {}
     seen = set()
     for i, stamp in enumerate(payload["timestamp"]):
-        if type(stamp) is not int or stamp % 60 or stamp in seen:
+        stamp = integral_number(stamp)
+        if stamp % 60 or stamp in seen:
             raise ContractError("ambiguous minute timestamp")
         seen.add(stamp)
         available = datetime.fromtimestamp(stamp, IST)+timedelta(minutes=1)
         prices = [dec(payload[key][i], key) for key in ("open", "high", "low", "close")]
         op, hi, lo, close = prices
-        volume, interest = payload["volume"][i], oi[i]
+        volume, interest = integral_number(payload["volume"][i]), integral_number(oi[i])
         if min(prices) <= 0 or not lo <= min(op, close) <= max(op, close) <= hi:
             raise ContractError("invalid minute OHLC")
         if any(type(v) is not int or v < 0 for v in (volume, interest)):
@@ -151,7 +165,7 @@ def evaluate(strategy, now, calendar, spot, future, expiries):
             return result("SIGNAL" if side else "NO_SIGNAL", "SELLOFF_THRESHOLD_MET" if side else "SELLOFF_BELOW_THRESHOLD",
                           side=side, spot=current, minimum_expiry=exit_at.date()+timedelta(days=1),
                           exit_at=exit_at, details={"open_return":str(change)})
-        previous = spot[calendar.previous_closes].close
+        previous = spot[calendar.previous_spot_closes or calendar.previous_closes].close
         if previous <= 0:
             raise ContractError("nonpositive previous close")
         gap = opening/previous-1

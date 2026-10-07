@@ -13,6 +13,8 @@ MAX_DAYS = 31
 def monitor_sample(report, now):
     rt = report.get('runtime') or {}
     current = freshness(rt.get('observed_at'), now, 45)['fresh'] and rt.get('fresh') is True
+    observer = report.get('daily_monitor') or {}
+    observer_current = observer.get('mode') == 'READ_ONLY' and observer.get('fresh') is True and freshness(observer.get('observed_at'), now, 90)['fresh']
     obs = rt.get('observation') or {}
     feeds = rt.get('feed_health') or {}
     return {
@@ -29,6 +31,8 @@ def monitor_sample(report, now):
         'iep_at': timestamp(obs.get('iep_at')),
         'phase': choice(obs.get('phase'), {'CTS_CLOSE', 'CAS_LM_START', 'CAS_M_STOP', 'CAS_STOP', 'UNKNOWN'}),
         'strategies': strategy_projection(rt.get('strategy_evaluations')) if current else [],
+        'daily_monitor': strategy_projection(observer.get('strategy_evaluations')) if observer_current else [],
+        'daily_monitor_current': observer_current,
         'feeds': {key: feeds.get(key, {}).get('connected') if current and type(feeds.get(key, {}).get('connected')) is bool else None
                   for key in ('signal', 'market', 'order')},
     }
@@ -45,7 +49,7 @@ def advance_history(previous, report, now):
     sample = monitor_sample(report, now)
     last = value['events'][-1] if value['events'] else None
     elapsed = (now - datetime.fromisoformat(last['at'])).total_seconds() if last else None
-    changed = last and any(sample.get(key) != last.get(key) for key in ('state', 'authority', 'reason', 'mode', 'phase', 'feeds', 'source_current', 'strategies'))
+    changed = last and any(sample.get(key) != last.get(key) for key in ('state', 'authority', 'reason', 'mode', 'phase', 'feeds', 'source_current', 'strategies', 'daily_monitor', 'daily_monitor_current'))
     # Sample each minute and on state changes (coalesced to at most every 5s).
     # Market quotes alone never turn this into an unbounded tick archive.
     if last and (elapsed < 5 or (elapsed < 60 and not changed)):

@@ -187,6 +187,24 @@ def strategy_projection(raw):
     return result
 
 
+def daily_monitor_view(raw, now):
+    if not isinstance(raw, dict) or raw.get('mode') != 'READ_ONLY' or raw.get('writes_to_broker') is not False:
+        return None
+    timing = freshness(raw.get('observed_at'), now, 90)
+    rows = strategy_projection(raw.get('strategy_evaluations'))
+    if not timing['fresh']:
+        rows = [{**r, 'state':'UNKNOWN', 'reason':'STRATEGY_INPUTS_STALE', 'side':None} for r in rows]
+    return {**timing, 'mode':'READ_ONLY', 'writes_to_broker':False,
+            'strategies':['GAP_FADE_DOUBLE','NIFTY_SELLOFF_REBOUND_1510'],
+            'strategy_evaluations':rows, 'last_decisions':strategy_projection(raw.get('last_decisions')),
+            'calendar_checked_at':timestamp(raw.get('calendar_checked_at')),
+            'session_open':timestamp(raw.get('session_open')), 'session_close':timestamp(raw.get('session_close')),
+            'exchange_open':raw.get('exchange_open') if type(raw.get('exchange_open')) is bool else None,
+            'spot_at':timestamp(raw.get('spot_at')),
+            **{key:money(raw.get(key)) for key in ('spot','opening','previous_close')},
+            **{key:integer(raw.get(key)) for key in ('spot_bars','future_bars')}}
+
+
 def observation_projection(raw):
     if not isinstance(raw, dict):
         return None
