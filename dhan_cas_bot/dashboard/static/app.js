@@ -11,7 +11,9 @@ function at(value){if(!value)return 'No observation';const d=new Date(value);ret
 function age(s){if(s===null||s===undefined)return 'Unknown age';if(s<60)return `${s}s ago`;if(s<3600)return `${Math.floor(s/60)}m ago`;if(s<86400)return `${Math.floor(s/3600)}h ago`;return `${Math.floor(s/86400)}d ago`;}
 function pnl(id,value){const n=$(id);n.textContent=cash(value);n.classList.remove('positive','negative');if(value&&value!=='0.00')n.classList.add(value.startsWith('-')?'negative':'positive');}
 function badge(text,kind=''){return el('span',text,'badge '+kind);}
-function details(c){const f=c.facts||{};if(c.status==='FAIL')return `${c.error_type||'Check failed'}${c.http_status?' · HTTP '+c.http_status:''}. See the bot’s private logs for diagnosis.`;if(c.name==='dhan_market_feed')return `${f.full_packets??'No'} full packets recorded · ${f.book_verified?'book data observed':'book data unverified'}`;if(c.name==='upstox_feed')return `${f.index_seen?'Index received':'Index unverified'} · ${f.index_iep_seen?'IEP observed':'IEP not observed'}`;if(c.name==='dhan_order_socket')return `${f.websocket_connected?'Socket connected':'Socket unverified'} · ${f.route_verified?'order route verified':'order route unverified'}`;if(c.name==='contract_metadata')return `${f.instruments??'—'} contracts · expiry ${f.expiry?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short'}).format(new Date(f.expiry)):'unknown'}`;if(c.name==='dhan_auth')return `${f.derivatives_enabled?'F&O enabled':'F&O unverified'} · data plan ${f.data_plan||'unknown'}`;if(c.name==='dhan_account')return `${f.positions??'—'} reported positions · ${f.orders??'—'} orders`;if(c.name==='egress')return f.matches_expected?'Observed IP matches the configured address.':'Expected IP match unverified.';return 'No result recorded.';}
+function feedError(value){return ({ConnectionClosedError:'Connection closed',TimeoutError:'Connection timed out',InvalidHandshake:'Connection handshake failed',HTTPStatusError:'Provider request failed',OSError:'Network connection failed',EOFError:'Connection ended unexpectedly',ContractError:'Feed validation failed'})[value]||'Cause not reported';}
+function diagnosticFailure(c){const f=c.facts||{};let detail=feedError(c.error_type);if(c.http_status)detail+=` · HTTP ${c.http_status}`;if(f.keepalive_timeout)detail+=' · no reply to the connection keepalive';if(f.close_received_code!=null)detail+=` · provider close code ${f.close_received_code}`;if(f.close_sent_code!=null)detail+=` · client close code ${f.close_sent_code}`;return detail+'. This is the dated diagnostic result; current socket state is shown in Live connections.';}
+function details(c){const f=c.facts||{};if(c.status==='FAIL')return diagnosticFailure(c);if(c.name==='dhan_market_feed')return `${f.full_packets??'No'} full packets recorded · ${f.book_verified?'book data observed':'book data unverified'}`;if(c.name==='upstox_feed')return `${f.index_seen?'Index received':'Index unverified'} · ${f.index_iep_seen?'IEP observed':'IEP not observed'}`;if(c.name==='dhan_order_socket')return `${f.websocket_connected?'Socket connected':'Socket unverified'} · ${f.route_verified?'order route verified':'order route unverified'}`;if(c.name==='contract_metadata')return `${f.instruments??'—'} contracts · expiry ${f.expiry?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short'}).format(new Date(f.expiry)):'unknown'}`;if(c.name==='dhan_auth')return `${f.derivatives_enabled?'F&O enabled':'F&O unverified'} · data plan ${f.data_plan||'unknown'}`;if(c.name==='dhan_account')return `${f.positions??'—'} reported positions · ${f.orders??'—'} orders`;if(c.name==='egress')return f.matches_expected?'Observed IP matches the configured address.':'Expected IP match unverified.';return 'No result recorded.';}
 function rows(target, rows, columns){if(!changed('table:'+target,[rows,columns.map(c=>c.title||'')]))return;const body=$(target);body.replaceChildren();for(const r of rows){const tr=el('tr');for(const c of columns){const td=el('td',undefined,c.numeric?'numeric':'');const v=c.read(r);if(v instanceof Node)td.append(v);else td.textContent=v??'—';tr.append(td);}body.append(tr);}}
 function orderBadge(s){return badge((s||'UNKNOWN').replaceAll('_',' '),s==='REJECTED'?'bad':pending.has(s)?'warn':s==='TRADED'||s==='FILLED'?'good':'');}
 function renderOrders(){const d=state.data;const a=d?.account;const ledger=d?.ledger;const kind=state.source;if(!changed('orders',[a?{...a,age_seconds:undefined}:a,ledger,kind,$('order-filter').value]))return;let items=kind==='broker'?a?.orders:ledger?.[kind];const available=kind==='broker'?Array.isArray(items):ledger?.available&&Array.isArray(items);items=available?items:[];const filter=$('order-filter').value;if(kind!=='fills'&&filter!=='all')items=items.filter(r=>filter==='pending'?pending.has(r.state):filter==='filled'?['TRADED','FILLED'].includes(r.state):['CANCELLED','REJECTED','ABORTED'].includes(r.state));$('order-filter').disabled=kind==='fills';
@@ -30,7 +32,7 @@ function renderTimings(rt){
 }
 function elapsed(stamp,now){const value=(Date.parse(now)-Date.parse(stamp))/1000;return Number.isFinite(value)&&value>=-5?Math.max(0,Math.floor(value)):null;}
 function renderFeeds(rt,now){
- const feeds=rt?.feed_health||{};const names={signal:'Upstox signal feed',market:'Dhan option books',order:'Dhan order updates'};
+ const feeds=rt?.feed_health||{};const names={signal:'Upstox index feed',market:'Dhan options feed',order:'Dhan order updates'};
  const idle=rt?.monitoring_mode==='IDLE';const fresh=rt?.fresh===true;
  const issues=[];let known=0;
  const rows=Object.entries(names).map(([key,name])=>{
@@ -38,7 +40,8 @@ function renderFeeds(rt,now){
   if(f){
    if(typeof f.connected==='boolean')known++;
    const seen=elapsed(f.last_received_at,now),usable=elapsed(f.last_usable_at,now);
-   detail=`Last message: ${seen===null?'not observed':age(seen)} · reconnects: ${f.reconnects??'unknown'}`;
+   detail=`Last message in this connection: ${seen===null?'not observed':age(seen)} · reconnects: ${f.reconnects??'unknown'}`;
+   if(f.connected===false)detail+=` · last error: ${feedError(f.last_error)}`;
    if(key!=='order')detail+=` · accepted ${key==='market'?'book':'signal'}: ${usable===null?'not observed':age(usable)}`;
    else detail+=' · silence is normal when no orders change';
    detail+=` · pending messages: ${f.pending_messages??'unknown'}`;
@@ -56,7 +59,7 @@ function renderFeeds(rt,now){
  });
  $('feed-context').textContent=!fresh?'Current feed health is unknown until a fresh bot status arrives.':idle?'The bot reports an idle session: entries are outside their active window. Market data may still arrive; receipt times and socket state are shown separately.':'Live socket observations. Connected does not mean the strategy has a usable signal or permission to trade.';
  if(changed('feed-rows',rows)){$('live-connections').replaceChildren();for(const r of rows){const row=el('div',undefined,'connection-row live-feed');const info=el('div');info.append(el('p',r.name,'connection-name'),el('p',r.detail,'connection-detail'));row.append(info,badge(r.status,r.kind));$('live-connections').append(row);}}
- return {issues,known,idle};
+ return {issues,known,idle,disconnected:rows.filter(r=>r.status==='Disconnected').map(r=>r.name)};
 }
 function monitoringNotice(d,feeds){
  if(!d.available)return {text:'No dashboard snapshot is available. The collector may not be running.',kind:'error'};
@@ -64,7 +67,7 @@ function monitoringNotice(d,feeds){
  if(!d.runtime?.fresh)return {text:'The bot status is stale or missing. Current trading authority cannot be confirmed.',kind:'error'};
  if(!d.account_read_ok)return {text:'The latest Dhan account read failed. Last observed balances and positions are shown where available.',kind:'error'};
  if(d.account&&!d.account.fresh)return {text:'Account observations are stale. Last observed balances and positions are shown; current account state is unknown.'};
- if(feeds.issues.includes('disconnected'))return {text:'A live feed is disconnected. Inspect Live connections below.',kind:'error'};
+ if(feeds.issues.includes('disconnected'))return {text:`${feeds.disconnected.join(' / ')} disconnected. Open System → Live connections for the latest error and reconnect count.`,kind:'error'};
  if(feeds.issues.includes('delayed'))return {text:'Feed processing is delayed. Inspect pending messages in Live connections.'};
  if(feeds.known<3)return {text:'Account and bot updates are current. Live feed health is unavailable from the deployed version; dated diagnostics are shown separately.'};
  if(feeds.idle)return {text:'The bot reports an idle session. Account updates are current; live socket observations are shown below.',kind:'healthy'};

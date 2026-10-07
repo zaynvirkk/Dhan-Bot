@@ -36,9 +36,9 @@ CHECK_FIELDS = {
     'dhan_account': ('orders', 'positions', 'trades', 'whitelist_resolved'),
     'egress': ('matches_expected',),
     'contract_metadata': ('expiry', 'instruments', 'freeze_quantity'),
-    'upstox_feed': ('websocket_connected', 'index_seen', 'protobuf_frames', 'cas_status_seen', 'index_iep_seen'),
-    'dhan_market_feed': ('websocket_connected', 'full_packets', 'book_verified'),
-    'dhan_order_socket': ('websocket_connected', 'route_verified'),
+    'upstox_feed': ('websocket_connected', 'index_seen', 'protobuf_frames', 'cas_status_seen', 'index_iep_seen', 'close_received_code', 'close_sent_code', 'keepalive_timeout'),
+    'dhan_market_feed': ('websocket_connected', 'full_packets', 'book_verified', 'close_received_code', 'close_sent_code', 'keepalive_timeout'),
+    'dhan_order_socket': ('websocket_connected', 'route_verified', 'close_received_code', 'close_sent_code', 'keepalive_timeout'),
 }
 REASONS = {
     'NO_EXECUTABLE_LAG_OR_REMAINING_ALLOWANCE': 'No contract passes the price, depth, fees and remaining capital checks.',

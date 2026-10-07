@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from websockets.asyncio.client import connect
+from websockets.exceptions import ConnectionClosed
 
 from .auth import session_token
 from .broker import DhanBroker
@@ -24,6 +25,18 @@ from .rules import RuleSource, DHAN_MASTER_URL, NSE_FREEZE_URL
 from .upstox_signal import decode_binary, NIFTY_KEY
 from .dhan_feed import decode_full_binary
 from .profile import require_derivatives_profile
+
+
+def connection_failure(exc):
+    """Export protocol codes, never URLs or arbitrary provider reason strings."""
+    if not isinstance(exc, ConnectionClosed):
+        return {}
+    def code(frame):
+        value = getattr(frame, 'code', None)
+        return int(value) if isinstance(value, int) and 1000 <= value <= 4999 else None
+    return {'close_received_code': code(exc.rcvd),
+            'close_sent_code': code(exc.sent),
+            'keepalive_timeout': getattr(exc.sent, 'reason', None) == 'keepalive ping timeout'}
 
 
 def normalize_whitelist(value):
@@ -50,7 +63,7 @@ async def check_connections(config: dict) -> dict:
         except Exception as exc:
             # URLs and provider bodies can contain credentials. Only types
             # and HTTP status codes enter operator logs.
-            checks[name] = {**checks.get(name, {}), "status": "FAIL", "error_type": type(exc).__name__}
+            checks[name] = {**checks.get(name, {}), "status": "FAIL", "error_type": type(exc).__name__, **connection_failure(exc)}
             if (name == "dhan_market_feed" and isinstance(exc, asyncio.TimeoutError)
                     and checks[name].get("stage") == "waiting_for_depth"
                     and checks[name].get("websocket_connected") is True):
