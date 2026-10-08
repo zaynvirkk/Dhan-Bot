@@ -168,9 +168,16 @@ function renderStrategies(d){
    const caption=el('p',`${['SIGNAL','NO_SIGNAL'].includes(row.state)?'Decision inputs':'Observed inputs; entry schedule still applies'} · ${at(row.evaluated_at)}`, 'condition-caption');
    wrap.append(caption,conditionList(row,row.current));
   }else if(row.strategy!=='CAS_LAG_V1')wrap.append(el('p',row.reason==='STRATEGY_INPUT_UNAVAILABLE'?'Condition inputs are unavailable because a market-data request failed.':'Detailed conditions have not been reported by this service version.','condition-caption'));
-  if(last?.conditions?.length&&last.evaluated_at!==row.evaluated_at&&['SIGNAL','NO_SIGNAL'].includes(last.state)){
+  if(last&&last.evaluated_at!==row.evaluated_at&&['SIGNAL','NO_SIGNAL'].includes(last.state)){
    const detail=el('details',undefined,'last-decision-inputs');
-   detail.append(el('summary',`Inputs at the last decision · ${at(last.evaluated_at)}`),conditionList(last,true));
+   detail.append(el('summary',`Inputs at the last decision · ${at(last.evaluated_at)}`));
+   if(last.conditions?.length)detail.append(conditionList(last,true));
+   else{
+    const labels={gap:'Opening gap',fraction_filled:'Gap filled',future_5m_return:'Futures 5 min',open_return:'From open'};
+    const recorded=Object.entries(last.details||{}).filter(([key])=>key in labels).map(([key,value])=>`${labels[key]}: ${pct(value)}`);
+    if(typeof last.details?.persistent==='boolean')recorded.push(`Persistence: ${last.details.persistent?'passed':'failed'}`);
+    detail.append(el('p',recorded.length?recorded.join(' · '):'Detailed inputs were not recorded by the earlier service version.','connection-detail'));
+   }
    wrap.append(detail);
   }
   $('strategy-checks').append(wrap);

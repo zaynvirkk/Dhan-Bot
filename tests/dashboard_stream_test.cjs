@@ -222,5 +222,15 @@ setImmediate(()=>{
  const retained=row.children.find(c=>c.children?.[0]?.textContent?.startsWith('Inputs at the last decision'));
  assert.ok(retained,'Previous decision values remain inspectable between scheduled checks');
  assert.match(retained.children[1].children[0].children[0].children[1].textContent,/0.32%.*0.50%/);
+ // Older monitor decisions have numeric details but no condition rows.
+ const legacy=browser.explained.daily_monitor.last_decisions[0];
+ legacy.conditions=[];
+ legacy.details={gap:'-.000176967',fraction_filled:'-65.225',persistent:false,future_5m_return:'-.002885'};
+ vm.runInContext('render(explained)',browser);
+ row=ids['strategy-checks'].children[0];
+ const legacyDetail=row.children.find(c=>c.children?.[0]?.textContent?.startsWith('Inputs at the last decision'));
+ assert.ok(legacyDetail,'Earlier version decisions must retain inspectable numeric inputs');
+ assert.match(legacyDetail.children[1].textContent,/Opening gap: -0.02%/);
+ assert.match(legacyDetail.children[1].textContent,/Persistence: failed/);
  console.log('Visible failed conditions, exact thresholds, next check and retained decision verified');
 });
