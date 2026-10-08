@@ -49,3 +49,10 @@ def test_atomic_replacement_preserves_original_on_failed_install(tmp_path,monkey
     with pytest.raises(OSError): module.atomic(target,b'new',0o640,(0,0))
     assert target.read_bytes()==b'private original'
     assert list(tmp_path.iterdir())==[target]
+
+
+def test_failed_preflight_rollback_cannot_overwrite_concurrent_config(tmp_path):
+    path=tmp_path/'config'
+    path.write_bytes(b'operator update')
+    module.restore_files([(path,b'stale config',0o600,(0,0))],changed=False)
+    assert path.read_bytes()==b'operator update'

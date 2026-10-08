@@ -78,6 +78,17 @@ def atomic(path,data,mode,owner):
         if os.path.exists(tmp):os.unlink(tmp)
 
 
+def restore_files(records, *, changed):
+    # A preflight/lock failure must not overwrite a concurrent operator edit.
+    if not changed:
+        return
+    for path,data,mode,owner in records:
+        if data is None:
+            path.unlink(missing_ok=True)
+        else:
+            atomic(path,data,mode,owner)
+
+
 def systemctl(*args):
     subprocess.run(['systemctl',*args],check=True,stdout=subprocess.DEVNULL)
 
@@ -108,6 +119,9 @@ def main():
         marker=state/'software_verified.json'
         prior_marker=marker.read_bytes() if marker.exists() else None
         owner=(state.stat().st_uid,state.stat().st_gid)
+        records=[(path,original,stat.st_mode & 0o777,(stat.st_uid,stat.st_gid)),
+                 (override,prior_override,0o644,(0,0)), (marker,prior_marker,0o600,owner)]
+        changed=False
         systemctl('stop','dhan-cas.service')
         lock=os.open(state/'writer.lock',os.O_CREAT|os.O_RDWR,0o600)
         try:
@@ -116,6 +130,7 @@ def main():
                 raise ValueError('Configuration changed during checks; retry against current configuration')
             asyncio.run(flat_account(config))
             override.parent.mkdir(parents=True,exist_ok=True)
+            changed=True
             atomic(path,updated,stat.st_mode & 0o777,(stat.st_uid,stat.st_gid))
             unit=f'[Service]\nWorkingDirectory={ROOT}\nExecStart=\nExecStart={ROOT}/.venv/bin/dhan-cas run --mode AUTO_LIVE --config {path}\n'
             atomic(override,unit.encode(),0o644,(0,0))
@@ -124,11 +139,7 @@ def main():
                 raise ValueError('Verification marker does not match installed source')
         except Exception:
             os.close(lock)
-            atomic(path,original,stat.st_mode & 0o777,(stat.st_uid,stat.st_gid))
-            if prior_override is None: override.unlink(missing_ok=True)
-            else: atomic(override,prior_override,0o644,(0,0))
-            if prior_marker is None: marker.unlink(missing_ok=True)
-            else: atomic(marker,prior_marker,0o600,owner)
+            restore_files(records,changed=changed)
             systemctl('daemon-reload')
             systemctl('start','dhan-cas.service')
             raise
@@ -140,11 +151,7 @@ def main():
             systemctl('is-active','--quiet','dhan-cas.service')
         except Exception:
             systemctl('stop','dhan-cas.service')
-            atomic(path,original,stat.st_mode & 0o777,(stat.st_uid,stat.st_gid))
-            if prior_override is None: override.unlink(missing_ok=True)
-            else: atomic(override,prior_override,0o644,(0,0))
-            if prior_marker is None: marker.unlink(missing_ok=True)
-            else: atomic(marker,prior_marker,0o600,owner)
+            restore_files(records,changed=changed)
             systemctl('daemon-reload')
             systemctl('start','dhan-cas.service')
             raise
