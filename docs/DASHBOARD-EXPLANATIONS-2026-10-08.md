@@ -1,10 +1,10 @@
 # Dashboard decision explanations, 8 October 2026
 
-Implemented locally. These changes have not been pushed or deployed, and the
-live browser has not been inspected today. The last verified dashboard and
-read-only monitor release is `eb7f442` from 7 October. The last verified funded
-trader was still `5596c5d`, CAS only; these observations are not a current
-account or service-status check.
+Pushed and deployed on 8 October. The final dashboard, collector and read-only
+daily monitor release is `3792d8512bc45bf184eb96825d556225df5b8cba`, installed at
+16:43 IST and inspected in the authenticated browser at 16:44 IST. The funded
+trader remains `5596c5d`, CAS only, with PID 288398 and its 7 October start time
+unchanged. The dashboard deployment does not activate daily-strategy orders.
 
 ## Cause and change
 
@@ -26,6 +26,12 @@ completed decision remains visible, with expandable historical inputs. Only
 sanitized, same-day, past decisions can be restored after a monitor restart;
 failed data reads do not erase them. History retains the new diagnostic fields.
 Read-only monitoring and funded execution remain explicitly separate.
+
+Live inspection found that earlier monitor versions had saved numeric details
+without the new condition rows. The final compatibility fix displays those
+original details in the expandable retained-decision panel; it does not invent
+historical condition evidence. A failing browser test reproduced that omission
+before the fix.
 
 No strategy threshold, entry window, execution authority or broker order path
 was changed by this dashboard work. A separately pending upgrade-helper fix
@@ -50,16 +56,41 @@ git diff --check
 # passed
 ```
 
-The required full command was attempted:
-`.venv/bin/dhan-cas verify --state-dir /tmp/dhan-dashboard-explanations-verify-20261008`.
-It did not complete and was interrupted. An isolated real-socket case,
-`tests/test_cloud_runtime.py::test_real_socket_reconnect_resubscribes_binary_and_clears_epoch`,
-fails because this environment cannot bind `127.0.0.1`. No current full-suite or
-mutation-verification pass is claimed; no verification marker was created.
+The earlier restricted-environment attempt could not bind localhost or reach
+the VM. After access was restored, full verification completed twice, including
+after the compatibility fix:
 
-Current access attempts also fail: the local browser bridge is unavailable,
-dashboard/GitHub DNS resolution fails, and gcloud cannot open its credential
-database on the read-only filesystem. No credentials were copied or exposed.
-Deployment requires restored access, a complete verification pass, then the
-existing isolated `ops/deploy_dashboard.sh` path. A browser inspection of the
-deployed conditions and history remains outstanding.
+```bash
+.venv/bin/dhan-cas verify --state-dir /tmp/dhan-dashboard-deploy-final-20261008
+# 432 tests, all 60 acceptance cases, all 15 production mutations killed
+```
+
+Covered-source digest:
+`b0b88f44aa23f4ba6b201ff85ed923bff507146a8335f9261baec43371674bcf`.
+The browser regression is included through the Node lifecycle test invocation.
+
+## Deployment and actual observations
+
+`ops/deploy_dashboard.sh` ran from a clean temporary checkout to preserve the
+operator's untracked instructions. It pushed all three pending application
+commits (`f7793e8`, `ea5100c`, `3792d85`) and installed the final immutable
+release. Its 59 local deployment checks and 78 VM checks pass; public HTTPS
+serves the sign-in form and returns 401 for unauthenticated account requests.
+Authenticated local status is current. All dashboard/collector/monitor units
+are active, and the existing funded trader was not restarted.
+
+The operator signed in privately after the browser session expired. Actual
+desktop and 390-pixel mobile inspection verifies the condition rows, thresholds,
+next scheduled checks, saved inputs and ongoing time updates, with no horizontal
+overflow. Mobile/focus overrides were cleared afterward. Screenshots:
+`/tmp/dhan-explanations-desktop-view-20261008.png` and
+`/tmp/dhan-explanations-mobile-20261008.png`.
+
+Observed cash was INR 8,822.36 with zero open positions. The session open was
+22,599.05 against a prior close of 22,603.05: a -0.0177% opening gap, below the
+0.5% minimum. The retained 11:30 gap-fade decision was NO_SIGNAL. The retained
+15:10 rebound observation was SIGNAL (CE), with -1.82596% from the open. That
+record came from the read-only monitor and is not a broker order or fill. The
+closed session displays tomorrow's 09:45 and 15:10 checks, retaining today's
+decisions separately. The funded CAS process remains enabled/armed, with its
+route unverified; no new execution authority was applied.
