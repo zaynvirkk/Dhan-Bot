@@ -62,6 +62,8 @@ class Evaluation:
     minimum_expiry: date | None = None
     exit_at: datetime | None = None
     details: dict = field(default_factory=dict)
+    conditions: list = field(default_factory=list)
+    next_check_at: datetime | None = None
 
 
 def parse_session(payload, day, *, exchange="NFO"):
@@ -129,11 +131,70 @@ def parse_bars(payload, received_at, *, require_oi=False):
     return dict(sorted(result.items()))
 
 
+def next_check(strategy, now, calendar, expiries):
+    """Only calendar-confirmed sessions; no weekday or holiday inference."""
+    if calendar is None or not calendar.fresh(now):
+        return None
+    for opening,closing in ((calendar.opens,calendar.closes),(calendar.next_opens,calendar.next_closes)):
+        if not opening or opening.time()!=time(9,15):
+            continue
+        day=opening.date()
+        if strategy==GAP and day in expiries:
+            continue
+        clocks=([time(9+m//60,m%60) for m in range(45,151,5)] if strategy==GAP else [time(15,10)])
+        for clock in clocks:
+            candidate=datetime.combine(day,clock,IST)
+            if now<candidate and opening<candidate<closing:
+                return candidate
+    return None
+
+
+def condition_evidence(strategy, now, calendar, spot, future):
+    """Diagnostic values only. These never create or admit a trading signal."""
+    at=now.replace(second=0,microsecond=0)
+    def number(fn):
+        try:
+            value=fn()
+            return value if value.is_finite() else None
+        except (KeyError,ArithmeticError,AttributeError,TypeError):
+            return None
+    def item(key,value,passed,**thresholds):
+        return {'key':key,'state':'UNKNOWN' if passed is None else 'PASS' if passed else 'FAIL',
+                'value':str(value) if value is not None else None, **thresholds}
+    valid=calendar is not None and calendar.fresh(now)
+    opening=number(lambda:spot[calendar.opens+timedelta(minutes=1)].open) if valid and calendar.opens else None
+    current=number(lambda:spot[at].close)
+    if not valid:
+        current=None
+    if strategy==REBOUND:
+        change=number(lambda:current/opening-1)
+        return [item('selloff',change,change<=D('-.0075') if change is not None else None,maximum='-0.0075')]
+    previous=number(lambda:spot[calendar.previous_spot_closes or calendar.previous_closes].close) if valid else None
+    gap=number(lambda:opening/previous-1)
+    direction=(-1 if gap>0 else 1) if gap is not None and gap!=0 else None
+    fraction=number(lambda:(opening-current)/(opening-previous))
+    f5=number(lambda:future[at].close/future[at-timedelta(minutes=5)].close-1) if valid else None
+    persistent=None
+    try:
+        closes=[spot[at-timedelta(minutes=i)].close for i in (2,1,0)]
+        if direction is not None:
+            persistent=all(direction*(b-a)>0 for a,b in zip(closes,closes[1:]))
+    except (KeyError,ArithmeticError,TypeError):
+        pass
+    return [item('gap_size',gap,abs(gap)>=D('.005') if gap is not None else None,minimum='0.005'),
+            item('gap_fill',fraction,D('.25')<=fraction<=1 if fraction is not None else None,minimum='0.25',maximum='1'),
+            item('persistence',None,persistent,expected='RISING' if direction==1 else 'FALLING' if direction==-1 else None),
+            item('futures_direction',f5,direction*f5>0 if f5 is not None and direction else None,
+                 expected='RISING' if direction==1 else 'FALLING' if direction==-1 else None)]
+
+
 def evaluate(strategy, now, calendar, spot, future, expiries):
     now = now.astimezone(IST)
     at = now.replace(second=0, microsecond=0)
     def result(state, reason, **kw):
-        return Evaluation(strategy, state, reason, at, **kw)
+        return Evaluation(strategy, state, reason, at, **kw,
+                          conditions=condition_evidence(strategy,now,calendar,spot,future),
+                          next_check_at=next_check(strategy,now,calendar,expiries))
     if strategy not in (GAP, REBOUND):
         raise ContractError("unknown directional strategy")
     if calendar is None or not calendar.fresh(now):

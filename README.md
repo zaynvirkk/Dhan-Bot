@@ -1,5 +1,14 @@
 # SableStone Dhan CAS bot
 
+**8 October: decision explanations implemented locally; deployment pending.**
+Strategy rows show each condition's actual value, threshold and passed/failed/
+unavailable result, the next calendar-confirmed check and the last completed
+decision with its inputs. Missing data cannot appear as a passed condition.
+69 focused tests and 60 acceptance cases pass; full socket verification and
+live deployment are blocked by this session's restricted environment.
+The last verified dashboard deployment is `eb7f442` from 7 October.
+[Change and verification record](docs/DASHBOARD-EXPLANATIONS-2026-10-08.md).
+
 **7 October: daily live-data monitoring and a funded-service upgrade are prepared.**
 The data subscription is Active again. Real API checks exposed and fixed decimal
 candle-number parsing and the separate cash/derivatives closing boundaries.

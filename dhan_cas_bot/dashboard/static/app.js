@@ -99,13 +99,41 @@ function renderHistory(d){
   const quote=(label,value,stamp)=>value==null?`${label} not recorded`:`${label} ${points(value)} (${age(elapsed(stamp,e.at))} at sample)`;
   const connected=Object.values(e.feeds||{}).filter(v=>v===true).length;
   info.append(el('strong',stateLabel(e.state)),el('p',e.source_current?`${quote('NIFTY',e.ltp,e.ltp_at)} · ${quote('IEP',e.iep,e.iep_at)} · ${e.books??'unknown'} books · ${connected}/3 sockets connected`:'Bot status was stale or missing. Market and trading state were unknown.'));
-  if(e.reason)info.append(el('p',e.reason));for(const s of e.strategies||[])info.append(el('p',`${strategyNames[s.strategy]||s.strategy}: ${strategyReasons[s.reason]||s.state}`));for(const s of e.daily_monitor||[])info.append(el('p',`Read-only ${strategyNames[s.strategy]||s.strategy}: ${strategyReasons[s.reason]||s.state}`));li.append(time,info);$('history-events').append(li);
+  if(e.reason)info.append(el('p',e.reason));for(const s of e.strategies||[])info.append(el('p',`${strategyNames[s.strategy]||s.strategy}: ${conditionSummary(s)}`));for(const s of e.daily_monitor||[])info.append(el('p',`Read-only ${strategyNames[s.strategy]||s.strategy}: ${conditionSummary(s)}`));li.append(time,info);$('history-events').append(li);
  }
  $('history-empty').hidden=available&&events.length>0;
  $('history-empty').textContent=day?'The daily summary is retained; no detail samples for this date remain in the bounded history.':'No samples are available for this date. Missing history is not a zero-trade result.';
 }
 const strategyNames={CAS_LAG_V1:'Expiry auction',GAP_FADE_DOUBLE:'Morning gap-fade',NIFTY_SELLOFF_REBOUND_1510:'Overnight rebound'};
 const strategyReasons={CALENDAR_UNAVAILABLE:'The exchange calendar is unavailable.',EXCHANGE_CLOSED:'The exchange is closed.',CONTRACT_CALENDAR_UNAVAILABLE:'Current contract dates are unavailable.',EXPIRY_SESSION_OUTSIDE_RESEARCH_SCOPE:'NIFTY expires today; gap-fade covers non-expiry sessions.',OUTSIDE_STRATEGY_WINDOW:'Waiting for the next scheduled check.',SPECIAL_SESSION_OUTSIDE_RESEARCH_SCOPE:'This is a special session outside the tested schedule.',NEXT_SESSION_EXIT_UNAVAILABLE:'The next session does not support the planned exit.',SELLOFF_THRESHOLD_MET:'The index decline crossed the 0.75% trigger.',SELLOFF_BELOW_THRESHOLD:'The index decline has not reached 0.75%.',GAP_FADE_CONFIRMED:'Gap, retracement, persistence and futures direction agree.',GAP_FADE_CONDITIONS_NOT_MET:'The gap-fade conditions do not all agree.',COMPLETED_INPUT_MISSING_OR_INVALID:'A required completed minute is missing or invalid.',NOT_CONFIGURED:'This engine is not enabled in the service configuration.',STRATEGY_INPUTS_STALE:'The minute inputs are stale.',STRATEGY_INPUT_UNAVAILABLE:'A market-data request failed.',INPUTS_NOT_RECEIVED:'Waiting for the first input check.'};
+const conditionNames={gap_size:'Opening gap',gap_fill:'Gap retracement',persistence:'Price persistence',futures_direction:'Futures confirmation',selloff:'Decline from open'};
+function pct(value){return value==null?'Unavailable':`${(Number(value)*100).toFixed(2)}%`;}
+function conditionDetail(c){
+ const direction=c.expected==='RISING'?'rising':c.expected==='FALLING'?'falling':null;
+ if(c.key==='persistence')return c.state==='UNKNOWN'?'Three completed closes or the gap direction are unavailable.':`Last three closes ${c.state==='PASS'?'are':'are not all'} ${direction||'in the required direction'}.`;
+ if(c.key==='futures_direction')return `${pct(c.value)} over five minutes; needs ${direction||'a confirmed gap direction'}.`;
+ if(c.key==='gap_size')return `${pct(c.value)}; needs an absolute gap of at least ${pct(c.minimum)}.`;
+ if(c.key==='gap_fill')return `${pct(c.value)} filled; needs ${pct(c.minimum)} to ${pct(c.maximum)}.`;
+ if(c.key==='selloff')return `${pct(c.value)} from open; needs ${pct(c.maximum)} or lower.`;
+ return 'Condition unavailable.';
+}
+function conditionSummary(row){
+ const checks=row.conditions||[],failed=checks.filter(c=>c.state==='FAIL'),missing=checks.filter(c=>c.state==='UNKNOWN');
+ if(row.state==='NO_SIGNAL'&&failed.length)return `No signal: ${failed.map(c=>conditionNames[c.key]).join(', ')} failed.`;
+ if(row.state==='UNKNOWN'&&missing.length)return `Cannot decide: ${missing.map(c=>conditionNames[c.key]).join(', ')} ${missing.length===1?'is':'are'} unavailable.`;
+ return strategyReasons[row.reason]||row.state;
+}
+function conditionList(row,current){
+ const list=el('ul',undefined,'strategy-conditions');list.setAttribute('aria-label','Observed entry conditions');
+ const invalid=!current||['STRATEGY_INPUTS_STALE','STRATEGY_INPUT_UNAVAILABLE','INPUTS_NOT_RECEIVED'].includes(row.reason);
+ for(const original of row.conditions||[]){
+  const c=invalid?{...original,state:'UNKNOWN'}:original,li=el('li'),body=el('div');
+  body.append(el('strong',conditionNames[c.key]||'Condition'),el('p',conditionDetail(c)));
+  const label=c.state==='PASS'?'Passed':c.state==='FAIL'?'Failed':'Unavailable';
+  li.append(body,badge(label,c.state==='PASS'?'good':c.state==='FAIL'?'bad':'warn'));list.append(li);
+ }
+ return list;
+}
 function renderStrategies(d){
  const rt=d.runtime,observer=d.daily_monitor,configured=rt?.strategies||[],checks=rt?.strategy_evaluations||[];
  const usingObserver=Boolean(observer),calendar=observer||rt;
@@ -114,7 +142,7 @@ function renderStrategies(d){
  const market=observer?.spot!=null?`NIFTY completed close ${points(observer.spot)} · ${at(observer.spot_at)}${observer.opening!=null?` · Session open ${points(observer.opening)}`:''}${observer.previous_close!=null?` · Previous close ${points(observer.previous_close)}`:''}`:'';
  $('strategy-market').textContent=market;
  const display=checks.map(row=>({...row,current:rt?.fresh===true,source:'Trading service'}));
- for(const row of observer?.strategy_evaluations||[])if(!configured.includes(row.strategy))display.push({...row,current:observer.fresh===true,source:'Read-only monitor'});
+ for(const row of observer?.strategy_evaluations||[])if(!configured.includes(row.strategy))display.push({...row,current:observer.fresh===true,source:'Read-only monitor',lastDecision:(observer.last_decisions||[]).find(v=>v.strategy===row.strategy)});
  if(configured.includes('CAS_LAG_V1')||(!configured.length&&rt?.observation?.expiry)){
   const expiryToday=rt.expiry_today??(istDay(rt.observation?.expiry)===istDay(d.server_time));
   display.push({strategy:'CAS_LAG_V1',current:rt?.fresh===true,source:'Trading service',state:expiryToday?'WAITING':'NOT_APPLICABLE',enabled:true,reason:expiryToday?'Expiry confirmed from current contracts. Auction entry checks are below.':`Next loaded NIFTY expiry: ${shortDate(rt.observation?.expiry)}.`});
@@ -127,12 +155,25 @@ function renderStrategies(d){
   const state=row.current?row.state:'UNKNOWN',label={WAITING:'Waiting',NO_SIGNAL:'No signal',SIGNAL:'Signal observed',NOT_APPLICABLE:'Not applicable',DISABLED:'Disabled',UNKNOWN:'Unknown'}[state]||'Unknown';
   const window=row.strategy==='GAP_FADE_DOUBLE'?'09:45–11:30 IST · every 5 minutes':row.strategy==='NIFTY_SELLOFF_REBOUND_1510'?'15:10 IST · may hold into the next session':'Eligible expiry · auction phase required';
   info.append(el('p',strategyNames[row.strategy]||'Unknown strategy','connection-name'),el('p',`${row.source} · ${window}`,'connection-detail'));
-  info.append(el('p',row.current?(strategyReasons[row.reason]||(row.strategy==='CAS_LAG_V1'?row.reason:'No specific check result reported.')):'This observation is stale. Current checks are unknown.','connection-detail'));
-  const values=Object.entries(row.details||{}).map(([key,value])=>`${{gap:'Opening gap',fraction_filled:'Gap filled',future_5m_return:'Futures 5 min',open_return:'From open'}[key]||key}: ${(Number(value)*100).toFixed(2)}%`);
+  info.append(el('p',row.current?(row.strategy==='CAS_LAG_V1'?row.reason:conditionSummary(row)):'This observation is stale. Current checks are unknown.','connection-detail'));
+  const values=row.conditions?.length?[]:Object.entries(row.details||{}).filter(([key])=>key!=='persistent').map(([key,value])=>`${{gap:'Opening gap',fraction_filled:'Gap filled',future_5m_return:'Futures 5 min',open_return:'From open'}[key]||key}: ${(Number(value)*100).toFixed(2)}%`);
   if(row.spot!=null)values.unshift(`NIFTY minute close ${points(row.spot)}`);
   if(row.evaluated_at)values.push(`Checked ${at(row.evaluated_at)}`);
   if(values.length)info.append(el('p',values.join(' · '),'connection-detail'));
-  wrap.append(info,badge(label,state==='UNKNOWN'?'warn':''));$('strategy-checks').append(wrap);
+  if(row.next_check_at)info.append(el('p',`Next scheduled check: ${at(row.next_check_at)}.`, 'connection-detail'));
+  const last=row.lastDecision;
+  if(last&&last.evaluated_at!==row.evaluated_at&&['SIGNAL','NO_SIGNAL'].includes(last.state))info.append(el('p',`Last completed decision · ${at(last.evaluated_at)}: ${conditionSummary(last)}`, 'last-strategy-decision'));
+  wrap.append(info,badge(label,state==='UNKNOWN'?'warn':''));
+  if(row.conditions?.length){
+   const caption=el('p',`${['SIGNAL','NO_SIGNAL'].includes(row.state)?'Decision inputs':'Observed inputs; entry schedule still applies'} · ${at(row.evaluated_at)}`, 'condition-caption');
+   wrap.append(caption,conditionList(row,row.current));
+  }else if(row.strategy!=='CAS_LAG_V1')wrap.append(el('p',row.reason==='STRATEGY_INPUT_UNAVAILABLE'?'Condition inputs are unavailable because a market-data request failed.':'Detailed conditions have not been reported by this service version.','condition-caption'));
+  if(last?.conditions?.length&&last.evaluated_at!==row.evaluated_at&&['SIGNAL','NO_SIGNAL'].includes(last.state)){
+   const detail=el('details',undefined,'last-decision-inputs');
+   detail.append(el('summary',`Inputs at the last decision · ${at(last.evaluated_at)}`),conditionList(last,true));
+   wrap.append(detail);
+  }
+  $('strategy-checks').append(wrap);
  }
 }
 function renderDecision(d){
@@ -158,6 +199,7 @@ function renderDecision(d){
  if(current&&rt.authority==='DISABLED'&&!['POSITION_OPEN','EXIT_PENDING','SETTLEMENT_PENDING','RECOVERING'].includes(rt.state)){
   title='New entries are disabled';reason='The bot can continue observing and handling existing positions.';next='';
  }
+ if(d.daily_monitor)title='Funded trader: '+title.charAt(0).toLowerCase()+title.slice(1);
  $('now-title').textContent=title;$('now-reason').textContent=reason||'No specific decision reason was recorded.';$('next-step').textContent=next;$('next-step').hidden=!next;
  $('realised-note').textContent=a?.realised_pnl==null?'Not reported by Dhan':'As reported by Dhan';$('unrealised-note').textContent=a?.unrealised_pnl==null?'Not reported by Dhan':'As reported by Dhan';
  $('signal-value').textContent=points(o?.iep);$('reference-value').textContent=points(o?.reference);

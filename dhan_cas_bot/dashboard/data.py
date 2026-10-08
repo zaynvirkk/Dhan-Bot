@@ -167,6 +167,22 @@ def runtime_view(raw, now):
             'observation': observation_projection(raw.get('observation'))}
 
 
+def condition_projection(raw):
+    result=[]
+    allowed={'gap_size','gap_fill','persistence','futures_direction','selloff'}
+    for row in raw[:5] if isinstance(raw,list) else []:
+        if not isinstance(row,dict) or row.get('key') not in allowed:
+            continue
+        clean={'key':row['key'],'state':choice(row.get('state'),{'PASS','FAIL','UNKNOWN'},'UNKNOWN'),
+               **{k:str(Decimal(str(row[k]))) if money(row.get(k)) is not None else None
+                  for k in ('value','minimum','maximum')},
+               'expected':choice(row.get('expected'),{'RISING','FALLING'})}
+        if clean['key']!='persistence' and clean['value'] is None:
+            clean['state']='UNKNOWN'
+        result.append(clean)
+    return result
+
+
 def strategy_projection(raw):
     result=[]
     for row in raw[:3] if isinstance(raw, list) else []:
@@ -177,12 +193,15 @@ def strategy_projection(raw):
             value=(row.get('details') or {}).get(key) if isinstance(row.get('details'), dict) else None
             if money(value) is not None:
                 details[key]=str(Decimal(str(value)))
+        if isinstance(row.get('details'),dict) and type(row['details'].get('persistent')) is bool:
+            details['persistent']=row['details']['persistent']
         result.append({'strategy':row['strategy'],
             'enabled':row.get('enabled') if type(row.get('enabled')) is bool else None,
             'state':choice(row.get('state'), {'UNKNOWN','WAITING','SIGNAL','NO_SIGNAL','NOT_APPLICABLE','DISABLED'},'UNKNOWN'),
             'reason':choice(str(row.get('reason','')).split(':')[0],STRATEGY_REASONS,'UNKNOWN'),
             'evaluated_at':timestamp(row.get('evaluated_at')), 'side':choice(row.get('side'), {'CE','PE'}),
             'spot':money(row.get('spot')), 'exit_at':timestamp(row.get('exit_at')), 'details':details,
+            'conditions':condition_projection(row.get('conditions')), 'next_check_at':timestamp(row.get('next_check_at')),
             'last_execution_reason':choice(str(row.get('last_execution_reason','')).split(':')[0],STRATEGY_REASONS,'UNKNOWN')})
     return result
 
@@ -193,7 +212,8 @@ def daily_monitor_view(raw, now):
     timing = freshness(raw.get('observed_at'), now, 90)
     rows = strategy_projection(raw.get('strategy_evaluations'))
     if not timing['fresh']:
-        rows = [{**r, 'state':'UNKNOWN', 'reason':'STRATEGY_INPUTS_STALE', 'side':None} for r in rows]
+        rows = [{**r, 'state':'UNKNOWN', 'reason':'STRATEGY_INPUTS_STALE', 'side':None,
+                 'conditions':[{**c,'state':'UNKNOWN'} for c in r.get('conditions',[])]} for r in rows]
     return {**timing, 'mode':'READ_ONLY', 'writes_to_broker':False,
             'strategies':['GAP_FADE_DOUBLE','NIFTY_SELLOFF_REBOUND_1510'],
             'strategy_evaluations':rows, 'last_decisions':strategy_projection(raw.get('last_decisions')),

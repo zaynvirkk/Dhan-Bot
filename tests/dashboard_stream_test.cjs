@@ -194,3 +194,33 @@ setImmediate(()=>{
  assert.equal(ids['strategy-checks'].children[0].children[1].textContent,'Unknown','Stale observer signal must be demoted');
  console.log('Daily observer labels, authority isolation and stale signals verified');
 });
+
+setImmediate(()=>{
+ const stamp='2026-10-09T04:20:00Z';
+ const conditions=[{key:'gap_size',state:'FAIL',value:'.0032',minimum:'.005'},
+  {key:'persistence',state:'FAIL',expected:'RISING'},
+  {key:'futures_direction',state:'UNKNOWN',value:null,expected:'RISING'}];
+ browser.explained={available:true,server_time:stamp,collector:{fresh:true},runtime:{fresh:true,authority:'DISABLED'},
+  daily_monitor:{fresh:true,observed_at:stamp,mode:'READ_ONLY',writes_to_broker:false,
+   strategy_evaluations:[{strategy:'GAP_FADE_DOUBLE',state:'NO_SIGNAL',reason:'GAP_FADE_CONDITIONS_NOT_MET',evaluated_at:stamp,conditions,next_check_at:'2026-10-09T04:25:00Z'}]}};
+ vm.runInContext('render(explained)',browser);
+ let row=ids['strategy-checks'].children[0];
+ assert.match(row.children[0].children[2].textContent,/Opening gap, Price persistence failed/);
+ assert.match(row.children[0].children.map(c=>c.textContent).join(' '),/Next scheduled check/);
+ let list=row.children.find(c=>c.children?.[0]?.children?.[0]?.children?.[0]?.textContent==='Opening gap');
+ assert.ok(list,'Observed conditions have a visible list');
+ assert.match(list.children[0].children[0].children[1].textContent,/0.32%.*0.50%/);
+ assert.equal(list.children[2].children[1].textContent,'Unavailable');
+ const last=structuredClone(browser.explained.daily_monitor.strategy_evaluations[0]);
+ browser.explained.server_time='2026-10-09T04:21:00Z';
+ browser.explained.daily_monitor.observed_at=browser.explained.server_time;
+ browser.explained.daily_monitor.last_decisions=[last];
+ Object.assign(browser.explained.daily_monitor.strategy_evaluations[0],{state:'WAITING',reason:'OUTSIDE_STRATEGY_WINDOW',evaluated_at:browser.explained.server_time});
+ vm.runInContext('render(explained)',browser);
+ row=ids['strategy-checks'].children[0];
+ assert.match(row.children[0].children.map(c=>c.textContent).join(' '),/Last completed decision.*Opening gap, Price persistence failed/);
+ const retained=row.children.find(c=>c.children?.[0]?.textContent?.startsWith('Inputs at the last decision'));
+ assert.ok(retained,'Previous decision values remain inspectable between scheduled checks');
+ assert.match(retained.children[1].children[0].children[0].children[1].textContent,/0.32%.*0.50%/);
+ console.log('Visible failed conditions, exact thresholds, next check and retained decision verified');
+});

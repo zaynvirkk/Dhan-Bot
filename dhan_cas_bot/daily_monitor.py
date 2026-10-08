@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import json
@@ -15,9 +15,9 @@ import httpx
 
 from .config import load_config
 from .dashboard.collect import atomic_json
-from .dashboard.data import read_json
+from .dashboard.data import read_json, strategy_projection
 from .rules import RuleSource, DHAN_MASTER_URL, NSE_FREEZE_URL
-from .session_strategies import GAP, REBOUND, IST, Evaluation, evaluate
+from .session_strategies import GAP, REBOUND, IST, evaluate
 from .strategy_inputs import CalendarSource, MinuteSource, selected_contracts
 
 
@@ -46,11 +46,11 @@ def serializable(value):
 
 
 def monitor_report(now, calendar, spot, future, expiries, *, error=None):
-    local = now.astimezone(IST)
     rows=[]
     for strategy in (GAP, REBOUND):
-        sample = (Evaluation(strategy, 'UNKNOWN', 'STRATEGY_INPUT_UNAVAILABLE', local)
-                  if error else evaluate(strategy, now, calendar, spot, future, expiries))
+        sample=evaluate(strategy,now,calendar,{} if error else spot,{} if error else future,expiries)
+        if error:
+            sample=replace(sample,state='UNKNOWN',reason='STRATEGY_INPUT_UNAVAILABLE',side=None)
         rows.append({**asdict(sample), 'enabled': True})
     latest = max((at for at in spot if at <= now), default=None)
     opening = spot.get(calendar.opens+timedelta(minutes=1)) if calendar and calendar.opens else None
@@ -120,7 +120,7 @@ class DailyMonitor:
             spot,future={},{}
         report=monitor_report(now,self.calendar,spot,future,self.expiries,error=error)
         for row in report['strategy_evaluations']:
-            if row['state'] in ('SIGNAL','NO_SIGNAL','UNKNOWN'):
+            if row['state'] in ('SIGNAL','NO_SIGNAL'):
                 self.last_decisions[row['strategy']]=row
         # These are observations actually made by this process, never backfilled.
         report['last_decisions']=[v for v in self.last_decisions.values()
@@ -128,8 +128,23 @@ class DailyMonitor:
         return report
 
 
+def restore_decisions(raw, now):
+    if not isinstance(raw,dict) or raw.get('mode')!='READ_ONLY' or raw.get('writes_to_broker') is not False:
+        return {}
+    result={}
+    for row in strategy_projection(raw.get('last_decisions')):
+        stamp=row.get('evaluated_at')
+        if not stamp or row['state'] not in ('SIGNAL','NO_SIGNAL'):
+            continue
+        at=datetime.fromisoformat(stamp)
+        if at<=now and at.astimezone(IST).date()==now.astimezone(IST).date():
+            result[row['strategy']]=row
+    return result
+
+
 async def run(config, output, *, once=False):
     monitor=DailyMonitor(config,os.environ.get('UPSTOX_ANALYTICS_TOKEN',''))
+    monitor.last_decisions=restore_decisions(read_json(output),monitor.now())
     while True:
         report=await monitor.refresh()
         atomic_json(output,report)

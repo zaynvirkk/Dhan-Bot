@@ -76,3 +76,19 @@ def test_observer_unit_cannot_write_trader_state_or_open_ledger():
     assert 'InaccessiblePaths=-/var/lib/sablestone-dhan/ledger.sqlite3 ' in text
     assert 'dhan-cas run' not in text
     assert 'activate-live' not in text
+
+
+def test_restart_restores_only_actual_same_day_decisions_not_future_or_private_data():
+    from dhan_cas_bot.daily_monitor import restore_decisions
+    now=datetime(2026,10,8,4,16,tzinfo=timezone.utc)
+    valid={'strategy':GAP,'state':'NO_SIGNAL','reason':'GAP_FADE_CONDITIONS_NOT_MET',
+           'evaluated_at':(now-timedelta(minutes=1)).isoformat(),'secret':'private',
+           'conditions':[{'key':'gap_size','state':'FAIL','value':'.002','minimum':'.005'}]}
+    raw={'mode':'READ_ONLY','writes_to_broker':False,'last_decisions':[valid,
+          {'strategy':REBOUND,'state':'SIGNAL','evaluated_at':(now+timedelta(minutes=1)).isoformat()}]}
+    restored=restore_decisions(raw,now)
+    assert set(restored)=={GAP}
+    assert 'private' not in json.dumps(restored)
+    assert restored[GAP]['conditions'][0]['minimum']=='0.005'
+    assert restore_decisions(raw,now+timedelta(days=1))=={}
+    assert restore_decisions({**raw,'writes_to_broker':True},now)=={}
