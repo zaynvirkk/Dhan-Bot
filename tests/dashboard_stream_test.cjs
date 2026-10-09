@@ -181,6 +181,7 @@ setImmediate(()=>{
  f.runtime.software_verified=false;
  vm.runInContext('render(strategiesFixture)',browser);
  assert.match(ids['now-title'].textContent,/blocked by software verification/,'A software entry blocker must not look like ordinary signal waiting');
+ assert.equal(ids.authority.textContent,'Trading authority enabled','Standing permission is not entry readiness');
  f.runtime.software_verified=true;
  vm.runInContext('render(strategiesFixture)',browser);
  assert.equal(ids['now-title'].textContent,'Funded trader: watching configured strategies');
