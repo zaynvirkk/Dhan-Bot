@@ -1,5 +1,16 @@
 # Session-strategy startup repair, 9 October 2026
 
+**Completion update, 19:24 IST:** the operator reapplied the corrected helper
+on `342ec7f`. Direct VM verification confirms the module launcher, new funded
+PID 308757 (started 19:24:16 IST), `software_verified: true`, funded account,
+existing write authority and armed status. All three strategies are loaded.
+The service is `WAITING_EXCHANGE_SESSION`; all three sockets are connected.
+Cash is INR 8,822.36, zero orders/positions. Route qualification remains false
+and is scheduled automatically during the eligible route window; it has not
+been proved by an actual broker acceptance yet. Next scheduled strategy checks
+reported by the current calendar are 12 October 09:45 and 15:10 IST. No further
+activation command is needed. The original failure and repair history follow.
+
 The operator applied release `3792d8512bc45bf184eb96825d556225df5b8cba`
 at 12:55 IST. A subsequent read-only VM check found all three configured
 strategies in the funded service, existing authority enabled and all three
@@ -23,7 +34,7 @@ the full suite and after it passes. The dashboard explicitly shows a software
 verification blocker, and labels funded strategy rows independently from the
 presence of the separate read-only observer.
 
-## Operator completion
+## Corrective command (already completed by the operator)
 
 Once the repaired dashboard release is installed, run the same command on the
 VM to reverify and correct the funded service launcher:
