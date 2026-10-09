@@ -173,6 +173,17 @@ setImmediate(()=>{
  assert.equal(ids['strategy-checks'].children.length,3);
  assert.equal(ids['now-title'].textContent,'Watching configured strategies');
  assert.ok(!ids['next-step'].textContent.includes('auction value'));
+ f.daily_monitor={fresh:true,observed_at:f.server_time,mode:'READ_ONLY',writes_to_broker:false,
+  strategy_evaluations:[{strategy:'GAP_FADE_DOUBLE',state:'NO_SIGNAL',reason:'GAP_FADE_CONDITIONS_NOT_MET'}]};
+ vm.runInContext('render(strategiesFixture)',browser);
+ assert.equal(ids['strategy-checks'].children.length,3,'Observer must not duplicate funded strategy rows');
+ assert.ok(!ids['strategy-mode'].textContent.includes('cannot submit orders'),'Funded strategy rows must not be described as read-only');
+ f.runtime.software_verified=false;
+ vm.runInContext('render(strategiesFixture)',browser);
+ assert.match(ids['now-title'].textContent,/blocked by software verification/,'A software entry blocker must not look like ordinary signal waiting');
+ f.runtime.software_verified=true;
+ vm.runInContext('render(strategiesFixture)',browser);
+ assert.equal(ids['now-title'].textContent,'Funded trader: watching configured strategies');
  f.server_time='2026-10-06T05:00:01Z';f.runtime.fresh=false;
  vm.runInContext('render(strategiesFixture)',browser);
  for(const row of ids['strategy-checks'].children)assert.equal(row.children[1].textContent,'Unknown');

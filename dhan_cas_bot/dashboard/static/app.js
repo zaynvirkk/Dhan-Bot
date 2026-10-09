@@ -136,7 +136,7 @@ function conditionList(row,current){
 }
 function renderStrategies(d){
  const rt=d.runtime,observer=d.daily_monitor,configured=rt?.strategies||[],checks=rt?.strategy_evaluations||[];
- const usingObserver=Boolean(observer),calendar=observer||rt;
+ const usingObserver=(observer?.strategy_evaluations||[]).some(row=>!configured.includes(row.strategy)),calendar=observer||rt;
  $('calendar-stamp').textContent=calendar?.calendar_checked_at?`Calendar checked ${at(calendar.calendar_checked_at)}`:'No exchange calendar observation';
  $('strategy-mode').textContent=usingObserver?'Daily checks use live market data in read-only mode. They cannot submit orders. Funded execution is shown separately in the trading-service rows and account status.':'The rows below describe the engines reported by the trading service. A signal is not an executed trade.';
  const market=observer?.spot!=null?`NIFTY completed close ${points(observer.spot)} · ${at(observer.spot_at)}${observer.opening!=null?` · Session open ${points(observer.opening)}`:''}${observer.previous_close!=null?` · Previous close ${points(observer.previous_close)}`:''}`:'';
@@ -202,6 +202,11 @@ function renderDecision(d){
   title=rt.state==='WAITING_EXCHANGE_SESSION'?'Waiting for an exchange session':'Watching configured strategies';
   reason='The strategy checks below show the latest evaluation and missing inputs.';
   next=rt.broker_route_verified?'Signals still need current option depth, available cash and final order checks.':'New entries also require broker order-route qualification.';
+ }
+ if(current&&rt.authority==='ENABLED'&&rt.software_verified===false&&!['POSITION_OPEN','ENTRY_PENDING','EXIT_PENDING','SETTLEMENT_PENDING','RECOVERING'].includes(rt.state)){
+  title='New entries blocked by software verification';
+  reason='The running software does not have matching verification. Enabled trading authority cannot override this check.';
+  next='The service needs a verified release before it can qualify the order route or submit a new entry.';
  }
  if(current&&rt.authority==='DISABLED'&&!['POSITION_OPEN','EXIT_PENDING','SETTLEMENT_PENDING','RECOVERING'].includes(rt.state)){
   title='New entries are disabled';reason='The bot can continue observing and handling existing positions.';next='';

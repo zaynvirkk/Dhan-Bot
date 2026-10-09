@@ -1,6 +1,12 @@
 """Operator upgrade must preserve funds, authority, and existing private state."""
 import importlib.util
+import json
+import os
 from pathlib import Path
+import shlex
+import shutil
+import subprocess
+import sys
 import tomllib
 
 import pytest
@@ -56,3 +62,45 @@ def test_failed_preflight_rollback_cannot_overwrite_concurrent_config(tmp_path):
     path.write_bytes(b'operator update')
     module.restore_files([(path,b'stale config',0o600,(0,0))],changed=False)
     assert path.read_bytes()==b'operator update'
+
+
+def test_service_launcher_uses_verified_release_not_installed_package(tmp_path):
+    """A wheel copy and the release differ even when their Python bytes match."""
+    root=tmp_path/'release'
+    package=root/'dhan_cas_bot'
+    package.mkdir(parents=True)
+    for name in ('__init__.py','__main__.py','release.py','domain.py'):
+        shutil.copyfile(Path('dhan_cas_bot')/name,package/name)
+    (package/'cli.py').write_text('''import json
+from pathlib import Path
+from .release import current_verification
+def main():
+    root=Path(__file__).resolve().parents[1]
+    print(json.dumps({'root':str(root),'verified':current_verification(root,Path.cwd()/'state')}))
+    return 0
+''')
+    installed=tmp_path/'site-packages'
+    shutil.copytree(package,installed/'dhan_cas_bot')
+    # Release metadata/tests are covered by the digest but absent from a wheel.
+    shutil.copyfile('pyproject.toml',root/'pyproject.toml')
+    binaries=root/'.venv/bin'
+    binaries.mkdir(parents=True)
+    (binaries/'python').symlink_to(sys.executable)
+    script=binaries/'dhan-cas'
+    script.write_text(f'#!{sys.executable}\nfrom dhan_cas_bot.cli import main\nmain()\n')
+    script.chmod(0o755)
+    from dhan_cas_bot.release import write_verification
+    write_verification(root,root/'state',case_count=60)
+    env={**os.environ,'PYTHONPATH':str(installed)}
+    # This reproduces the deployed console-script failure with a non-editable copy.
+    old=subprocess.run([str(script)],cwd=root,env=env,check=True,capture_output=True,text=True)
+    assert json.loads(old.stdout)=={'root':str(installed),'verified':False}
+    unit=module.service_override(root,root/'production.toml')
+    working=next(line.split('=',1)[1] for line in unit.splitlines() if line.startswith('WorkingDirectory='))
+    command=next(line.split('=',1)[1] for line in unit.splitlines() if line.startswith('ExecStart=') and line!='ExecStart=')
+    result=subprocess.run(shlex.split(command),cwd=working,env=env,check=True,capture_output=True,text=True)
+    assert json.loads(result.stdout)=={'root':str(root),'verified':True}
+    # Source drift must still block entry; the launcher must not weaken the check.
+    (package/'domain.py').write_text((package/'domain.py').read_text()+'\n# changed after verification\n')
+    result=subprocess.run(shlex.split(command),cwd=working,env=env,check=True,capture_output=True,text=True)
+    assert json.loads(result.stdout)['verified'] is False

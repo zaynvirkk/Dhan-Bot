@@ -1,7 +1,10 @@
 # Daily strategy deployment, 7 October 2026
 
-The funded VM still runs the older CAS-only release until the operator applies
-the upgrade below. Dashboard deployment by itself does not change that service.
+Update, 9 October: the operator applied the session-strategy upgrade. All three
+strategies loaded, but a launch-path mismatch blocked source verification.
+See [the startup repair](SERVICE-LAUNCH-REPAIR-2026-10-09.md) for the cause and
+corrective operator command. Dashboard deployment by itself does not change
+the funded service.
 
 This release adds an isolated live-data monitor for `GAP_FADE_DOUBLE` and
 `NIFTY_SELLOFF_REBOUND_1510`. It uses the same pure rules as the session runtime,

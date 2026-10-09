@@ -93,6 +93,14 @@ def systemctl(*args):
     subprocess.run(['systemctl',*args],check=True,stdout=subprocess.DEVNULL)
 
 
+def service_override(root,path):
+    # The dashboard uses a non-editable wheel. Its console script imports that
+    # copy from site-packages, which lacks the verified release's tests/metadata.
+    # Module launch from the pinned working directory loads the verified source.
+    return (f'[Service]\nWorkingDirectory={root}\nExecStart=\n'
+            f'ExecStart={root}/.venv/bin/python -m dhan_cas_bot run --mode AUTO_LIVE --config {path}\n')
+
+
 def main():
     args=arguments()
     if os.geteuid()!=0 or ROOT.parent!=Path('/opt/sablestone-dhan-dashboard/releases') or not re.fullmatch('[0-9a-f]{40}',ROOT.name):
@@ -110,7 +118,9 @@ def main():
     asyncio.run(flat_account(config))
     with tempfile.TemporaryDirectory(prefix='dhan-session-upgrade-') as temporary:
         # Runs the exact full suite and mutations; no marker or evidence is invented.
+        print('Running the full software tests and mutation checks; this takes a few minutes. The current service is unchanged during these checks.',file=sys.stderr,flush=True)
         verified=run_verification(ROOT,temporary)
+        print(f"Software checks passed: {verified['total_count']} tests. Source verification is current.",file=sys.stderr,flush=True)
         if not args.apply:
             print(json.dumps({'checks_passed':True,'applied':False,'writes_to_broker':False,'strategies':list(STRATEGIES),'tests':verified['total_count']}))
             return
@@ -132,7 +142,7 @@ def main():
             override.parent.mkdir(parents=True,exist_ok=True)
             changed=True
             atomic(path,updated,stat.st_mode & 0o777,(stat.st_uid,stat.st_gid))
-            unit=f'[Service]\nWorkingDirectory={ROOT}\nExecStart=\nExecStart={ROOT}/.venv/bin/dhan-cas run --mode AUTO_LIVE --config {path}\n'
+            unit=service_override(ROOT,path)
             atomic(override,unit.encode(),0o644,(0,0))
             atomic(marker,(Path(temporary)/'software_verified.json').read_bytes(),0o600,owner)
             if not current_verification(ROOT,state):
