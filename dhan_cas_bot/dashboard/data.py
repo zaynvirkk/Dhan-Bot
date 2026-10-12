@@ -150,6 +150,8 @@ def runtime_view(raw, now):
               'official_cas_signal_seen', 'final_value_source_verified', 'auto_live_armed', 'writes')}
     prefix = str(raw.get('reason', '')).split(':')[0]
     return {**timing, **flags, 'authority': authority,
+            'route_attempts_used': integer(raw.get('route_attempts_used')),
+            'route_attempt_limit': integer(raw.get('route_attempt_limit')),
             'state': choice(raw.get('state'), STATES, 'UNKNOWN'),
             'reason': REASONS.get(prefix, 'No specific decision reason was recorded.'),
             'session': timestamp(str(raw.get('session', '')) + 'T00:00:00+05:30'),

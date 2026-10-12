@@ -208,7 +208,8 @@ function renderDecision(d){
  if(current&&rt.authority==='ENABLED'&&rt.broker_route_verified===false&&['ARMED_WAITING_SIGNAL','ARMED_WAITING_SESSION','ENTRY_HALTED'].includes(rt.state)){
   title='Not entering trades — order route unverified';
   reason='Real-money permission is enabled, but the broker order route has not passed its required check. A qualifying signal cannot become an entry yet.';
-  next='The route check must complete within the saved probe allowance. Cancelling an unfilled route-test order is not a strategy trade.';
+  const used=rt.route_attempts_used,limit=rt.route_attempt_limit;
+  next=Number.isSafeInteger(used)&&used>=0&&Number.isSafeInteger(limit)&&limit>0?`Route attempts used this session: ${used} of ${limit}. ${used>=limit?'No further attempt is permitted under the saved allowance.':'A bounded automatic check can run in its eligible open-session window.'}`:'The route check must complete within the saved probe allowance. Cancelling an unfilled route-test order is not a strategy trade.';
  }
  if(current&&rt.authority==='ENABLED'&&rt.software_verified===false&&!['POSITION_OPEN','ENTRY_PENDING','EXIT_PENDING','SETTLEMENT_PENDING','RECOVERING'].includes(rt.state)){
   title='New entries blocked by software verification';

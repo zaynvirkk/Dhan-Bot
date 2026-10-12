@@ -46,8 +46,11 @@ def route_window(enabled, now, calendar, expiry_today):
         return True
     if calendar is None or not calendar.is_open(now):
         return False
+    # Connection qualification is recovery work, not a trading signal. With
+    # rebound enabled, permit bounded qualification throughout the verified
+    # open session before its decision, including after a repaired restart.
     return ((GAP in enabled and not expiry_today and time(9,40)<=local.time()<time(11,31))
-            or (REBOUND in enabled and time(15,5)<=local.time()<time(15,10)))
+            or (REBOUND in enabled and local.time()<time(15,10)))
 
 
 class CalendarSource:

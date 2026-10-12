@@ -335,3 +335,10 @@ def test_firewall_broader_or_different_scope_rejected(change):
           'allowed':[{'IPProtocol':'tcp','ports':['80','443']}]}
     rule.update(change)
     with pytest.raises(ValueError): validate_firewall([rule], 'n')
+
+
+def test_route_attempt_counts_are_visible_without_private_mandate_payload():
+    out=runtime_view({'observed_at':NOW.isoformat(),'route_attempts_used':1,'route_attempt_limit':2},NOW)
+    assert out['route_attempts_used']==1 and out['route_attempt_limit']==2
+    unknown=runtime_view({'observed_at':NOW.isoformat(),'route_attempts_used':True,'route_attempt_limit':'two'},NOW)
+    assert unknown['route_attempts_used'] is None and unknown['route_attempt_limit'] is None

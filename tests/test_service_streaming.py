@@ -18,7 +18,7 @@ from .test_production_lifecycles import MatchingBroker
 from .acceptance.cas.support import mandate
 
 
-@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames', 'native_status', 'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account'])
+@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames', 'native_status', 'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account', 'route_reconnect', 'exhausted_route_reconnect'])
 def test_background_reconciliation_through_production_session(tmp_path, monkeypatch, mode):
     async def run():
         ledger = Ledger(tmp_path/'ledger.sqlite3')
@@ -95,7 +95,7 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             raise AssertionError(path)
         real_client = httpx.AsyncClient
         monkeypatch.setattr(httpx, 'AsyncClient', lambda **kwargs: real_client(transport=httpx.MockTransport(handler), **kwargs))
-        if mode in {'message_burst', 'transport_reconnect', 'invalid_frames'}:
+        if mode in {'message_burst', 'transport_reconnect', 'invalid_frames', 'route_reconnect', 'exhausted_route_reconnect'}:
             # Replay official binary frames through the real transport queue,
             # parser and production execution loop. Only network I/O is a fixture.
             import websockets.asyncio.client
@@ -139,6 +139,9 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
         monkeypatch.setenv('UPSTOX_ANALYTICS_TOKEN', 'synthetic-token')
         monkeypatch.delenv('DHAN_BROKER_READ_ONLY', raising=False)
         m = mandate(live=True)
+        if mode=='route_reconnect':
+            from dataclasses import replace
+            m=replace(m,probe_max_attempts_per_session=2)
         fields=('account_id','allocated_capital','cumulative_entry_debit_cap','debit_cap_scope','reinvest_realized_profit','probe_max_attempts_per_session','probe_entry_debit_cap_per_session','probe_spending_cap_per_mandate','live_order_authority')
         (tmp_path/'mandate.json').write_text(json.dumps(json_safe({key:getattr(m,key) for key in fields})))
         config = {'state_dir':str(tmp_path),'account_id':'TEST','live_order_authority':True,'expected_egress_ip':'127.0.0.1',
@@ -175,6 +178,21 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
                 return
             await until(lambda: status_file().get('broker_route_verified'))
             assert len(broker.requests)==1
+            if mode in {'route_reconnect','exhausted_route_reconnect'}:
+                old=channels['orders']
+                await old.disconnect()
+                await until(lambda:channels['orders'] is not old)
+                if mode=='route_reconnect':
+                    await until(lambda:len(broker.requests)==2 and status_file().get('route_attempts_used')==2 and status_file().get('broker_route_verified') and not ledger.pending_intents())
+                    assert ledger.counter('probe.attempts:2026-09-15')==2
+                else:
+                    await until(lambda:not status_file().get('broker_route_verified') and len(broker.requests)==1)
+                    await asyncio.sleep(.2)
+                    assert len(broker.requests)==1
+                    assert ledger.counter('probe.attempts:2026-09-15')==1
+                assert not ledger.pending_intents()
+                assert not any(broker.quantities.values())
+                return
             assert 'observation' in status_file()
             assert status_file()['observation']['iep'] is None
             assert len(status_file()['observation']['watchlist']) == 2

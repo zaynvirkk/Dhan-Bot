@@ -77,3 +77,23 @@ def test_chart_adapter_overfetches_open_boundary_but_drops_outside_requested_tim
         values=await MinuteSource(Broker(),now_fn=lambda:at(clock='10:00')).fetch('13','IDX_I','INDEX',at(clock='09:15'),at())
         assert list(values)==[at(clock='09:16')]
     asyncio.run(run())
+
+
+def test_rebound_route_can_recover_between_strategy_windows_with_verified_session():
+    assert route_window((REBOUND,),at(clock="13:00"),calendar(),False)
+    assert route_window((GAP,REBOUND,CAS),at(clock="13:00"),calendar(),False)
+
+
+@pytest.mark.parametrize("clock",["09:10","15:10","15:40","18:00"])
+def test_rebound_route_never_probes_outside_open_session_or_after_entry_deadline(clock):
+    assert not route_window((REBOUND,),at(clock=clock),calendar(),False)
+
+
+def test_rebound_route_recovery_does_not_bypass_missing_stale_or_holiday_calendar():
+    from dataclasses import replace
+    now=at(clock="13:00")
+    assert not route_window((REBOUND,),now,None,False)
+    assert not route_window((REBOUND,),now,replace(calendar(),checked_at=at("2026-10-04")),False)
+    assert not route_window((REBOUND,),now,replace(calendar(),opens=None,closes=None),False)
+    assert not route_window((GAP,),now,calendar(),False)
+    assert not route_window((CAS,),now,calendar(),True)

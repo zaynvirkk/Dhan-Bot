@@ -516,6 +516,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                              monitoring_mode="IDLE" if idle else "ACTIVE", recorder_pending=records.qsize(),
                              strategies=list(enabled), strategy_evaluations=engine.directional.view(),
                              calendar_checked_at=calendar.checked_at.isoformat() if calendar else None,
+                             route_attempts_used=int(ledger.counter(f"probe.attempts:{today.isoformat()}")),
+                             route_attempt_limit=mandate.probe_max_attempts_per_session,
                              expiry_today=expiry_today if metadata_admitted else None,
                              observation=observation_view(engine, instruments))
                 last_status = monotonic

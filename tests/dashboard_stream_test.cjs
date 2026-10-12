@@ -253,6 +253,12 @@ setImmediate(()=>{
  browser.moneyFixture={available:true,server_time:stamp,collector:{fresh:true},account:{fresh:true,available_cash:'8822.36',open_position_count:0},ledger:{available:true,counts:{fills:0}},runtime:{fresh:true,authority:'ENABLED',software_verified:true,broker_route_verified:false,state:'ARMED_WAITING_SIGNAL',strategies:['GAP_FADE_DOUBLE']}};
  vm.runInContext('render(moneyFixture)',browser);
  assert.match(ids['now-title'].textContent,/Not entering trades.*order route unverified/);
+ browser.moneyFixture.runtime.route_attempts_used=1;browser.moneyFixture.runtime.route_attempt_limit=1;
+ vm.runInContext('render(moneyFixture)',browser);
+ assert.match(ids['next-step'].textContent,/1 of 1.*No further attempt/);
+ browser.moneyFixture.runtime.route_attempt_limit=2;
+ vm.runInContext('render(moneyFixture)',browser);
+ assert.match(ids['next-step'].textContent,/1 of 2.*bounded automatic check/);
  assert.equal(ids['fill-count'].textContent,'0');
  assert.match(ids['fill-note'].textContent,/No fills recorded/);
  assert.equal(ids['pnl-unreported'].hidden,false);
