@@ -356,7 +356,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                     return
                 identity = str(data.get("OrderNo") or data.get("orderNo") or data.get("orderId") or "")
                 correlation = str(data.get("CorrelationId") or data.get("correlationId") or "")
-                state = str(data.get("Status") or data.get("OrderStatus") or data.get("orderStatus") or "").upper()
+                state = str(data.get("Status") or data.get("status") or data.get("OrderStatus") or data.get("orderStatus") or "").upper()
                 if identity or correlation:
                     usable_at["order"] = datetime.fromtimestamp(message_received_ns(int(now().timestamp()*1e9))/1e9, timezone.utc).isoformat()
                     runtime.telemetry.received("order")
@@ -448,7 +448,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                     if saved:
                         evidence = echoed.get(saved["order_id"]) or echoed.get(probe.get("correlation_id"))
                         totals = ledger.lifecycle_totals("route-probe")
-                        if evidence and evidence[0] == orders.protocol.epoch.id and evidence[1] not in {"REJECTED", ""} and saved["state"] != "REJECTED" and not totals["unresolved"]:
+                        if evidence and evidence[0] == orders.protocol.epoch.id and evidence[1] in {"TRANSIT", "PENDING", "PART_TRADED", "TRADED", "CANCELLED", "EXPIRED"} and saved["state"] != "REJECTED" and not totals["unresolved"]:
                             if totals["quantity"] == 0:
                                 runtime.status.broker_route_verified = True
                 may_probe = (account_refresh.fresh and account_admitted and broker.allow_writes and runtime.status.auto_live_armed and runtime.status.software_verified and uncertainty <= 100 and not runtime.status.broker_route_verified and engine.active is None and not ledger.pending_intents() and orders.protocol.epoch.connected and orders.protocol.epoch.id not in route_failed_epochs and route_window(enabled, current, calendar, expiry_today))

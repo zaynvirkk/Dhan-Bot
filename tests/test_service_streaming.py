@@ -18,7 +18,7 @@ from .test_production_lifecycles import MatchingBroker
 from .acceptance.cas.support import mandate
 
 
-@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames'])
+@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames', 'native_status', 'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account'])
 def test_background_reconciliation_through_production_session(tmp_path, monkeypatch, mode):
     async def run():
         ledger = Ledger(tmp_path/'ledger.sqlite3')
@@ -48,6 +48,16 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
         async def accepted(row):
             event = {'Data': {'ClientId':'TEST', 'OrderNo':row['orderId'],
                 'CorrelationId':row['correlationId'], 'Status':row['orderStatus'], 'TradedQty':row['filledQty']}}
+            if mode.startswith('native_'):
+                # Actual Dhan order_alert observed on 12 October: lower-camel
+                # field names and title-case status, unlike its doc example.
+                event = {'Type':'order_alert', 'Data': {
+                    'clientId':'TEST', 'orderNo':row['orderId'],
+                    'correlationId':row['correlationId'], 'status':row['orderStatus'].title()}}
+                if mode == 'native_missing_status': event['Data'].pop('status')
+                if mode == 'native_rejected_status': event['Data']['status']='Rejected'
+                if mode == 'native_unknown_status': event['Data']['status']='Unrecognized'
+                if mode == 'native_foreign_account': event['Data']['clientId']='FOREIGN'
             # Notification arrives before submit_order() returns its HTTP ACK.
             await channels['orders'].send(json.dumps(event).encode())
             await channels['orders'].send(json.dumps(event).encode())
@@ -156,6 +166,13 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
         try:
             await until(lambda:len(channels)==3)
             await channels['market'].send(full_packet(100)+full_packet(200))
+            if mode in {'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account'}:
+                await until(lambda:len(broker.requests)==1 and not ledger.pending_intents())
+                await asyncio.sleep(.15)
+                assert not status_file().get('broker_route_verified')
+                assert len(broker.requests)==1
+                assert not any(broker.quantities.values())
+                return
             await until(lambda: status_file().get('broker_route_verified'))
             assert len(broker.requests)==1
             assert 'observation' in status_file()
