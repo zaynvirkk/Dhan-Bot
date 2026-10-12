@@ -217,9 +217,10 @@ setImmediate(()=>{
    strategy_evaluations:[{strategy:'GAP_FADE_DOUBLE',state:'NO_SIGNAL',reason:'GAP_FADE_CONDITIONS_NOT_MET',evaluated_at:stamp,conditions,next_check_at:'2026-10-09T04:25:00Z'}]}};
  vm.runInContext('render(explained)',browser);
  let row=ids['strategy-checks'].children[0];
- assert.match(row.children[0].children[2].textContent,/Opening gap, Price persistence failed/);
+ assert.match(row.children[0].children[2].textContent,/Opening gap, Price persistence not met/);
  assert.match(row.children[0].children.map(c=>c.textContent).join(' '),/Next scheduled check/);
- let list=row.children.find(c=>c.children?.[0]?.children?.[0]?.children?.[0]?.textContent==='Opening gap');
+ const detail=row.children.find(c=>c.children?.[0]?.textContent?.startsWith('Why this decision'));
+ let list=detail?.children[1];
  assert.ok(list,'Observed conditions have a visible list');
  assert.match(list.children[0].children[0].children[1].textContent,/0.32%.*0.50%/);
  assert.equal(list.children[2].children[1].textContent,'Unavailable');
@@ -230,7 +231,7 @@ setImmediate(()=>{
  Object.assign(browser.explained.daily_monitor.strategy_evaluations[0],{state:'WAITING',reason:'OUTSIDE_STRATEGY_WINDOW',evaluated_at:browser.explained.server_time});
  vm.runInContext('render(explained)',browser);
  row=ids['strategy-checks'].children[0];
- assert.match(row.children[0].children.map(c=>c.textContent).join(' '),/Last completed decision.*Opening gap, Price persistence failed/);
+ assert.match(row.children[0].children.map(c=>c.textContent).join(' '),/Last completed decision.*Opening gap, Price persistence not met/);
  const retained=row.children.find(c=>c.children?.[0]?.textContent?.startsWith('Inputs at the last decision'));
  assert.ok(retained,'Previous decision values remain inspectable between scheduled checks');
  assert.match(retained.children[1].children[0].children[0].children[1].textContent,/0.32%.*0.50%/);
@@ -245,4 +246,22 @@ setImmediate(()=>{
  assert.match(legacyDetail.children[1].textContent,/Opening gap: -0.02%/);
  assert.match(legacyDetail.children[1].textContent,/Persistence: failed/);
  console.log('Visible failed conditions, exact thresholds, next check and retained decision verified');
+});
+
+setImmediate(()=>{
+ const stamp='2026-10-12T07:00:00Z';
+ browser.moneyFixture={available:true,server_time:stamp,collector:{fresh:true},account:{fresh:true,available_cash:'8822.36',open_position_count:0},ledger:{available:true,counts:{fills:0}},runtime:{fresh:true,authority:'ENABLED',software_verified:true,broker_route_verified:false,state:'ARMED_WAITING_SIGNAL',strategies:['GAP_FADE_DOUBLE']}};
+ vm.runInContext('render(moneyFixture)',browser);
+ assert.match(ids['now-title'].textContent,/Not entering trades.*order route unverified/);
+ assert.equal(ids['fill-count'].textContent,'0');
+ assert.match(ids['fill-note'].textContent,/No fills recorded/);
+ assert.equal(ids['pnl-unreported'].hidden,false);
+ browser.moneyFixture.ledger={available:false};
+ browser.moneyFixture.runtime.state='POSITION_OPEN';
+ vm.runInContext('render(moneyFixture)',browser);
+ assert.equal(ids['fill-count'].textContent,'—','Unavailable execution records must not imply zero fills');
+ assert.equal(ids['now-title'].textContent,'Managing an open position','Route blocker must not hide position management');
+ browser.moneyFixture.runtime.fresh=false;
+ vm.runInContext('render(moneyFixture)',browser);
+ assert.equal(ids['now-title'].textContent,'Current bot state is unknown','Stale route observations cannot establish current blockage');
 });

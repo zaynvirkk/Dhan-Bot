@@ -119,7 +119,7 @@ function conditionDetail(c){
 }
 function conditionSummary(row){
  const checks=row.conditions||[],failed=checks.filter(c=>c.state==='FAIL'),missing=checks.filter(c=>c.state==='UNKNOWN');
- if(row.state==='NO_SIGNAL'&&failed.length)return `No signal: ${failed.map(c=>conditionNames[c.key]).join(', ')} failed.`;
+ if(row.state==='NO_SIGNAL'&&failed.length)return `Skipped: ${failed.map(c=>conditionNames[c.key]).join(', ')} not met.`;
  if(row.state==='UNKNOWN'&&missing.length)return `Cannot decide: ${missing.map(c=>conditionNames[c.key]).join(', ')} ${missing.length===1?'is':'are'} unavailable.`;
  return strategyReasons[row.reason]||row.state;
 }
@@ -129,8 +129,8 @@ function conditionList(row,current){
  for(const original of row.conditions||[]){
   const c=invalid?{...original,state:'UNKNOWN'}:original,li=el('li'),body=el('div');
   body.append(el('strong',conditionNames[c.key]||'Condition'),el('p',conditionDetail(c)));
-  const label=c.state==='PASS'?'Passed':c.state==='FAIL'?'Failed':'Unavailable';
-  li.append(body,badge(label,c.state==='PASS'?'good':c.state==='FAIL'?'bad':'warn'));list.append(li);
+  const label=c.state==='PASS'?'Passed':c.state==='FAIL'?'Not met':'Unavailable';
+  li.append(body,badge(label,c.state==='PASS'?'good':c.state==='FAIL'?'':'warn'));list.append(li);
  }
  return list;
 }
@@ -155,7 +155,8 @@ function renderStrategies(d){
   const state=row.current?row.state:'UNKNOWN',label={WAITING:'Waiting',NO_SIGNAL:'No signal',SIGNAL:'Signal observed',NOT_APPLICABLE:'Not applicable',DISABLED:'Disabled',UNKNOWN:'Unknown'}[state]||'Unknown';
   const window=row.strategy==='GAP_FADE_DOUBLE'?'09:45–11:30 IST · every 5 minutes':row.strategy==='NIFTY_SELLOFF_REBOUND_1510'?'15:10 IST · may hold into the next session':'Eligible expiry · auction phase required';
   info.append(el('p',strategyNames[row.strategy]||'Unknown strategy','connection-name'),el('p',`${row.source} · ${window}`,'connection-detail'));
-  info.append(el('p',row.current?(row.strategy==='CAS_LAG_V1'?row.reason:conditionSummary(row)):'This observation is stale. Current checks are unknown.','connection-detail'));
+  const finished=row.current&&row.strategy==='GAP_FADE_DOUBLE'&&row.reason==='OUTSIDE_STRATEGY_WINDOW'&&new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(d.server_time))>='11:30';
+  info.append(el('p',row.current?(finished?'Morning entry window finished. No new entry from this engine today.':row.strategy==='CAS_LAG_V1'?row.reason:conditionSummary(row)):'This observation is stale. Current checks are unknown.','connection-detail'));
   const values=row.conditions?.length?[]:Object.entries(row.details||{}).filter(([key])=>key!=='persistent').map(([key,value])=>`${{gap:'Opening gap',fraction_filled:'Gap filled',future_5m_return:'Futures 5 min',open_return:'From open'}[key]||key}: ${(Number(value)*100).toFixed(2)}%`);
   if(row.spot!=null)values.unshift(`NIFTY minute close ${points(row.spot)}`);
   if(row.evaluated_at)values.push(`Checked ${at(row.evaluated_at)}`);
@@ -165,8 +166,9 @@ function renderStrategies(d){
   if(last&&last.evaluated_at!==row.evaluated_at&&['SIGNAL','NO_SIGNAL'].includes(last.state))info.append(el('p',`Last completed decision · ${at(last.evaluated_at)}: ${conditionSummary(last)}`, 'last-strategy-decision'));
   wrap.append(info,badge(label,state==='UNKNOWN'?'warn':''));
   if(row.conditions?.length){
-   const caption=el('p',`${['SIGNAL','NO_SIGNAL'].includes(row.state)?'Decision inputs':'Observed inputs; entry schedule still applies'} · ${at(row.evaluated_at)}`, 'condition-caption');
-   wrap.append(caption,conditionList(row,row.current));
+   const detail=el('details',undefined,'decision-inputs');
+   detail.append(el('summary',`Why this decision · inputs at ${at(row.evaluated_at)}`),conditionList(row,row.current));
+   wrap.append(detail);
   }else if(row.strategy!=='CAS_LAG_V1')wrap.append(el('p',row.reason==='STRATEGY_INPUT_UNAVAILABLE'?'Condition inputs are unavailable because a market-data request failed.':'Detailed conditions have not been reported by this service version.','condition-caption'));
   if(last&&last.evaluated_at!==row.evaluated_at&&['SIGNAL','NO_SIGNAL'].includes(last.state)){
    const detail=el('details',undefined,'last-decision-inputs');
@@ -203,6 +205,11 @@ function renderDecision(d){
   reason='The strategy checks below show the latest evaluation and missing inputs.';
   next=rt.broker_route_verified?'Signals still need current option depth, available cash and final order checks.':'New entries also require broker order-route qualification.';
  }
+ if(current&&rt.authority==='ENABLED'&&rt.broker_route_verified===false&&['ARMED_WAITING_SIGNAL','ARMED_WAITING_SESSION','ENTRY_HALTED'].includes(rt.state)){
+  title='Not entering trades — order route unverified';
+  reason='Real-money permission is enabled, but the broker order route has not passed its required check. A qualifying signal cannot become an entry yet.';
+  next='The route check must complete within the saved probe allowance. Cancelling an unfilled route-test order is not a strategy trade.';
+ }
  if(current&&rt.authority==='ENABLED'&&rt.software_verified===false&&!['POSITION_OPEN','ENTRY_PENDING','EXIT_PENDING','SETTLEMENT_PENDING','RECOVERING'].includes(rt.state)){
   title='New entries blocked by software verification';
   reason='The running software does not have matching verification. Enabled trading authority cannot override this check.';
@@ -213,6 +220,9 @@ function renderDecision(d){
  }
  if(d.daily_monitor)title='Funded trader: '+title.charAt(0).toLowerCase()+title.slice(1);
  $('now-title').textContent=title;$('now-reason').textContent=reason||'No specific decision reason was recorded.';$('next-step').textContent=next;$('next-step').hidden=!next;
+ const fills=d.ledger?.counts?.fills,knownFills=d.ledger?.available===true&&Number.isSafeInteger(fills)&&fills>=0;
+ $('fill-count').textContent=knownFills?String(fills):'—';
+ $('fill-note').textContent=knownFills?fills===0?'No fills recorded in the bot ledger':'Fill records, not completed trades':'Execution ledger unavailable';
  $('realised-note').textContent=a?.realised_pnl==null?'Not reported by Dhan':'As reported by Dhan';$('unrealised-note').textContent=a?.unrealised_pnl==null?'Not reported by Dhan':'As reported by Dhan';
  $('signal-value').textContent=points(o?.iep);$('reference-value').textContent=points(o?.reference);
  $('index-value').textContent=points(o?.ltp);
