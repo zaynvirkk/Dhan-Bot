@@ -83,3 +83,18 @@ errors and missing-data demotion passed. Narrow preview header overflow was fixe
 The detector's sole advisory concerned deliberate unknown-value dash placeholders.
 Full automatic verification passes 365 tests and 15 source mutation checks.
 Deployment and real-observation verification are recorded in the session worklog.
+
+12 October money-first refinement: retained the journal styling and read-only
+model. Available cash, recorded fills, positions and broker-reported P&L now
+precede the execution decision. A fresh unverified route takes priority over
+ordinary signal waiting, while open-position management and unknown observations
+remain distinct. Missing execution records never show zero fills. Routine signal
+filters say Not met; numeric inputs and auction data use native disclosures.
+Actual orders precede the sampled session log. No performance chart or claim of
+profitability was added.
+
+Live finish evidence: dashboard release 810add3 verified in the owner's signed-in
+browser at 1440px and 390px, with no document overflow and collapsed disclosures.
+Cash INR 8,822.36, zero recorded fills and the unverified route match the API.
+Trading process and authority were preserved. Detector advisories concern
+existing unknown-value placeholders and incidental copy constructions.

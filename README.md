@@ -1,5 +1,12 @@
 # SableStone Dhan CAS bot
 
+**12 October: money-first dashboard deployed.** Available cash, recorded fills,
+positions and reported P&L lead the overview. The unverified order route is shown
+as the entry blocker; routine unmet signals say Not met, with expandable inputs.
+Release `810add3` is browser-verified on desktop/mobile. The funded trader remains
+armed on `c57221f`, with zero fills and route qualification still pending.
+This does not establish a profitable edge. [Live state and changes](docs/MONEY-DASHBOARD-2026-10-12.md).
+
 **12 October: native Dhan order-status parser repaired and deployed.**
 The actual lower-camel WebSocket `status` field was omitted, preventing route
 qualification despite a cancelled zero-fill probe. Release `c57221f` is running
