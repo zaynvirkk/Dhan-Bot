@@ -1,5 +1,13 @@
 # SableStone Dhan CAS bot
 
+**12 October: native Dhan order-status parser repaired and deployed.**
+The actual lower-camel WebSocket `status` field was omitted, preventing route
+qualification despite a cancelled zero-fill probe. Release `c57221f` is running
+with all three funded strategies; 438 tests, 60 acceptance cases and 15 mutations
+pass locally and on the VM. No strategy trade has filled. Route proof remains
+pending after restart because today's one-probe allowance is already used.
+[Live findings and repair](docs/ORDER-STATUS-REPAIR-2026-10-12.md).
+
 **8 October: decision explanations deployed and browser-verified.**
 Strategy rows show each condition's actual value, threshold and passed/failed/
 unavailable result, the next calendar-confirmed check and the last completed
