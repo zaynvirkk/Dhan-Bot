@@ -1,5 +1,15 @@
 # SableStone Dhan CAS bot
 
+**12 October: funded order route recovered and browser-verified.** Release
+`687d733` is running all three configured strategies with enabled real-money
+authority and current broker-route proof. Qualification can recover during the
+verified open session before the 15:10 rebound decision. The operator authorized
+one additional route attempt; existing INR 100 session / INR 500 lifetime probe
+cash caps and capital allocation are unchanged. At 13:40 IST cash is INR
+8,822.36, both today's qualification orders are cancelled with zero fills, and
+there are no positions or strategy fills. This establishes execution readiness,
+not profitability. [Repair and live evidence](docs/ROUTE-RECOVERY-2026-10-12.md).
+
 **12 October: money-first dashboard deployed.** Available cash, recorded fills,
 positions and reported P&L lead the overview. The unverified order route is shown
 as the entry blocker; routine unmet signals say Not met, with expandable inputs.
