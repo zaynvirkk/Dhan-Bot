@@ -1,0 +1,67 @@
+# Market and entry audit, 13 October 2026
+
+## Observed account and market
+
+At 10:00 IST the funded service has current order-route proof, enabled real-money
+authority and usable Dhan option, Dhan order and Upstox signal sockets. Broker
+cash is INR 8,822.36, positions are zero, and the durable fill count is zero.
+Today's qualification order is cancelled with zero filled quantity; it is not
+a strategy trade. All three configured strategies are active. Previously named
+research hypotheses are not additional deployed engines.
+
+The broker reports NIFTY LTP 22,568.15, completed close 22,567.55, session open
+22,364.15 and previous close 22,363.35. The move from the open is approximately
++0.91%; the opening gap is approximately +0.0036%. Current contract metadata
+confirms NIFTY expiry today. This excludes the morning non-expiry gap experiment;
+the selloff/rebound condition is not met, and no auction value is available yet.
+Same-day 22,550 CE and PE have affordable one-lot asks and substantial displayed
+quantity. That establishes quote availability, not a qualifying or profitable
+trade. Public search quotes conflicted with broker observations and were not
+used as current prices.
+
+## Yesterday's real signal
+
+Persisted strategy observations establish a CALL signal at 15:10 IST on
+12 October: NIFTY 22,308.65, down 1.25945% from the open. The signal required
+an option surviving the next session's exit, with minimum expiry 14 October.
+No strategy lifecycle or strategy order was created. The consumed signal records
+ENTRY_DEADLINE_MISSED. The old version did not retain the preceding candidate
+rejection, so its precise blocker is unknown. The current runtime's global reason
+cannot explain an earlier process's decision.
+
+Signal evaluation was recorded at 15:10:04.833 IST. This disproves the assumption
+that no signal had occurred; it does not prove that processing delay caused the
+miss. Historical order-book frames exist around the entry window. Historical
+reconstruction uses current contract metadata cross-checked against recorded
+security IDs; the prior complete instrument-master payload was not archived.
+
+## Repair
+
+The selector previously required a current quote before computing one-lot
+affordability. Missing or stale quotes for an unaffordable nearest contract could
+therefore block a cheaper contract. It now computes cash including fees and exit
+reserve from already-completed option candles first. Unaffordable contracts are
+skipped without requiring a quote; an affordable contract must still have a
+current usable book. Selection retains its actual expiry, nearest-strike order,
+four-candidate limit, volume/OI, spread, depth, fixed-price and deadline rules.
+This regression establishes a real defect, not that it caused yesterday's miss.
+
+Each qualifying signal now retains its binding assessment and contract checks.
+On an expired entry window, the consumed record preserves the preceding reason.
+The dashboard projects only allowlisted history and shows the last qualifying
+signal separately from current checks, including skipped entry and candidate
+costs. Missing historical reasons remain unknown. A recorded order decision does
+not appear as a fill. The dashboard remains read-only.
+
+## Verification and rollout
+
+Negative execution tests were added before the selector change. They demonstrate
+an affordable farther candidate remains reachable past an unaffordable contract,
+while a stale quote on that affordable candidate still prevents ordering. A
+missed-window test verifies persistence of the binding reason. Dashboard tests
+cover private-field filtering, unknown legacy reasons and separation of a
+historical CALL signal from current Waiting status.
+
+Live rollout evidence is appended after the guarded deployment and browser check.
+No signal, missed fill, software check or route qualification is credited as
+profitability.

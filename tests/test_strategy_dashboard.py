@@ -50,3 +50,40 @@ def test_missing_condition_number_cannot_be_displayed_as_passed():
     from dhan_cas_bot.dashboard.data import condition_projection
     row=condition_projection([{'key':'gap_size','state':'PASS','value':'NaN','minimum':'.005'}])[0]
     assert row['state']=='UNKNOWN' and row['value'] is None
+
+
+def test_ledger_keeps_last_qualifying_signal_without_inventing_legacy_blocker(tmp_path):
+    from dhan_cas_bot.ledger import Ledger
+    from dhan_cas_bot.dashboard.data import ledger_view
+    ledger=Ledger(tmp_path/'ledger.sqlite3')
+    key='directional-signal:2026-10-12:NIFTY_SELLOFF_REBOUND_1510'
+    ledger.put_metadata(key, {'strategy':'NIFTY_SELLOFF_REBOUND_1510','state':'SIGNAL',
+        'side':'CE','evaluated_at':'2026-10-12T15:10:00+05:30','secret':'private'})
+    ledger.put_metadata(key+':consumed', {'reason':'ENTRY_DEADLINE_MISSED'})
+    ledger.put_metadata('directional-signal:2026-10-13:NIFTY_SELLOFF_REBOUND_1510',
+        {'strategy':'NIFTY_SELLOFF_REBOUND_1510','state':'NO_SIGNAL'})
+    row=ledger_view(ledger.path)['last_signals'][0]
+    assert row['evaluated_at']=='2026-10-12T09:40:00+00:00'
+    assert row['outcome']=='ENTRY_DEADLINE_MISSED' and row['blocking_reason']=='UNKNOWN'
+    assert row['candidate_checks']==[] and 'private' not in json.dumps(row)
+
+
+def test_signal_candidate_projection_filters_private_and_unknown_fields(tmp_path):
+    from dhan_cas_bot.ledger import Ledger
+    from dhan_cas_bot.dashboard.data import ledger_view
+    path=tmp_path/'ledger.sqlite3'
+    ledger=Ledger(path)
+    key='directional-signal:2026-10-13:GAP_FADE_DOUBLE'
+    ledger.put_metadata(key, {'strategy':'GAP_FADE_DOUBLE','state':'SIGNAL',
+        'side':'PE','evaluated_at':'2026-10-13T09:45:00+05:30'})
+    ledger.put_metadata(key+':assessment', {'reason':'OPTION_BOOK_UNAVAILABLE_OR_STALE',
+        'candidate_checks':[{'security_id':'123','strike':'22500','budget':'8381.242',
+            'one_lot_cash':'9000','reason':'ONE_LOT_UNAFFORDABLE','token':'private'},
+            {'reason':'provider secret','strike':'NaN'}]})
+    row=ledger_view(path)['last_signals'][0]
+    assert row['outcome']=='UNKNOWN'
+    assert row['blocking_reason']=='OPTION_BOOK_UNAVAILABLE_OR_STALE'
+    assert row['candidate_checks'][0]['budget']=='8381.24'  # dashboard cash amounts use paise
+    assert row['candidate_checks'][1]['reason']=='UNKNOWN'
+    assert row['candidate_checks'][1]['strike'] is None
+    assert 'private' not in json.dumps(row) and 'provider secret' not in json.dumps(row)

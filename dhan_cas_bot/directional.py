@@ -33,6 +33,7 @@ class DirectionalEngine:
         self.inputs = None
         self.signals = {}
         self.last_reason = "INPUTS_NOT_RECEIVED"
+        self.candidate_checks = []
 
     def update(self, inputs):
         self.inputs = inputs
@@ -74,6 +75,10 @@ class DirectionalEngine:
 
     def candidate(self, signal, allocation):
         data, engine = self.inputs, self.engine
+        self.candidate_checks = []
+        budget = min(allocation.remaining, allocation.spendable_cash, allocation.bankroll*D(".95"))
+        if allocation.selected_cap_remaining is not None:
+            budget = min(budget, allocation.selected_cap_remaining)
         # Determine ATM from the full known contract set, not only whichever
         # quotes happened to arrive. Missing nearby history cannot be skipped.
         instruments = getattr(engine, "instruments", {}) or {k:b.instrument for k,b in engine.books.items()}
@@ -86,25 +91,36 @@ class DirectionalEngine:
         side = 1 if signal.side == "CE" else -1
         eligible = sorted((i for i in eligible if side*(i.strike-atm)>=0), key=lambda i:(side*(i.strike-atm),i.security_id))[:4]
         for inst in eligible:
+            check = {"security_id": inst.security_id, "strike": str(inst.strike), "budget": str(budget)}
+            self.candidate_checks.append(check)
             try:
                 bars = [data.option_bars[inst.security_id][signal.evaluated_at-timedelta(minutes=i)] for i in range(3)]
             except KeyError:
                 self.last_reason = "OPTION_MINUTES_UNAVAILABLE"
+                check["reason"] = self.last_reason
                 return None
+            check.update(minute_volume=min(b.volume for b in bars), open_interest=bars[0].oi, lot_size=inst.lot_size)
             if min(b.volume for b in bars)<inst.lot_size*20 or bars[0].oi<inst.lot_size*10:
+                check["reason"] = "OPTION_LIQUIDITY_BELOW_POLICY"
                 continue
             limit = (bars[0].close*D("1.05")/inst.tick_size).to_integral_value(rounding=ROUND_CEILING)*inst.tick_size
             if limit<=0 or (inst.lower_limit and limit<inst.lower_limit) or (inst.upper_limit and limit>inst.upper_limit):
+                check["reason"] = "OPTION_LIMIT_OUTSIDE_BAND"
+                continue
+            minimum_cash = worst_case_entry_cash(inst.lot_size,limit) + FeeSchedule().sell(inst.lot_size*limit*2,3)
+            check.update(limit=str(limit), one_lot_cash=str(minimum_cash))
+            # Known unaffordability does not require a live book. An unusable
+            # quote on a contract we cannot buy must not block a cheaper strike.
+            if minimum_cash > budget:
+                check["reason"] = "ONE_LOT_UNAFFORDABLE"
                 continue
             book = engine.books.get(inst.security_id)
             if not self.book_ready(book):
                 self.last_reason = "OPTION_BOOK_UNAVAILABLE_OR_STALE"
+                check["reason"] = self.last_reason
                 return None
             capacity = min(inst.freeze_qty, int(D(min(b.volume for b in bars))*D(".05")),
                            sum(level.quantity for level in book.asks if level.price<=limit))
-            budget = min(allocation.remaining, allocation.spendable_cash, allocation.bankroll*D(".95"))
-            if allocation.selected_cap_remaining is not None:
-                budget = min(budget, allocation.selected_cap_remaining)
             quantity = 0
             for q in range(inst.lot_size, capacity+1, inst.lot_size):
                 debit = worst_case_entry_cash(q,limit)
@@ -114,14 +130,25 @@ class DirectionalEngine:
                 else:
                     break
             if quantity:
+                check.update(reason="READY", quantity=quantity)
                 return inst, quantity, limit, book
             # Affordability may select a farther OTM contract. A fixed limit
             # already below the market is a missed fill, not strike hopping.
             if book.top_ask.price>limit:
                 self.last_reason = "FIXED_LIMIT_ALREADY_MISSED"
+                check["reason"] = self.last_reason
                 return None
+            check["reason"] = "OPTION_DEPTH_BELOW_ONE_LOT"
         self.last_reason = "NO_AFFORDABLE_LIQUID_CONTRACT"
         return None
+
+    def record_assessment(self, signal, reason, checks=None):
+        ledger = self.engine.runtime.ledger
+        key = self.signal_key(signal) + ":assessment"
+        value = {"reason": reason, "candidate_checks": checks or []}
+        # Store changes to the binding result, not every incoming quote.
+        if ledger.metadata(key) != value:
+            ledger.put_metadata(key, value)
 
     async def enter_locked(self, snapshot):
         engine, runtime = self.engine, self.engine.runtime
@@ -141,7 +168,10 @@ class DirectionalEngine:
             if now < due:
                 continue
             if now >= due+timedelta(seconds=30):
-                ledger.put_metadata(key,{"reason":"ENTRY_DEADLINE_MISSED"})
+                assessment = ledger.metadata(self.signal_key(signal)+":assessment", {})
+                ledger.put_metadata(key,{"reason":"ENTRY_DEADLINE_MISSED",
+                    "blocking_reason":assessment.get("reason", "UNKNOWN"),
+                    "candidate_checks":assessment.get("candidate_checks", [])})
                 self.last_reason="ENTRY_DEADLINE_MISSED"
                 continue
             if signal.strategy == REBOUND and ledger.metadata("rebound-exited:"+now.astimezone(IST).date().isoformat()):
@@ -149,6 +179,7 @@ class DirectionalEngine:
                 continue
             if not runtime.permit_entry(strategy=signal.strategy):
                 self.last_reason="ENTRY_NOT_PERMITTED"
+                self.record_assessment(signal, self.last_reason)
                 return False
             funds = await runtime.broker.funds()
             if funds.broker_account != runtime.mandate.account_id or not self.input_ready() or not runtime.permit_entry(strategy=signal.strategy):
@@ -156,6 +187,7 @@ class DirectionalEngine:
             allocation = engine._allocation(funds)
             candidate = self.candidate(signal,allocation)
             if candidate is None:
+                self.record_assessment(signal, self.last_reason, self.candidate_checks)
                 return False  # bounded retry for data arrival, never after send
             inst, quantity, limit, book = candidate
             lifecycle = "l"+uuid.uuid4().hex

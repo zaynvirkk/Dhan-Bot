@@ -98,3 +98,10 @@ browser at 1440px and 390px, with no document overflow and collapsed disclosures
 Cash INR 8,822.36, zero recorded fills and the unverified route match the API.
 Trading process and authority were preserved. Detector advisories concern
 existing unknown-value placeholders and incidental copy constructions.
+
+13 October entry-history refinement: each funded directional row retains the
+last qualifying signal from the durable ledger, labelled historical, with its
+recorded outcome and expandable candidate checks. An expired entry window is
+distinct from no signal. Unknown older blockers remain unknown; a committed
+decision is not labelled a fill. Current waiting states retain their own badge.
+The money-first journal layout and read-only authority model are preserved.

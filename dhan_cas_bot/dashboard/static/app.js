@@ -147,6 +147,7 @@ function renderStrategies(d){
   const expiryToday=rt.expiry_today??(istDay(rt.observation?.expiry)===istDay(d.server_time));
   display.push({strategy:'CAS_LAG_V1',current:rt?.fresh===true,source:'Trading service',state:expiryToday?'WAITING':'NOT_APPLICABLE',enabled:true,reason:expiryToday?'Expiry confirmed from current contracts. Auction entry checks are below.':`Next loaded NIFTY expiry: ${shortDate(rt.observation?.expiry)}.`});
  }
+ for(const row of display)row.lastSignal=(d.ledger?.last_signals||[]).find(v=>v.strategy===row.strategy);
  $('strategy-empty').hidden=display.length>0;
  if(!changed('strategy-checks',display))return;
  $('strategy-checks').replaceChildren();
@@ -162,6 +163,23 @@ function renderStrategies(d){
   if(row.evaluated_at)values.push(`Checked ${at(row.evaluated_at)}`);
   if(values.length)info.append(el('p',values.join(' · '),'connection-detail'));
   if(row.next_check_at)info.append(el('p',`Next scheduled check: ${at(row.next_check_at)}.`, 'connection-detail'));
+  const signal=row.lastSignal;
+  if(signal){
+   const explanations={ONE_LOT_UNAFFORDABLE:'One lot exceeds the available entry budget',OPTION_BOOK_UNAVAILABLE_OR_STALE:'An affordable contract has no current usable quote',FIXED_LIMIT_ALREADY_MISSED:'The ask moved above the fixed entry limit',OPTION_MINUTES_UNAVAILABLE:'Required completed option candles are missing',NO_AFFORDABLE_LIQUID_CONTRACT:'No contract passed affordability and liquidity checks',ENTRY_NOT_PERMITTED:'Execution permission was unavailable',OPTION_LIQUIDITY_BELOW_POLICY:'Recent volume or open interest is below the entry requirement',OPTION_DEPTH_BELOW_ONE_LOT:'Less than one lot is available inside the limit',OPTION_LIMIT_OUTSIDE_BAND:'The fixed limit is outside the permitted price band',READY:'Contract passed entry checks'};
+   info.append(el('p',`Last qualifying signal (historical) · ${at(signal.evaluated_at)} · ${signal.side==='CE'?'CALL':'PUT'}`,'last-strategy-decision'));
+   const outcome=signal.outcome==='ENTRY_DEADLINE_MISSED'?'Entry skipped: entry window expired.':signal.outcome==='DECISION_COMMITTED'?'Order decision recorded. Check orders and fills for execution.':signal.outcome==='PRIOR_REBOUND_EXITED_TODAY'?'Entry skipped: this engine already exited a rebound today.':'Execution outcome was not recorded.';
+   const blocker=explanations[signal.blocking_reason]||'Prior blocking reason was not recorded.';
+   info.append(el('p',`${outcome}${signal.outcome==='DECISION_COMMITTED'?'':` ${blocker}`}`,'connection-detail'));
+   if(signal.candidate_checks?.length){
+    const detail=el('details',undefined,'decision-inputs');
+    detail.append(el('summary','Contracts checked for this entry'));
+    for(const check of signal.candidate_checks){
+     const costs=check.one_lot_cash!=null?` · One-lot cash including fee reserve ${cash(check.one_lot_cash)} / budget ${cash(check.budget)}`:'';
+     detail.append(el('p',`Strike ${points(check.strike)}: ${explanations[check.reason]||'Check result unavailable'}${costs}`,'connection-detail'));
+    }
+    info.append(detail);
+   }
+  }
   const last=row.lastDecision;
   if(last&&last.evaluated_at!==row.evaluated_at&&['SIGNAL','NO_SIGNAL'].includes(last.state))info.append(el('p',`Last completed decision · ${at(last.evaluated_at)}: ${conditionSummary(last)}`, 'last-strategy-decision'));
   wrap.append(info,badge(label,state==='UNKNOWN'?'warn':''));

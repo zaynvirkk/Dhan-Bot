@@ -193,3 +193,40 @@ def test_expired_directional_position_never_sends_an_expired_sell(tmp_path):
         assert len(broker.requests)==1
         assert engine.runtime.status.state=="SETTLEMENT_PENDING"
     asyncio.run(run())
+
+
+@pytest.mark.parametrize('cheap_book_fresh', [True, False])
+def test_unaffordable_atm_quote_cannot_block_affordable_contract_or_admit_stale_one(tmp_path, cheap_book_fresh):
+    async def run():
+        engine, broker, ledger, clock, inputs = setup(tmp_path)
+        atm = engine.books['101'].instrument
+        cheap = replace(atm, security_id='102', strike=atm.strike + D(50))
+        engine.instruments = {'101': atm, '102': cheap}
+        engine.books.pop('101')  # This expensive contract has no usable book.
+        engine.on_book(OptionBook(cheap, (Level(D('9.8'), 650),), (Level(D(10), 650),),
+                                  'm1', int((clock[0] - timedelta(seconds=0 if cheap_book_fresh else 5)).timestamp()*1e9)))
+        expensive = {t: replace(b, open=D(200), close=D(200)) for t,b in inputs.option_bars['101'].items()}
+        engine.directional.update(replace(inputs, option_bars={'101': expensive, '102': inputs.option_bars['101']}))
+        assert bool(await engine.cycle()) is cheap_book_fresh
+        assert len(broker.requests) == (1 if cheap_book_fresh else 0)
+        if cheap_book_fresh:
+            assert broker.requests[0]['securityId'] == '102'
+        else:
+            assert ledger.db.execute('SELECT count(*) FROM lifecycles').fetchone()[0] == 0
+    asyncio.run(run())
+
+
+def test_missed_deadline_preserves_binding_contract_reason(tmp_path):
+    async def run():
+        engine, broker, ledger, clock, inputs = setup(tmp_path)
+        broker.cash = D('10')
+        assert not await engine.cycle()
+        clock[0] = at() + timedelta(minutes=1, seconds=31)
+        engine.directional.update(replace(inputs, received_at=clock[0]))
+        assert not await engine.cycle()
+        consumed = ledger.metadata(engine.directional.signal_key(inputs.evaluations[GAP]) + ':consumed')
+        assert consumed['reason'] == 'ENTRY_DEADLINE_MISSED'
+        assert consumed['blocking_reason'] == 'NO_AFFORDABLE_LIQUID_CONTRACT'
+        assert consumed['candidate_checks'][0]['reason'] == 'ONE_LOT_UNAFFORDABLE'
+        assert broker.requests == []
+    asyncio.run(run())

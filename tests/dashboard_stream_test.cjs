@@ -271,3 +271,21 @@ setImmediate(()=>{
  vm.runInContext('render(moneyFixture)',browser);
  assert.equal(ids['now-title'].textContent,'Current bot state is unknown','Stale route observations cannot establish current blockage');
 });
+
+setImmediate(()=>{
+ browser.signalHistory={server_time:'2026-10-13T05:00:00Z',runtime:{fresh:true,strategies:['NIFTY_SELLOFF_REBOUND_1510'],strategy_evaluations:[{strategy:'NIFTY_SELLOFF_REBOUND_1510',state:'WAITING',reason:'OUTSIDE_STRATEGY_WINDOW'}]},ledger:{last_signals:[{strategy:'NIFTY_SELLOFF_REBOUND_1510',side:'CE',evaluated_at:'2026-10-12T09:40:00Z',outcome:'ENTRY_DEADLINE_MISSED',blocking_reason:'UNKNOWN',candidate_checks:[]}]}};
+ vm.runInContext('renderStrategies(signalHistory)',browser);
+ let row=ids['strategy-checks'].children[0];
+ assert.equal(row.children[1].textContent,'Waiting','Historical signal must not look like a current trade');
+ let text=row.children[0].children.map(c=>c.textContent).join(' ');
+ assert.match(text,/Last qualifying signal \(historical\).*CALL/);
+ assert.match(text,/entry window expired.*Prior blocking reason was not recorded/);
+ browser.signalHistory.ledger.last_signals[0].blocking_reason='OPTION_BOOK_UNAVAILABLE_OR_STALE';
+ browser.signalHistory.ledger.last_signals[0].candidate_checks=[{strike:'22550.00',budget:'8381.24',one_lot_cash:'9000.00',reason:'ONE_LOT_UNAFFORDABLE'}];
+ vm.runInContext('renderStrategies(signalHistory)',browser);
+ row=ids['strategy-checks'].children[0];
+ assert.match(row.children[0].children.map(c=>c.textContent).join(' '),/no current usable quote/);
+ const detail=row.children[0].children.find(c=>c.children?.[0]?.textContent==='Contracts checked for this entry');
+ assert.match(detail.children[1].textContent,/One lot exceeds.*9,000.00.*8,381.24/);
+ console.log('Historical qualifying signal, unknown legacy blocker and candidate costs verified');
+});

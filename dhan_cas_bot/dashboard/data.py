@@ -375,6 +375,54 @@ def account_view(funds, positions, orders, now):
             'positions_truncated': len(open_positions) > 100, 'orders_truncated': len(orders) > 100}
 
 
+def last_signal_views(db):
+    """Historical qualifying signals, with only recorded execution outcomes."""
+    if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='metadata'").fetchone():
+        return []
+    def metadata(key):
+        row=db.execute('SELECT value FROM metadata WHERE key=?',(key,)).fetchone()
+        try:
+            value=json.loads(row['value']) if row and len(row['value'])<=100_000 else {}
+            return value if isinstance(value,dict) else {}
+        except (ValueError,TypeError):
+            return {}
+    check_reasons=STRATEGY_REASONS|{'READY','ONE_LOT_UNAFFORDABLE','OPTION_LIQUIDITY_BELOW_POLICY',
+        'OPTION_LIMIT_OUTSIDE_BAND','OPTION_DEPTH_BELOW_ONE_LOT'}
+    result=[]
+    seen=set()
+    for record in db.execute("SELECT key,value FROM metadata WHERE key LIKE 'directional-signal:%' ORDER BY key DESC LIMIT 128"):
+        match=re.fullmatch(r'directional-signal:(\d{4}-\d{2}-\d{2}):(GAP_FADE_DOUBLE|NIFTY_SELLOFF_REBOUND_1510)',record['key'])
+        if not match or match[2] in seen or len(record['value'])>100_000:
+            continue
+        try:
+            raw=json.loads(record['value'])
+            if not isinstance(raw,dict) or raw.get('strategy')!=match[2] or raw.get('state')!='SIGNAL':
+                continue
+            stamp=timestamp(raw.get('evaluated_at'))
+            side=choice(raw.get('side'),{'CE','PE'})
+            if stamp is None or side is None:
+                continue
+            consumed=metadata(record['key']+':consumed')
+            assessment=metadata(record['key']+':assessment')
+            checks=consumed.get('candidate_checks',assessment.get('candidate_checks',[]))
+            projected=[]
+            for item in checks[:5] if isinstance(checks,list) else []:
+                if not isinstance(item,dict):
+                    continue
+                projected.append({'security_id':label(item.get('security_id')),
+                    'reason':choice(item.get('reason'),check_reasons,'UNKNOWN'),
+                    **{field:money(item.get(field)) for field in ('strike','budget','limit','one_lot_cash')},
+                    **{field:integer(item.get(field)) for field in ('lot_size','minute_volume','open_interest','quantity')}})
+            result.append({'strategy':match[2],'evaluated_at':stamp,'side':side,
+                'outcome':choice(consumed.get('reason'),{'ENTRY_DEADLINE_MISSED','DECISION_COMMITTED','PRIOR_REBOUND_EXITED_TODAY'},'UNKNOWN'),
+                'blocking_reason':choice(consumed.get('blocking_reason',assessment.get('reason')),STRATEGY_REASONS,'UNKNOWN'),
+                'candidate_checks':projected})
+            seen.add(match[2])
+        except (ValueError,TypeError,AttributeError):
+            continue
+    return result
+
+
 def ledger_view(path):
     """One SQLite read transaction, no schema initialization or broker methods."""
     out = {'available': False, 'orders': None, 'fills': None, 'incidents': None, 'counts': None}
@@ -419,7 +467,8 @@ def ledger_view(path):
                              'confirmations': len(raw['history']) if isinstance(raw.get('history'), list) else None}
                 except (ValueError, KeyError, TypeError, AttributeError):
                     entry = None
-            return {'available': True, 'orders': orders, 'fills': fills, 'incidents': incidents, 'counts': counts, 'last_entry': entry}
+            return {'available': True, 'orders': orders, 'fills': fills, 'incidents': incidents, 'counts': counts, 'last_entry': entry,
+                    'last_signals':last_signal_views(db)}
     except (sqlite3.Error, OSError, ValueError):
         return out
 
