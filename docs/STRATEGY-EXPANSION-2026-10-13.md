@@ -82,3 +82,23 @@ leveraged-short and blind-option controls are not activated as NIFTY bots.
 No new profitable backtest, guarantee of fills or future winner is claimed.
 
 Deployment and current broker observations are recorded below after verification.
+
+## First installed release
+
+GitHub/main and dashboard release `c859819` deployed successfully. The installed
+funded upgrade completed its full 472-test / 60-case / 15-mutation verification,
+amended the strategy list to all 137 configurations, preserved the existing
+mandate and restarted the funded trader from the immutable release. The signed-in
+browser reports 137 configured names / 136 minute-engine evaluations plus CAS,
+enabled armed authority, current software verification and AVAILABLE history.
+The session is closed: route proof will refresh through the bounded automatic
+qualification at the next verified open session, not an invented current proof.
+
+Read-only VM input probes found usable calendar, 375 completed bars each for Bank,
+IT and VIX, 763 GIFT bars, insights and prior trend. They exposed three integration
+issues: optionchain requires a client-id header, institutional `from` denotes the
+newest-row anchor, and the public archive download needed browser-compatible
+headers. Explicit corrected read-only probes returned 235 IV strikes, current
+October FII/DII records and the 1,150,222-byte official prior-session archive.
+The recorded next eligible expiry is October 19, not a guessed Tuesday. Repairs
+are source-bound and verified before the final funded update below.

@@ -72,8 +72,8 @@ class FeatureSource:
     async def published_chain(self,calendar,expiry):
         day=calendar.previous_opens.date()
         url='https://nsearchives.nseindia.com/content/fo/BhavCopy_NSE_FO_0_0_0_'+day.strftime('%Y%m%d')+'_F_0000.csv.zip'
-        async with httpx.AsyncClient(timeout=8,follow_redirects=False) as client:
-            r=await client.get(url);r.raise_for_status()
+        async with httpx.AsyncClient(timeout=12,follow_redirects=False) as client:
+            r=await client.get(url,headers={'User-Agent':'Mozilla/5.0','Accept':'application/zip,application/octet-stream,*/*'});r.raise_for_status()
             if len(r.content)>30_000_000:raise ContractError('published chain too large')
         with ZipFile(BytesIO(r.content)) as archive:
             files=[x for x in archive.infolist() if x.filename.endswith('.csv')]
@@ -126,9 +126,14 @@ class FeatureSource:
             days=await self.daily_values(now);keys=sorted(days)
             return {'received_at':self.now(),'source_date':keys[-1],'value':days[keys[-1]]/days[keys[-21]]-1}
         async def institutions():
-            days=sorted(await self.daily_values(now));day,previous=days[-2],days[-3];rows={}
+            days=sorted(d for d in await self.daily_values(now) if d<=calendar.previous_opens.date())
+            if len(days)<3 or days[-1]!=calendar.previous_opens.date():raise ContractError('institutional session history unavailable')
+            day,previous=days[-2],days[-3];rows={}
             for kind,domain in (('fii','NSE_FO|INDEX_FUTURES'),('dii','NSE_EQ|CASH')):
-                raw=await self.upstox('/v2/market/'+kind+'?data_type='+quote(domain,safe='')+'&interval=1D&from='+str(now.date()-timedelta(days=60)))
+                # The live endpoint's `from` is its newest-row anchor, not an
+                # inclusive earliest date. Anchor today, then deliberately use
+                # only the two-session-lagged publication rows below.
+                raw=await self.upstox('/v2/market/'+kind+'?data_type='+quote(domain,safe='')+'&interval=1D&from='+str(now.date()))
                 out={}
                 for batch in (raw.get('data') or {}).values():
                     for row in batch:

@@ -23,7 +23,7 @@ class DhanBroker:
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         import httpx
-        headers = {"access-token": self.access_token, "Content-Type": "application/json"}
+        headers = {"access-token": self.access_token, "client-id":self.account_id, "Content-Type": "application/json"}
         if self.client is None:
             self.client = httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=3.0), follow_redirects=False)
         if method == "GET":

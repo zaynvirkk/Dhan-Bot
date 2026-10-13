@@ -178,3 +178,42 @@ def test_profitable_qualified_cas_is_not_starved_by_unranked_directional_signal(
         assert __import__('json').loads(engine.active['payload']).get('strategy',CAS)==CAS
         assert len(broker.requests)==1
     asyncio.run(run())
+
+
+def test_option_chain_request_includes_client_id_and_cannot_enable_writes():
+    import httpx
+    from dhan_cas_bot.broker import DhanBroker
+    async def run():
+        seen=[]
+        async def handler(request):
+            seen.append((request.headers.get('client-id'),request.url.path))
+            return httpx.Response(200,json={'data':{'oc':{}}})
+        broker=DhanBroker('TEST','synthetic-token',allow_writes=False)
+        broker.client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        await broker._request('POST','/optionchain',json={'UnderlyingScrip':13})
+        assert seen==[('TEST','/v2/optionchain')]
+        assert not broker.allow_writes
+        await broker.close()
+    asyncio.run(run())
+
+
+def test_institutional_query_anchors_at_current_day_but_uses_two_session_lag():
+    from dhan_cas_bot.strategy_features import FeatureSource
+    class Broker:pass
+    async def run():
+        source=FeatureSource(Broker(),'fixture',lambda:at())
+        days={at('2026-09-01').date()+timedelta(days=i):D(25000+i) for i in range(31)
+              if (at('2026-09-01').date()+timedelta(days=i)).weekday()<5}
+        async def daily(now):return days
+        paths=[]
+        async def query(path):
+            paths.append(path)
+            rows=[{'time_stamp':int(__import__('datetime').datetime.combine(day,__import__('datetime').time(0),__import__('datetime').timezone.utc).timestamp()*1000),
+                   'total_long_contracts':100+i,'total_short_contracts':50,'buy_amount':100,'sell_amount':50} for i,day in enumerate(sorted(days))]
+            return {'status':'success','data':{'market':rows}}
+        source.daily_values=daily;source.upstox=query
+        values=await source.refresh(at(),calendar(),date(2026,10,13),{'INSTITUTIONAL_ALIGN'})
+        assert all('&from=2026-10-05' in p for p in paths)
+        assert values['institutions']['source_date']==sorted(days)[-2]
+        assert values['institutions']['source_date']<calendar().previous_opens.date()
+    asyncio.run(run())
