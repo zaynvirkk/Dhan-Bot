@@ -93,7 +93,7 @@ function monitoringNotice(d,feeds){
 function points(value){return cash(value).replace('₹','');}
 function shortDate(value){return value?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short'}).format(new Date(value)):'date unconfirmed';}
 function istDay(value){const d=new Date(value);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);}
-function stateLabel(value){return ({NO_TRADE_DAY:'Not an eligible expiry session',ARMED_WAITING_SESSION:'Waiting for trading window',ARMED_WAITING_SIGNAL:'Waiting for auction signal',POSITION_OPEN:'Managing open position',ENTRY_PENDING:'Entry awaiting execution',EXIT_PENDING:'Exit awaiting execution',SETTLEMENT_PENDING:'Settlement pending',RECOVERING:'Reconciling account',ENTRY_HALTED:'Entries blocked',DISARMED:'Entries disabled',UNKNOWN:'Current state unknown'})[value]||'Unknown state';}
+function stateLabel(value){return ({WAITING_EXCHANGE_SESSION:'Waiting for an exchange session',NO_TRADE_DAY:'Not an eligible expiry session',ARMED_WAITING_SESSION:'Waiting for trading window',ARMED_WAITING_SIGNAL:'Waiting for auction signal',POSITION_OPEN:'Managing open position',ENTRY_PENDING:'Entry awaiting execution',EXIT_PENDING:'Exit awaiting execution',SETTLEMENT_PENDING:'Settlement pending',RECOVERING:'Reconciling account',ENTRY_HALTED:'Entries blocked',DISARMED:'Entries disabled',UNKNOWN:'Current state unknown'})[value]||'Unknown state';}
 function renderHistory(d){
  const h=d?.history;
  if(!state.historyDate)state.historyDate=istDay(d?.server_time);
@@ -110,7 +110,8 @@ function renderHistory(d){
   const quote=(label,value,stamp)=>value==null?`${label} not recorded`:`${label} ${points(value)} (${age(elapsed(stamp,e.at))} at sample)`;
   const connected=Object.values(e.feeds||{}).filter(v=>v===true).length;
   info.append(el('strong',stateLabel(e.state)),el('p',e.source_current?`${quote('NIFTY',e.ltp,e.ltp_at)} · ${quote('IEP',e.iep,e.iep_at)} · ${e.books??'unknown'} books · ${connected}/3 sockets connected`:'Bot status was stale or missing. Market and trading state were unknown.'));
-  if(e.reason)info.append(el('p',e.reason));for(const s of e.strategies||[])info.append(el('p',`${strategyNames[s.strategy]||s.strategy}: ${conditionSummary(s)}`));for(const s of e.daily_monitor||[])info.append(el('p',`Read-only ${strategyNames[s.strategy]||s.strategy}: ${conditionSummary(s)}`));li.append(time,info);$('history-events').append(li);
+  if(e.state==='WAITING_EXCHANGE_SESSION')info.append(el('p','No new entries while waiting for an exchange session.'));
+  if(e.reason)info.append(el('p',e.state==='WAITING_EXCHANGE_SESSION'?`Last recorded execution note: ${e.reason}`:e.reason));for(const s of e.strategies||[])info.append(el('p',`${strategyNames[s.strategy]||s.strategy}: ${conditionSummary(s)}`));for(const s of e.daily_monitor||[])info.append(el('p',`Read-only ${strategyNames[s.strategy]||s.strategy}: ${conditionSummary(s)}`));li.append(time,info);$('history-events').append(li);
  }
  $('history-empty').hidden=available&&events.length>0;
  $('history-empty').textContent=day?'The daily summary is retained; no detail samples for this date remain in the bounded history.':'No samples are available for this date. Missing history is not a zero-trade result.';
