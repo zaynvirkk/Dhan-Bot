@@ -34,8 +34,8 @@ def test_cash_per_minute_beats_larger_return_but_longer_hold(tmp_path):
         engine.runtime.enabled_strategies = frozenset(engine.directional.enabled)
         engine.directional.update(replace(inputs,evaluations={base.strategy:base,slow.strategy:slow}))
         engine.directional.ranking = {
-            base.strategy: {'ranking_available':True,'filled_closed':5,'mean_estimated_net_return':'.1','mean_gross_return':'.1','mean_holding_minutes':'2'},
-            slow.strategy: {'ranking_available':True,'filled_closed':5,'mean_estimated_net_return':'.4','mean_gross_return':'.4','mean_holding_minutes':'60'}}
+            base.strategy: {'ranking_available':True,'filled_closed':5,'mean_estimated_net_return':'.1','mean_gross_return':'.1','mean_holding_minutes':'2','mean_entry_fill_fraction':'1'},
+            slow.strategy: {'ranking_available':True,'filled_closed':5,'mean_estimated_net_return':'.4','mean_gross_return':'.4','mean_holding_minutes':'60','mean_entry_fill_fraction':'1'}}
         engine.directional.ranked_at = clock[0]
         assert await engine.cycle()
         assert __import__('json').loads(engine.active['payload'])['strategy'] == base.strategy

@@ -355,6 +355,7 @@ class DirectionalEngine:
         return True
 
     def view(self):
+        self.refresh_ranking()
         now=self.engine.now()
         result=[]
         for strategy in self.enabled or (GAP, REBOUND):

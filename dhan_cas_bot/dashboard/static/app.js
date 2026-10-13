@@ -157,15 +157,28 @@ function renderSelection(d){
  $('selection-stamp').textContent=sel?.evaluated_at?`Last comparison ${at(sel.evaluated_at)}`:'No executable comparison recorded';
  const names=s=>strategyNames[s]||s.replaceAll('_',' ').toLowerCase();
  const closed=rt?.state==='WAITING_EXCHANGE_SESSION';
- let reason=closed?'The exchange session is closed. The last comparison is retained below.':
+ let reason=closed?'The exchange session is closed.'+(sel?' The last comparison is retained below.':''):
   'The bot compares whole-lot affordability, fresh executable depth and spread before allocating money.';
  if(sel?.reason==='SELECTED')reason+=` Selected ${names(sel.selected)}. `+(sel.mode==='QUALIFIED_AUCTION'?'It passed the live auction discrepancy, execution and cash checks. No simultaneous executable minute candidate was present.':sel.mode==='MEASURED_CASH_PER_MINUTE'?
-  'Its estimated net rupees per holding minute ranked highest among fillable candidates.':
+  'Its estimated net rupees per holding minute, adjusted for observed fill completion, ranked highest among executable candidates.':
   'No measured profit estimate exists for these candidates. Same-side selection used lower execution friction, then a shorter holding limit.');
  else if(sel?.reason==='CONFLICTING_UNRANKED_SIGNALS')reason+=' Calls and puts both qualified without measured positive evidence. No trade was selected.';
  else if(sel?.reason==='NO_POSITIVE_ESTIMATED_EDGE')reason+=' The fillable candidates had no positive estimated profit after current costs. No trade was selected.';
  else reason+=' No executable candidate comparison has been recorded this session.';
  $('selection-reason').textContent=reason;
+ const percent=(value,digits=1)=>value==null?'unavailable':`${(Number(value)*100).toFixed(digits)}%`;
+ const history=rt?.execution_feedback||[];
+ if(changed('selection-history',history)){
+  $('selection-history').replaceChildren();
+  for(const row of history){
+   if(!row.filled_closed&&!row.closed_entry_opportunities)continue;
+   const text=`${names(row.strategy)}: ${row.filled_closed??0} filled closed trades across ${row.sessions??0} session(s). `+
+    `${row.filled_entry_opportunities??'—'} of ${row.closed_entry_opportunities??'—'} recent completed entry opportunities filled; average quantity completion ${percent(row.mean_entry_fill_fraction)}. `+
+    (row.mean_estimated_net_return!=null?`Estimated mean net return ${percent(row.mean_estimated_net_return,2)}; standard error ${percent(row.return_standard_error,2)}. `:'')+
+    (row.sessions===1?'One session is insufficient to establish a repeatable edge.':'Charges remain estimates until final broker fees are reconciled.');
+   $('selection-history').append(el('p',text,'connection-detail'));
+  }
+ }
  const source={UPSTOX_COMPLETED_I1_STREAM:'Latest NIFTY minute source: validated Upstox stream',REST_BOOTSTRAP_OR_GAP_REPAIR:'Latest NIFTY minute source: REST startup or gap repair',NOT_OBSERVED:'NIFTY minute source has not yet been observed'}[rt?.minute_source]||'NIFTY minute source not reported';
  $('selection-flow').textContent=`${source}. Prices and fills use WebSockets; futures OI, missing candles and published inputs retain bounded REST reads. Estimates use prior closed trades and conservative costs; targets are not forecasts.`;
  if(!changed('selection-candidates',sel))return;
@@ -178,8 +191,9 @@ function renderSelection(d){
   item.append(el('p',`${winner?'Selected · ':''}${names(row.strategy)} · ${row.side||'Side unknown'}`,'connection-name'));
   const measured=row.estimated_net_profit!=null;
   item.append(el('p',`${row.quantity??'—'} units · entry limit ${cash(row.limit)} · friction reserve ${cash(row.friction_cash)}`,'connection-detail'));
-  item.append(el('p',measured?`Estimated net ${cash(row.estimated_net_profit)} · ${cash(row.estimated_profit_per_minute)}/minute · observed hold ${Number(row.holding_minutes).toFixed(1)} minutes · ${row.filled_closed} filled closed trades across ${row.sessions} session(s).`:
+  item.append(el('p',measured?`Conditional net ${cash(row.estimated_net_profit)} · fill-adjusted ${cash(row.estimated_profit_per_minute)}/minute · observed hold ${Number(row.holding_minutes).toFixed(1)} minutes · ${row.filled_closed} filled closed trades across ${row.sessions} session(s).`:
    'Profit estimate unavailable. Execution quality is an experimental fallback, not evidence of an edge.','connection-detail'));
+  item.append(el('p',`Observed entry fill rate ${percent(row.entry_fill_rate)} · average quantity completion ${percent(row.mean_entry_fill_fraction)} · return standard error ${percent(row.return_standard_error,2)}.`,'connection-detail'));
   list.append(item);
  }
  $('selection-candidates').append(list);

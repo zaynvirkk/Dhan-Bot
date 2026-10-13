@@ -362,12 +362,17 @@ setImmediate(()=>{
  browser.selectionFixture={runtime:{fresh:true,state:'ARMED_WAITING_SIGNAL',minute_source:'UPSTOX_COMPLETED_I1_STREAM',
   strategy_selection:{reason:'SELECTED',mode:'MEASURED_CASH_PER_MINUTE',selected:'OPEN_DRIVE_FAST',evaluated_at:new Date().toISOString(),
    candidates:[{strategy:'OPEN_DRIVE_FAST',side:'CE',quantity:65,limit:'10.00',friction_cash:'6.50',estimated_net_profit:'40.00',
-    estimated_profit_per_minute:'20.00',holding_minutes:'2',filled_closed:4,sessions:1}]}}};
+    estimated_profit_per_minute:'20.00',holding_minutes:'2',filled_closed:4,sessions:1,
+    entry_fill_rate:'.5',mean_entry_fill_fraction:'.25',closed_entry_opportunities:8,filled_entry_opportunities:4,return_standard_error:'.03'}]},
+   execution_feedback:[{strategy:'CAS_LAG_V1',filled_closed:16,sessions:1,closed_entry_opportunities:30,
+    filled_entry_opportunities:12,entry_fill_rate:'.4',mean_entry_fill_fraction:'.3',mean_estimated_net_return:'.01',return_standard_error:'.028'}]}};
  vm.runInContext('renderSelection(selectionFixture)',browser);
  assert.match(ids['selection-reason'].textContent,/net rupees per holding minute/);
  assert.match(ids['selection-flow'].textContent,/validated Upstox stream/);
  const list=ids['selection-candidates'].children[0];
  assert.match(list.children[1].children[2].textContent,/4 filled closed trades across 1 session/);
+ assert.match(list.children[1].children[3].textContent,/50.0%.*25.0%/);
+ assert.match(ids['selection-history'].children[0].textContent,/16 filled closed trades.*1 session.*1.00%.*2.80%/);
  browser.selectionFixture.runtime.strategy_selection.reason='CONFLICTING_UNRANKED_SIGNALS';
  browser.selectionFixture.runtime.strategy_selection.selected=null;
  vm.runInContext('renderSelection(selectionFixture)',browser);
@@ -375,5 +380,8 @@ setImmediate(()=>{
  browser.selectionFixture.runtime.state='WAITING_EXCHANGE_SESSION';
  vm.runInContext('renderSelection(selectionFixture)',browser);
  assert.match(ids['selection-reason'].textContent,/exchange session is closed/);
+ browser.selectionFixture.runtime.strategy_selection=null;
+ vm.runInContext('renderSelection(selectionFixture)',browser);
+ assert.ok(!ids['selection-reason'].textContent.includes('retained below'),'A missing comparison must not claim to retain one');
  console.log('Cash/time selection, conflict abstention and closed-session explanation verified');
 });

@@ -171,6 +171,7 @@ def runtime_view(raw, now):
             'strategies': [s for s in raw.get('strategies', []) if isinstance(s, str) and s in STRATEGY_NAMES] if isinstance(raw.get('strategies'), list) else [],
             'strategy_evaluations': strategy_projection(raw.get('strategy_evaluations')),
             'strategy_selection':selection_projection(raw.get('strategy_selection')),
+            'execution_feedback':execution_feedback_projection(raw.get('execution_feedback')),
             'minute_source':choice(raw.get('minute_source'),{'UPSTOX_COMPLETED_I1_STREAM','REST_BOOTSTRAP_OR_GAP_REPAIR','NOT_OBSERVED'}),
             'expiry_today': raw.get('expiry_today') if type(raw.get('expiry_today')) is bool else None,
             'calendar_checked_at': timestamp(raw.get('calendar_checked_at')),
@@ -187,14 +188,30 @@ def selection_projection(raw):
         if not isinstance(row,dict) or row.get('strategy') not in STRATEGY_NAMES:continue
         numeric={k:(money(row.get(k)) if k in ('limit','friction_cash','estimated_net_profit','estimated_profit_per_minute')
                     else str(Decimal(str(row[k]))) if money(row.get(k)) is not None else None) for k in
-                 ('limit','friction_cash','estimated_net_profit','estimated_profit_per_minute','holding_minutes','return_standard_error')}
+                 ('limit','friction_cash','estimated_net_profit','estimated_profit_per_minute','holding_minutes','return_standard_error','entry_fill_rate','mean_entry_fill_fraction')}
         rows.append({**numeric,'strategy':row['strategy'],'side':choice(row.get('side'),{'CE','PE'}),
                      'quantity':integer(row.get('quantity')),'filled_closed':integer(row.get('filled_closed')),
-                     'sessions':integer(row.get('sessions'))})
+                     'sessions':integer(row.get('sessions')),
+                     'closed_entry_opportunities':integer(row.get('closed_entry_opportunities')),
+                     'filled_entry_opportunities':integer(row.get('filled_entry_opportunities'))})
     return {'evaluated_at':timestamp(raw.get('evaluated_at')),
             'mode':choice(raw.get('mode'),{'WAITING','MEASURED_CASH_PER_MINUTE','EXPERIMENTAL_EXECUTION_QUALITY','QUALIFIED_AUCTION'},'WAITING'),
             'reason':choice(raw.get('reason'),{'SELECTED','CONFLICTING_UNRANKED_SIGNALS','NO_POSITIVE_ESTIMATED_EDGE','NO_EXECUTABLE_SIGNAL'},'NO_EXECUTABLE_SIGNAL'),
             'selected':choice(raw.get('selected'),STRATEGY_NAMES),'candidates':rows}
+
+
+def execution_feedback_projection(raw):
+    if not isinstance(raw,dict):return []
+    result=[]
+    for name,row in list(raw.items())[:256]:
+        if name not in STRATEGY_NAMES or not isinstance(row,dict):continue
+        numeric={key:str(Decimal(str(row[key]))) if money(row.get(key)) is not None else None for key in
+                 ('entry_fill_rate','mean_entry_fill_fraction','mean_estimated_net_return','return_standard_error')}
+        for key in ('entry_fill_rate','mean_entry_fill_fraction'):
+            if numeric[key] is not None and not 0<=Decimal(numeric[key])<=1:numeric[key]=None
+        result.append({'strategy':name,**numeric,**{key:integer(row.get(key)) for key in
+                      ('filled_closed','sessions','closed_entry_opportunities','filled_entry_opportunities')}})
+    return result
 
 
 def condition_projection(raw):

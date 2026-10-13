@@ -44,6 +44,7 @@ class FeatureSource:
     def __init__(self,broker,token,now):
         self.broker,self.token,self.now=broker,token,now
         self.cache={};self.retry_at={};self.daily=None
+        self.daily_lock=asyncio.Lock()
 
     async def upstox(self,path):
         if not self.token:raise ContractError('auxiliary authentication unavailable')
@@ -54,6 +55,10 @@ class FeatureSource:
             return raw
 
     async def daily_values(self,now):
+        async with self.daily_lock:
+            return await self._daily_values(now)
+
+    async def _daily_values(self,now):
         if self.daily and self.daily[0]==now.date():return self.daily[1]
         raw=await self.broker._request('POST','/charts/historical',json={'securityId':'13','exchangeSegment':'IDX_I',
             'instrument':'INDEX','expiryCode':0,'oi':False,'fromDate':str(now.date()-timedelta(days=80)),
@@ -144,11 +149,16 @@ class FeatureSource:
             return {'received_at':self.now(),'source_date':day,
                     'fii_net_change':dec(f['total_long_contracts'],'long')-dec(f['total_short_contracts'],'short')-dec(p['total_long_contracts'],'long')+dec(p['total_short_contracts'],'short'),
                     'dii_net':dec(di['buy_amount'],'buy')-dec(di['sell_amount'],'sell')}
-        if 'IV_CHEAP_TREND' in families:await collect('iv',iv,45)
-        if families&{'PCR_CONFIRM','PAIN_ESCAPE'}:await collect('insights',insights,60)
-        if families&{'PUBLISHED_PCR','PUBLISHED_PAIN','PRIOR_OI_WALL'}:await collect('prior_chain',lambda:self.published_chain(calendar,expiry),3600*12)
-        if families&{'NIFTY_DAY_CONTINUATION','NIFTY_TREND_ALIGNMENT','TREND_CONTINUATION','TREND_PULLBACK'}:await collect('prior_trend',trend,3600*12)
-        if 'INSTITUTIONAL_ALIGN' in families:await collect('institutions',institutions,3600*12)
+        jobs=[]
+        if 'IV_CHEAP_TREND' in families:jobs.append(('iv',iv,45))
+        if families&{'PCR_CONFIRM','PAIN_ESCAPE'}:jobs.append(('insights',insights,60))
+        if families&{'PUBLISHED_PCR','PUBLISHED_PAIN','PRIOR_OI_WALL'}:jobs.append(('prior_chain',lambda:self.published_chain(calendar,expiry),3600*12))
+        if families&{'NIFTY_DAY_CONTINUATION','NIFTY_TREND_ALIGNMENT','TREND_CONTINUATION','TREND_PULLBACK'}:jobs.append(('prior_trend',trend,3600*12))
+        if 'INSTITUTIONAL_ALIGN' in families:jobs.append(('institutions',institutions,3600*12))
+        slots=asyncio.Semaphore(3)
+        async def bounded(job):
+            async with slots:await collect(*job)
+        await asyncio.gather(*(bounded(job) for job in jobs))
         return result
 
     async def gift(self,now):
