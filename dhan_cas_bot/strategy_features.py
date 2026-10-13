@@ -84,7 +84,7 @@ class FeatureSource:
         oi={};old={'CE':0,'PE':0};total={'CE':0,'PE':0}
         for row in rows:
             side=row['OptnTp'];strike=dec(row['StrkPric'],'strike')
-            value=dec(row['OpnIntrst'],'oi');change=dec(row['ChngInOpnIntrst'],'oi change')
+            value=dec(row['OpnIntrst'],'oi');change=dec(row['ChngInOpnIntrst'],'oi change',allow_negative=True)
             if side not in total or value<0 or value-change<0 or (side,strike) in oi:raise ContractError('invalid published chain')
             oi[side,strike]=int(value);total[side]+=value;old[side]+=value-change
         if min(*total.values(),*old.values())<=0:raise ContractError('published chain incomplete')

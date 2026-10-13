@@ -217,3 +217,35 @@ def test_institutional_query_anchors_at_current_day_but_uses_two_session_lag():
         assert values['institutions']['source_date']==sorted(days)[-2]
         assert values['institutions']['source_date']<calendar().previous_opens.date()
     asyncio.run(run())
+
+
+def test_published_chain_accepts_oi_unwinds_and_keeps_negative_oi_invalid(monkeypatch):
+    import httpx
+    from io import BytesIO
+    from zipfile import ZipFile
+    from dhan_cas_bot.strategy_features import FeatureSource
+    from dhan_cas_bot.domain import ContractError
+    expiry=date(2026,10,13)
+    head='FinInstrmTp,TckrSymb,FininstrmActlXpryDt,OptnTp,StrkPric,OpnIntrst,ChngInOpnIntrst\n'
+    rows=['IDO,NIFTY,2026-10-13,CE,25000,100,-5\n',
+          'IDO,NIFTY,2026-10-13,PE,25000,200,10\n']
+    def archive():
+        out=BytesIO()
+        with ZipFile(out,'w') as zipped:zipped.writestr('published.csv',head+''.join(rows))
+        return out.getvalue()
+    async def handler(request):
+        assert request.headers['User-Agent']=='Mozilla/5.0'
+        assert calendar().previous_opens.strftime('%Y%m%d') in request.url.path
+        return httpx.Response(200,content=archive())
+    client=httpx.AsyncClient
+    monkeypatch.setattr(httpx,'AsyncClient',lambda **kw:client(transport=httpx.MockTransport(handler),**kw))
+    async def run():
+        source=FeatureSource(object(),'fixture',lambda:at())
+        chain=await source.published_chain(calendar(),expiry)
+        assert chain['oi']['CE',D(25000)]==100
+        assert chain['pcr_change']==D(200)/100/(D(190)/105)-1
+        rows[0]='IDO,NIFTY,2026-10-13,CE,25000,-100,-5\n'
+        try:await source.published_chain(calendar(),expiry)
+        except ContractError:pass
+        else:raise AssertionError('Negative outstanding OI must remain invalid')
+    asyncio.run(run())

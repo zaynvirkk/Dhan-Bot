@@ -102,3 +102,10 @@ headers. Explicit corrected read-only probes returned 235 IV strikes, current
 October FII/DII records and the 1,150,222-byte official prior-session archive.
 The recorded next eligible expiry is October 19, not a guessed Tuesday. Repairs
 are source-bound and verified before the final funded update below.
+
+The second installed release `958c810` passes IV and institutional live probes.
+The complete official-chain parser exposed a further signed-field issue: open
+interest itself must be nonnegative, while daily change may be negative. Its
+regression reproduces real unwinds without permitting negative outstanding OI.
+The final source verification passes 475 tests, 60 acceptance cases and all 15
+guard mutations. Software fixtures are not profitability evidence.
