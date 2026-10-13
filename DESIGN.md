@@ -114,3 +114,11 @@ reload keeps the live event connection open and loads the complete journal in
 1.75 seconds (28,488 encoded bytes versus 722,549 decoded bytes). History reads
 AVAILABLE and current enabled authority matches the fresh backend snapshot.
 Finite responses use negotiated gzip; event streams remain uncompressed.
+
+13 October live-status correction: a current Upstox transport receiving and
+processing frames remains distinct from an accepted auction input. After a
+provider-confirmed CTS_CLOSE reference, missing/currently stale indicative
+values are an auction-entry condition, not a generic market-data outage.
+Fresh option books remain required for a healthy feed summary; stale index
+transport, disconnected sockets and delayed processing keep their warnings.
+No execution rule or strategy clock is changed by this read-only presentation.

@@ -35,14 +35,15 @@ function renderFeeds(rt,now){
  const feeds=rt?.feed_health||{};const names={signal:'Upstox index feed',market:'Dhan options feed',order:'Dhan order updates'};
  const idle=rt?.monitoring_mode==='IDLE';const fresh=rt?.fresh===true;
  const issues=[];let known=0;
+ const auctionExpected=Number(rt?.observation?.reference)>0&&['CTS_CLOSE','CAS_LM_START','CAS_M_STOP'].includes(rt?.observation?.phase);
  const rows=Object.entries(names).map(([key,name])=>{
   const f=feeds[key];let status='Unknown',kind='warn',detail='The deployed bot has not supplied live connection observations.';
   if(f){
    if(typeof f.connected==='boolean')known++;
-   const seen=elapsed(f.last_received_at,now),usable=elapsed(f.last_usable_at,now);
+   const seen=elapsed(f.last_received_at,now),processed=elapsed(f.last_processed_at,now),usable=elapsed(f.last_usable_at,now);
    detail=`Last message in this connection: ${seen===null?'not observed':age(seen)} · reconnects: ${f.reconnects??'unknown'}`;
    if(f.connected===false)detail+=` · last error: ${feedError(f.last_error)}`;
-   if(key!=='order')detail+=` · accepted ${key==='market'?'book':'signal'}: ${usable===null?'not observed':age(usable)}`;
+   if(key!=='order')detail+=` · accepted ${key==='market'?'book':'strategy input'}: ${usable===null?'not observed':age(usable)}`;
    else detail+=' · silence is normal when no orders change';
    detail+=` · pending messages: ${f.pending_messages??'unknown'}`;
    if(f.pending_messages>0)detail+=` · oldest queued: ${f.oldest_pending_ms??'unknown'} ms`;
@@ -52,6 +53,11 @@ function renderFeeds(rt,now){
    else if(f.connected===true){
     status='Connected';kind='good';
     if(Number(f.oldest_pending_ms)>1000){status='Processing delayed';kind='warn';issues.push('delayed');}
+    else if(!idle&&key==='signal'&&(usable===null||usable>5)&&seen!==null&&seen<=5&&processed!==null&&processed<=5){
+     status='Receiving frames';
+     detail+=auctionExpected?' · auction entry awaits a current official indicative index value':' · no current strategy input accepted';
+     issues.push('signal-pending');
+    }
     else if(!idle&&key!=='order'&&(usable===null||usable>5)){status='Awaiting fresh data';kind='warn';issues.push('waiting');}
    }
   }
@@ -59,7 +65,7 @@ function renderFeeds(rt,now){
  });
  $('feed-context').textContent=!fresh?'Current feed health is unknown until a fresh bot status arrives.':idle?'The bot reports an idle session: entries are outside their active window. Market data may still arrive; receipt times and socket state are shown separately.':'Live socket observations. Connected does not mean the strategy has a usable signal or permission to trade.';
  if(changed('feed-rows',rows)){$('live-connections').replaceChildren();for(const r of rows){const row=el('div',undefined,'connection-row live-feed');const info=el('div');info.append(el('p',r.name,'connection-name'),el('p',r.detail,'connection-detail'));row.append(info,badge(r.status,r.kind));$('live-connections').append(row);}}
- return {issues,known,idle,disconnected:rows.filter(r=>r.status==='Disconnected').map(r=>r.name)};
+ return {issues,known,idle,auctionExpected,disconnected:rows.filter(r=>r.status==='Disconnected').map(r=>r.name)};
 }
 function monitoringNotice(d,feeds){
  if(!d.available)return {text:'No dashboard snapshot is available. The collector may not be running.',kind:'error'};
@@ -77,6 +83,9 @@ function monitoringNotice(d,feeds){
  if(feeds.known<3)return {text:'Account and bot updates are current. Live feed health is unavailable from the deployed version; dated diagnostics are shown separately.'};
  if(feeds.idle)return {text:'The bot reports an idle session. Account updates are current; live socket observations are shown below.',kind:'healthy'};
  if(feeds.issues.includes('waiting'))return {text:'Account updates are current. Waiting for fresh usable market data; inspect Live connections.'};
+ if(feeds.issues.includes('signal-pending'))return feeds.auctionExpected?
+  {text:'Live feeds are receiving data. Auction entries await a current official indicative index value.',kind:'healthy'}:
+  {text:'Upstox frames are arriving, but no current strategy input has been accepted. Inspect index inputs in Live connections.'};
  return {text:'Account and feed observations are current. Trading authority and entry conditions are shown separately.',kind:'healthy'};
 }
 function points(value){return cash(value).replace('₹','');}

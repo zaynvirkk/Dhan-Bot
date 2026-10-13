@@ -73,6 +73,28 @@ show({...current,server_time:'2026-10-01T09:01:01Z'});
 assert.equal(ids.connections.children[0],diagnostics,'Unchanged diagnostics preserve DOM');
 show({...current,runtime:{...current.runtime,monitoring_mode:'ACTIVE'}});
 assert.match(ids.notice.textContent,/Waiting for fresh usable market data/);
+// A frozen CTS reference is not a stopped live feed. Auction values remain
+// separate eligibility evidence even while current frames keep arriving.
+const auctionPending=structuredClone(current);
+auctionPending.runtime.monitoring_mode='ACTIVE';
+auctionPending.runtime.observation={phase:'CTS_CLOSE',reference:'22700.75',iep:null};
+for(const key of ['signal','market'])auctionPending.runtime.feed_health[key]={connected:true,reconnects:0,pending_messages:0,last_received_at:new Date(viewTime+1000).toISOString(),last_processed_at:new Date(viewTime+1000).toISOString(),last_usable_at:key==='market'?new Date(viewTime+1000).toISOString():null};
+show(auctionPending);
+assert.match(ids.notice.textContent,/Live feeds are receiving data/);
+assert.match(ids.notice.textContent,/official indicative index value/);
+assert.equal(ids.notice.hidden,true,'Expected missing auction input must not become a feed outage');
+assert.match(ids['live-connections'].children[0].children[1].textContent,/Receiving frames/);
+const signalSilent=structuredClone(auctionPending);
+signalSilent.runtime.feed_health.signal.last_processed_at='2026-10-01T08:00:00Z';
+signalSilent.runtime.feed_health.signal.last_received_at='2026-10-01T08:00:00Z';
+show(signalSilent);
+assert.match(ids.notice.textContent,/Waiting for fresh usable market data/);
+assert.equal(ids.notice.hidden,false,'Stopped index frames must still warn');
+const bookStale=structuredClone(auctionPending);
+bookStale.runtime.feed_health.market.last_usable_at='2026-10-01T08:00:00Z';
+show(bookStale);
+assert.match(ids.notice.textContent,/Waiting for fresh usable market data/);
+assert.equal(ids.notice.hidden,false,'Fresh transport must not hide stale option books');
 const disconnected=structuredClone(current);disconnected.runtime.feed_health.order.connected=false;show(disconnected);
 assert.match(ids.notice.textContent,/Dhan order updates disconnected/);
 assert.equal(ids.notice.hidden,false,'An idle session must not hide a real disconnection');
