@@ -27,5 +27,6 @@ details{border-top:1px solid var(--line);padding-bottom:5px}summary{padding:16px
 @media(max-width:900px){.account-strip,.account-strip.no-pnl{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 .selection-board{margin:1.5rem 0;padding:1.25rem 0;border-block:1px solid var(--line)}
+.selection-board .connection-detail{max-width:75ch;line-height:1.6}
 .selection-candidate{padding:.85rem 0;border-bottom:1px solid var(--line)}
 .selection-candidate:last-child{border-bottom:0}

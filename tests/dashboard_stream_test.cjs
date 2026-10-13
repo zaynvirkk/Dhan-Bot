@@ -383,5 +383,8 @@ setImmediate(()=>{
  browser.selectionFixture.runtime.strategy_selection=null;
  vm.runInContext('renderSelection(selectionFixture)',browser);
  assert.ok(!ids['selection-reason'].textContent.includes('retained below'),'A missing comparison must not claim to retain one');
+ browser.selectionFixture.runtime.strategy_selection={mode:'WAITING',reason:'NO_EXECUTABLE_SIGNAL',candidates:[]};
+ vm.runInContext('renderSelection(selectionFixture)',browser);
+ assert.ok(!ids['selection-reason'].textContent.includes('retained below'),'An initialized empty comparison is not a recorded comparison');
  console.log('Cash/time selection, conflict abstention and closed-session explanation verified');
 });

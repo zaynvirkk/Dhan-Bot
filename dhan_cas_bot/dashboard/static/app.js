@@ -157,7 +157,8 @@ function renderSelection(d){
  $('selection-stamp').textContent=sel?.evaluated_at?`Last comparison ${at(sel.evaluated_at)}`:'No executable comparison recorded';
  const names=s=>strategyNames[s]||s.replaceAll('_',' ').toLowerCase();
  const closed=rt?.state==='WAITING_EXCHANGE_SESSION';
- let reason=closed?'The exchange session is closed.'+(sel?' The last comparison is retained below.':''):
+ const recorded=sel?.evaluated_at&&sel?.candidates?.length>0;
+ let reason=closed?'The exchange session is closed.'+(recorded?' The last comparison is retained below.':''):
   'The bot compares whole-lot affordability, fresh executable depth and spread before allocating money.';
  if(sel?.reason==='SELECTED')reason+=` Selected ${names(sel.selected)}. `+(sel.mode==='QUALIFIED_AUCTION'?'It passed the live auction discrepancy, execution and cash checks. No simultaneous executable minute candidate was present.':sel.mode==='MEASURED_CASH_PER_MINUTE'?
   'Its estimated net rupees per holding minute, adjusted for observed fill completion, ranked highest among executable candidates.':
