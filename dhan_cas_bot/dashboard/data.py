@@ -29,6 +29,7 @@ STRATEGY_REASONS = {
     'NOT_CONFIGURED', 'STRATEGY_INPUTS_STALE', 'STRATEGY_INPUT_UNAVAILABLE', 'ENTRY_DEADLINE_MISSED',
     'ENTRY_NOT_PERMITTED', 'OPTION_MINUTES_UNAVAILABLE', 'OPTION_BOOK_UNAVAILABLE_OR_STALE',
     'FIXED_LIMIT_ALREADY_MISSED', 'NO_AFFORDABLE_LIQUID_CONTRACT', 'UNMANAGED_ACCOUNT_POSITION',
+    'CONFLICTING_UNRANKED_SIGNALS','NO_POSITIVE_ESTIMATED_EDGE',
 }
 STRATEGY_REASONS.update({'EXPANDED_RULE_CONFIRMED','EXPANDED_RULE_NOT_MET','REQUIRES_EXPIRY_SESSION',
     'MISSING_COMPLETED_BAR','MISSING_OHLC_RANGE','MISSING_VWAP_INPUTS','ZERO_FUTURE_VOLUME','ZERO_VOLUME_BASE',
@@ -169,12 +170,31 @@ def runtime_view(raw, now):
             'monitoring_mode': choice(raw.get('monitoring_mode'), {'IDLE', 'ACTIVE'}, 'UNKNOWN'),
             'strategies': [s for s in raw.get('strategies', []) if isinstance(s, str) and s in STRATEGY_NAMES] if isinstance(raw.get('strategies'), list) else [],
             'strategy_evaluations': strategy_projection(raw.get('strategy_evaluations')),
+            'strategy_selection':selection_projection(raw.get('strategy_selection')),
+            'minute_source':choice(raw.get('minute_source'),{'UPSTOX_COMPLETED_I1_STREAM','REST_BOOTSTRAP_OR_GAP_REPAIR','NOT_OBSERVED'}),
             'expiry_today': raw.get('expiry_today') if type(raw.get('expiry_today')) is bool else None,
             'calendar_checked_at': timestamp(raw.get('calendar_checked_at')),
             'feed_health': feed_health_view(raw.get('feed_health')),
             'recorder_pending': integer(raw.get('recorder_pending')),
             'telemetry': telemetry_view(raw.get('telemetry')),
             'observation': observation_projection(raw.get('observation'))}
+
+
+def selection_projection(raw):
+    if not isinstance(raw,dict):return None
+    rows=[]
+    for row in raw.get('candidates',[])[:256] if isinstance(raw.get('candidates'),list) else []:
+        if not isinstance(row,dict) or row.get('strategy') not in STRATEGY_NAMES:continue
+        numeric={k:(money(row.get(k)) if k in ('limit','friction_cash','estimated_net_profit','estimated_profit_per_minute')
+                    else str(Decimal(str(row[k]))) if money(row.get(k)) is not None else None) for k in
+                 ('limit','friction_cash','estimated_net_profit','estimated_profit_per_minute','holding_minutes','return_standard_error')}
+        rows.append({**numeric,'strategy':row['strategy'],'side':choice(row.get('side'),{'CE','PE'}),
+                     'quantity':integer(row.get('quantity')),'filled_closed':integer(row.get('filled_closed')),
+                     'sessions':integer(row.get('sessions'))})
+    return {'evaluated_at':timestamp(raw.get('evaluated_at')),
+            'mode':choice(raw.get('mode'),{'WAITING','MEASURED_CASH_PER_MINUTE','EXPERIMENTAL_EXECUTION_QUALITY','QUALIFIED_AUCTION'},'WAITING'),
+            'reason':choice(raw.get('reason'),{'SELECTED','CONFLICTING_UNRANKED_SIGNALS','NO_POSITIVE_ESTIMATED_EDGE','NO_EXECUTABLE_SIGNAL'},'NO_EXECUTABLE_SIGNAL'),
+            'selected':choice(raw.get('selected'),STRATEGY_NAMES),'candidates':rows}
 
 
 def condition_projection(raw):

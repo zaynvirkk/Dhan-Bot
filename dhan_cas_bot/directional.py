@@ -36,6 +36,9 @@ class DirectionalEngine:
         self.candidate_checks = []
         self.ranking={}
         self.ranked_at=None
+        self.selection_blocked=False
+        self.selection=engine.runtime.ledger.metadata("strategy-selection:"+engine.now().astimezone(IST).date().isoformat(),
+            {"reason":"NO_EXECUTABLE_SIGNAL","mode":"WAITING","candidates":[]})
 
     def update(self, inputs):
         self.inputs = inputs
@@ -164,31 +167,19 @@ class DirectionalEngine:
         if self.ranked_at is None or (now-self.ranked_at).total_seconds()>=5:
             self.ranking=scores(self.engine.runtime.ledger,now);self.ranked_at=now
 
-    def cas_has_priority(self):
-        self.refresh_ranking()
-        row=self.ranking.get(CAS,{})
-        if not row.get('ranking_available'):return False
-        value=D(row['mean_estimated_net_return'])
-        if value<=0:return False
-        now=self.engine.now()
-        for signal in self.signals.values():
-            due=signal.evaluated_at+timedelta(minutes=1)
-            if signal.strategy not in self.enabled or not due<=now<due+timedelta(seconds=30):continue
-            other=self.ranking.get(signal.strategy,{})
-            if other.get('ranking_available') and D(other['mean_estimated_net_return'])>value:return False
-        return True
-
     async def enter_locked(self, snapshot):
         engine, runtime = self.engine, self.engine.runtime
         ledger, now = runtime.ledger, engine.now()
-        if engine.active or snapshot["unresolved"] or ledger.pending_intents() or not self.input_ready():
+        if self.selection_blocked or engine.active or snapshot["unresolved"] or ledger.pending_intents() or not self.input_ready():
             return False
         if any(int(r.get("netQty",r.get("netQuantity",0))) for r in snapshot["positions"]):
             self.last_reason="UNMANAGED_ACCOUNT_POSITION"
             return False
-        from .strategy_arbiter import rank_signals
+        from .strategy_arbiter import rank_signals, execution_score, select_executable
         self.refresh_ranking()
         allocation=None
+        feasible=[]
+        choices={}
         for signal in rank_signals(self.signals.values(),ledger,now,ranking=self.ranking):
             if signal.strategy not in self.enabled:
                 continue
@@ -221,25 +212,70 @@ class DirectionalEngine:
             if candidate is None:
                 self.record_assessment(signal, self.last_reason, self.candidate_checks)
                 continue  # An unfillable engine cannot starve other valid signals.
-            inst, quantity, limit, book = candidate
-            lifecycle = "l"+uuid.uuid4().hex
-            payload = {"strategy":signal.strategy,"instrument":asdict(inst),"signal":asdict(signal),"exit_at":signal.exit_at}
-            intent = Intent("i"+uuid.uuid4().hex,"BUY",inst,quantity,limit,"e"+uuid.uuid4().hex[:28],engine.now(),lifecycle)
-            with ledger.transaction() as db:
-                db.execute("INSERT INTO lifecycles VALUES(?,?,?,?,?,?)",(lifecycle,engine.session_id,inst.security_id,str(allocation.bankroll),"OPEN",json.dumps(json_safe(payload))))
-                db.execute("INSERT INTO metadata VALUES(?,?)",(key,json.dumps({"lifecycle":lifecycle,"reason":"DECISION_COMMITTED"})))
-                db.execute("INSERT INTO metadata VALUES(?,?)",(self.family_key(signal),json.dumps({'lifecycle':lifecycle,'strategy':signal.strategy})))
-            ledger.observe("decision:"+intent.intent_id,"ENTRY_DECISION",{"strategy":signal.strategy,"signal":asdict(signal),"book":asdict(book),"allocation":asdict(allocation),"quantity":quantity,"limit":limit})
-            def current():
-                return (runtime.permit_entry(strategy=signal.strategy) and self.input_ready()
-                        and self.book_ready(engine.books.get(inst.security_id))
-                        and engine.books.get(inst.security_id) is book
-                        and due <= engine.now() < due+timedelta(seconds=30))
-            await runtime.orders.submit(intent,reserved_cash=reserve_cash(worst_case_entry_cash(quantity,limit)),pre_dispatch=current)
-            runtime.status.state="ENTRY_PENDING"
-            runtime.status.reason=self.last_reason=signal.strategy+":ENTRY_SUBMITTED"
-            return True
-        return False
+            row=execution_score(signal,candidate,self.ranking,engine.now())
+            feasible.append(row)
+            choices[signal.strategy]=(signal,candidate)
+            self.record_assessment(signal,"READY",self.candidate_checks)
+        if not feasible:
+            # Preserve the last actual comparison for the session log/UI.
+            return False
+        chosen,mode,reason=select_executable(feasible)
+        self.selection={"evaluated_at":engine.now().isoformat(),"mode":mode,"reason":reason,
+                        "selected":chosen['strategy'] if chosen else None,"candidates":feasible}
+        ledger.put_metadata("strategy-selection:"+now.astimezone(IST).date().isoformat(),self.selection)
+        if chosen is None:
+            self.last_reason=reason
+            for row in feasible:self.record_assessment(choices[row['strategy']][0],reason)
+            return False
+        signal,candidate=choices[chosen['strategy']]
+        inst, quantity, limit, book = candidate
+        due=signal.evaluated_at+timedelta(minutes=1)
+        key=self.signal_key(signal)+":consumed"
+        lifecycle = "l"+uuid.uuid4().hex
+        payload = {"strategy":signal.strategy,"instrument":asdict(inst),"signal":asdict(signal),"exit_at":signal.exit_at,"selection":self.selection}
+        intent = Intent("i"+uuid.uuid4().hex,"BUY",inst,quantity,limit,"e"+uuid.uuid4().hex[:28],engine.now(),lifecycle)
+        with ledger.transaction() as db:
+            db.execute("INSERT INTO lifecycles VALUES(?,?,?,?,?,?)",(lifecycle,engine.session_id,inst.security_id,str(allocation.bankroll),"OPEN",json.dumps(json_safe(payload))))
+            db.execute("INSERT INTO metadata VALUES(?,?)",(key,json.dumps({"lifecycle":lifecycle,"reason":"DECISION_COMMITTED"})))
+            db.execute("INSERT INTO metadata VALUES(?,?)",(self.family_key(signal),json.dumps({'lifecycle':lifecycle,'strategy':signal.strategy})))
+        ledger.observe("decision:"+intent.intent_id,"ENTRY_DECISION",{"strategy":signal.strategy,"signal":asdict(signal),"book":asdict(book),"allocation":asdict(allocation),"quantity":quantity,"limit":limit,"selection":self.selection})
+        def current():
+            return (runtime.permit_entry(strategy=signal.strategy) and self.input_ready()
+                    and self.book_ready(engine.books.get(inst.security_id))
+                    and engine.books.get(inst.security_id) is book
+                    and due <= engine.now() < due+timedelta(seconds=30))
+        await runtime.orders.submit(intent,reserved_cash=reserve_cash(worst_case_entry_cash(quantity,limit)),pre_dispatch=current)
+        runtime.status.state="ENTRY_PENDING"
+        runtime.status.reason=self.last_reason=signal.strategy+":ENTRY_SUBMITTED"
+        return True
+
+    def compare_auction(self,candidate,quantity,allocation):
+        """Auction and minute opportunities compete before either creates an intent."""
+        from .strategy_arbiter import execution_score,select_executable
+        engine=self.engine;now=engine.now();ledger=engine.runtime.ledger
+        self.refresh_ranking()
+        book=engine.books[candidate.instrument.security_id]
+        signal=Evaluation(CAS,'SIGNAL','QUALIFIED_AUCTION',now,candidate.instrument.option_type.value,
+            candidate.instrument.strike,candidate.instrument.expiry,now+timedelta(minutes=1))
+        rows=[execution_score(signal,(candidate.instrument,quantity,candidate.limit_price,book),self.ranking,now)]
+        if self.input_ready():
+            for other in self.signals.values():
+                due=other.evaluated_at+timedelta(minutes=1)
+                if (other.strategy not in self.enabled or not due<=now<due+timedelta(seconds=30)
+                        or ledger.metadata(self.signal_key(other)+':consumed') or ledger.metadata(self.family_key(other))
+                        or not engine.runtime.permit_entry(strategy=other.strategy)):continue
+                ready=self.candidate(other,allocation)
+                if ready:rows.append(execution_score(other,ready,self.ranking,now))
+        # A standalone auction continues using its separately qualified pricing
+        # discrepancy. Historical mean outcomes are not its intrinsic-value gate.
+        if len(rows)==1:
+            chosen=rows[0];mode='QUALIFIED_AUCTION';reason='SELECTED'
+        else:chosen,mode,reason=select_executable(rows)
+        self.selection={'evaluated_at':now.isoformat(),'mode':mode,'reason':reason,
+            'selected':chosen['strategy'] if chosen else None,'candidates':rows}
+        ledger.put_metadata('strategy-selection:'+now.astimezone(IST).date().isoformat(),self.selection)
+        self.selection_blocked=chosen is None
+        return chosen is not None and chosen['strategy']==CAS
 
     async def manage_locked(self, active, snapshot):
         engine, runtime = self.engine, self.engine.runtime

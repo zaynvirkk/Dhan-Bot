@@ -280,6 +280,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             if not upstox.accept_live_nifty(value):
                 wake.set()
                 return
+            if has_directional:
+                input_worker.on_stream(value,epoch,datetime.fromtimestamp(received_ns/1e9,timezone.utc))
             raw = value.feeds[NIFTY_KEY].SerializeToString()
             identity = f"{epoch}:{value.currentTs}:{hashlib.sha256(raw).hexdigest()}"
             try:
@@ -378,6 +380,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             engine.signal_reconnect(upstox.protocol.epoch.id)
         def signal_disconnect():
             upstox.protocol.on_disconnect()
+            if has_directional:input_worker.stream_reset()
             engine.signal_reconnect(None)
             wake.set()
         def market_connect():
@@ -518,6 +521,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                              account_snapshot_fresh=account_refresh.fresh, feed_health=feed_health,
                              monitoring_mode="IDLE" if idle else "ACTIVE", recorder_pending=records.qsize(),
                              strategies=list(enabled), strategy_evaluations=engine.directional.view(),
+                             strategy_selection=engine.directional.selection,
+                             minute_source=input_worker.minutes.spot_source if has_directional else None,
                              calendar_checked_at=calendar.checked_at.isoformat() if calendar else None,
                              route_attempts_used=int(ledger.counter(f"probe.attempts:{today.isoformat()}")),
                              route_attempt_limit=mandate.probe_max_attempts_per_session,

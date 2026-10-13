@@ -152,6 +152,39 @@ function conditionList(row,current){
  }
  return list;
 }
+function renderSelection(d){
+ const rt=d.runtime,sel=rt?.strategy_selection;
+ $('selection-stamp').textContent=sel?.evaluated_at?`Last comparison ${at(sel.evaluated_at)}`:'No executable comparison recorded';
+ const names=s=>strategyNames[s]||s.replaceAll('_',' ').toLowerCase();
+ const closed=rt?.state==='WAITING_EXCHANGE_SESSION';
+ let reason=closed?'The exchange session is closed. The last comparison is retained below.':
+  'The bot compares whole-lot affordability, fresh executable depth and spread before allocating money.';
+ if(sel?.reason==='SELECTED')reason+=` Selected ${names(sel.selected)}. `+(sel.mode==='QUALIFIED_AUCTION'?'It passed the live auction discrepancy, execution and cash checks. No simultaneous executable minute candidate was present.':sel.mode==='MEASURED_CASH_PER_MINUTE'?
+  'Its estimated net rupees per holding minute ranked highest among fillable candidates.':
+  'No measured profit estimate exists for these candidates. Same-side selection used lower execution friction, then a shorter holding limit.');
+ else if(sel?.reason==='CONFLICTING_UNRANKED_SIGNALS')reason+=' Calls and puts both qualified without measured positive evidence. No trade was selected.';
+ else if(sel?.reason==='NO_POSITIVE_ESTIMATED_EDGE')reason+=' The fillable candidates had no positive estimated profit after current costs. No trade was selected.';
+ else reason+=' No executable candidate comparison has been recorded this session.';
+ $('selection-reason').textContent=reason;
+ const source={UPSTOX_COMPLETED_I1_STREAM:'Latest NIFTY minute source: validated Upstox stream',REST_BOOTSTRAP_OR_GAP_REPAIR:'Latest NIFTY minute source: REST startup or gap repair',NOT_OBSERVED:'NIFTY minute source has not yet been observed'}[rt?.minute_source]||'NIFTY minute source not reported';
+ $('selection-flow').textContent=`${source}. Prices and fills use WebSockets; futures OI, missing candles and published inputs retain bounded REST reads. Estimates use prior closed trades and conservative costs; targets are not forecasts.`;
+ if(!changed('selection-candidates',sel))return;
+ $('selection-candidates').replaceChildren();
+ if(!sel?.candidates?.length)return;
+ const list=el('details',undefined,'decision-inputs');list.append(el('summary',`${sel.candidates.length} executable candidate${sel.candidates.length===1?'':'s'} compared`));
+ for(const row of sel.candidates){
+  const item=el('div',undefined,'selection-candidate');
+  const winner=sel.selected===row.strategy;
+  item.append(el('p',`${winner?'Selected · ':''}${names(row.strategy)} · ${row.side||'Side unknown'}`,'connection-name'));
+  const measured=row.estimated_net_profit!=null;
+  item.append(el('p',`${row.quantity??'—'} units · entry limit ${cash(row.limit)} · friction reserve ${cash(row.friction_cash)}`,'connection-detail'));
+  item.append(el('p',measured?`Estimated net ${cash(row.estimated_net_profit)} · ${cash(row.estimated_profit_per_minute)}/minute · observed hold ${Number(row.holding_minutes).toFixed(1)} minutes · ${row.filled_closed} filled closed trades across ${row.sessions} session(s).`:
+   'Profit estimate unavailable. Execution quality is an experimental fallback, not evidence of an edge.','connection-detail'));
+  list.append(item);
+ }
+ $('selection-candidates').append(list);
+}
+
 function renderStrategies(d){
  const rt=d.runtime,observer=d.daily_monitor,configured=rt?.strategies||[],checks=rt?.strategy_evaluations||[];
  const usingObserver=(observer?.strategy_evaluations||[]).some(row=>!configured.includes(row.strategy)),calendar=observer||rt;
@@ -217,7 +250,7 @@ function renderStrategies(d){
    const detail=el('details',undefined,'decision-inputs');
    detail.append(el('summary',`Why this decision · inputs at ${at(row.evaluated_at)}`),conditionList(row,row.current));
    wrap.append(detail);
-  }else if(row.strategy!=='CAS_LAG_V1')wrap.append(el('p',row.reason==='STRATEGY_INPUT_UNAVAILABLE'?'Condition inputs are unavailable because a market-data request failed.':'Detailed conditions have not been reported by this service version.','condition-caption'));
+  }else if(row.strategy!=='CAS_LAG_V1')wrap.append(el('p',row.reason==='STRATEGY_INPUT_UNAVAILABLE'?'Condition inputs are unavailable because a market-data request failed.':row.entry_rule?(row.reason==='EXCHANGE_CLOSED'?'The exchange is closed; no entry condition is evaluated outside its verified session.':'The rule and observed inputs above explain this check. Missing inputs cannot be treated as a qualifying signal.'):'This service has not provided condition details for this rule.','condition-caption'));
   if(last&&last.evaluated_at!==row.evaluated_at&&['SIGNAL','NO_SIGNAL'].includes(last.state)){
    const detail=el('details',undefined,'last-decision-inputs');
    detail.append(el('summary',`Inputs at the last decision · ${at(last.evaluated_at)}`));
@@ -325,7 +358,7 @@ function render(d){
  if(d.runtime&&!d.collector?.fresh)d.runtime.fresh=false;
  if(d.daily_monitor&&!d.collector?.fresh)d.daily_monitor.fresh=false;
  if(d.runtime&&!d.runtime.fresh)d.runtime.authority='UNKNOWN';
- state.generation++;state.data=d;const rt=d.runtime;renderTimings(rt);renderHistory(d);renderStrategies(d);const a=d.account;const cs=d.connections;const ledger=d.ledger;$('observation').textContent=rt?.observed_at?`${((rt.strategies||[]).length>3?`${rt.strategies.length} enabled strategies`:(rt.strategies||[]).map(s=>strategyNames[s]||s).join(' / '))||(rt.observation?.expiry?'Expiry auction service':'Strategy not reported')} · ${rt.fresh?'Updated':'Last observed'} ${at(rt.observed_at)}`:'Waiting for a bot observation.';
+ state.generation++;state.data=d;const rt=d.runtime;renderTimings(rt);renderHistory(d);renderSelection(d);renderStrategies(d);const a=d.account;const cs=d.connections;const ledger=d.ledger;$('observation').textContent=rt?.observed_at?`${((rt.strategies||[]).length>3?`${rt.strategies.length} enabled strategies`:(rt.strategies||[]).map(s=>strategyNames[s]||s).join(' / '))||(rt.observation?.expiry?'Expiry auction service':'Strategy not reported')} · ${rt.fresh?'Updated':'Last observed'} ${at(rt.observed_at)}`:'Waiting for a bot observation.';
  const feedState=renderFeeds(rt,d.server_time);
  const notice=$('notice');notice.className='notice';const message=monitoringNotice(d,feedState);notice.textContent=message.text;if(message.kind)notice.classList.add(message.kind);notice.hidden=message.kind==='healthy';
  $('cash-label').textContent=a?.fresh?'Available cash':'Last observed cash';$('cash').textContent=cash(a?.available_cash);$('cash-age').textContent=a?`${age(a.age_seconds)} · ${a.fresh?'broker read':'historical observation'}`:'No broker observation';pnl('realised',a?.realised_pnl);pnl('unrealised',a?.unrealised_pnl);$('position-count').textContent=a?.open_position_count??'—';$('position-note').textContent=a?.fresh?'Current broker snapshot':a?'Last observed account':'Awaiting account data';

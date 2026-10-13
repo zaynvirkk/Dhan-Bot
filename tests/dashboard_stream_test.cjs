@@ -357,3 +357,23 @@ setImmediate(async()=>{
  assert.equal(vm.runInContext('state.data.history.status',browser),'UNAVAILABLE','An older journal response must still update history accurately');
  console.log('Compact refresh, retained journal and periodic full refresh verified');
 });
+
+setImmediate(()=>{
+ browser.selectionFixture={runtime:{fresh:true,state:'ARMED_WAITING_SIGNAL',minute_source:'UPSTOX_COMPLETED_I1_STREAM',
+  strategy_selection:{reason:'SELECTED',mode:'MEASURED_CASH_PER_MINUTE',selected:'OPEN_DRIVE_FAST',evaluated_at:new Date().toISOString(),
+   candidates:[{strategy:'OPEN_DRIVE_FAST',side:'CE',quantity:65,limit:'10.00',friction_cash:'6.50',estimated_net_profit:'40.00',
+    estimated_profit_per_minute:'20.00',holding_minutes:'2',filled_closed:4,sessions:1}]}}};
+ vm.runInContext('renderSelection(selectionFixture)',browser);
+ assert.match(ids['selection-reason'].textContent,/net rupees per holding minute/);
+ assert.match(ids['selection-flow'].textContent,/validated Upstox stream/);
+ const list=ids['selection-candidates'].children[0];
+ assert.match(list.children[1].children[2].textContent,/4 filled closed trades across 1 session/);
+ browser.selectionFixture.runtime.strategy_selection.reason='CONFLICTING_UNRANKED_SIGNALS';
+ browser.selectionFixture.runtime.strategy_selection.selected=null;
+ vm.runInContext('renderSelection(selectionFixture)',browser);
+ assert.match(ids['selection-reason'].textContent,/No trade was selected/);
+ browser.selectionFixture.runtime.state='WAITING_EXCHANGE_SESSION';
+ vm.runInContext('renderSelection(selectionFixture)',browser);
+ assert.match(ids['selection-reason'].textContent,/exchange session is closed/);
+ console.log('Cash/time selection, conflict abstention and closed-session explanation verified');
+});

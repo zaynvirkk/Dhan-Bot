@@ -8,7 +8,7 @@ import json
 import time
 
 from .domain import ContractError, FundsSnapshot
-from .read_scheduler import account_reads
+from .read_scheduler import account_reads, data_reads
 
 
 class DhanBroker:
@@ -28,6 +28,8 @@ class DhanBroker:
             self.client = httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=3.0), follow_redirects=False)
         if method == "GET":
             await account_reads(self.account_id, self.base_url).acquire()
+        elif method == "POST" and (path.startswith('/charts/') or path.startswith('/optionchain')):
+            await data_reads(self.account_id, self.base_url).acquire()
         if "json" in kwargs:
             value = kwargs.pop("json")
             # Dhan expects a JSON number for price; emit the exact decimal

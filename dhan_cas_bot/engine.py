@@ -341,14 +341,14 @@ class SessionEngine:
                         return True
                     runtime.status.state = "POSITION_OPEN"
             if active is None and self.directional:
-                # A qualified auction opportunity with measured positive
-                # closed returns competes with the minute engines. Failed CAS
-                # execution qualification still falls through to their rules.
-                if (runtime.permit_entry() and any(len(h)>=2 for h in self.streaks.values())
-                        and self.directional.cas_has_priority()
+                # Compare a qualified auction opportunity with all executable
+                # minute signals before either can create a money intent.
+                self.directional.selection_blocked=False
+                if (runtime.permit_entry() and (self.final_value is not None or any(len(h)>=2 for h in self.streaks.values()))
                         and await self._enter(snapshot,active,positions,local_now)):
                     return True
                 if await self.directional.enter_locked(snapshot):return True
+                if self.directional.selection_blocked:return False
             return await self._enter(snapshot, active, positions, local_now)
 
     async def _enter(self, snapshot, active, positions, local_now, *, settlement_add=False):
@@ -402,6 +402,9 @@ class SessionEngine:
             return False
         lifecycle_id = active["lifecycle_id"] if active else "l"+uuid.uuid4().hex
         quantity = min(candidate.quantity, candidate.instrument.freeze_qty // candidate.instrument.lot_size * candidate.instrument.lot_size)
+        if active is None and self.directional and not self.directional.compare_auction(candidate,quantity,allocation):
+            telemetry.reason('NO_EXECUTABLE_CANDIDATE')
+            return False
         intent = Intent("i"+uuid.uuid4().hex, "BUY", candidate.instrument, quantity, candidate.limit_price, "e"+uuid.uuid4().hex[:28], self.now(), lifecycle_id)
         ledger.observe("decision:"+intent.intent_id,"ENTRY_DECISION", {"reference":asdict(self.reference) if self.reference else None,"final":asdict(self.final_value) if final_entry else None,"history":self.streaks.get(candidate.instrument.security_id,[]),"book":asdict(self.books[candidate.instrument.security_id]),"allocation":asdict(allocation),"quantity":quantity,"limit":candidate.limit_price})
         with ledger.transaction() as db:

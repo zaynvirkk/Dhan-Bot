@@ -59,3 +59,8 @@ class ReadScheduler:
 def account_reads(account, base_url):
     clients = _accounts.setdefault(asyncio.get_running_loop(), {})
     return clients.setdefault((account, base_url), ReadScheduler())
+
+
+def data_reads(account, base_url):
+    clients = _accounts.setdefault(asyncio.get_running_loop(), {})
+    return clients.setdefault((account, base_url, 'data'), ReadScheduler(interval=.21))

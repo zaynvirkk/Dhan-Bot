@@ -25,3 +25,7 @@ details{border-top:1px solid var(--line);padding-bottom:5px}summary{padding:16px
 /* Money and outcomes first; detailed conditions stay inspectable. */
 .account-strip{grid-template-columns:repeat(5,minmax(0,1fr))}.account-strip.no-pnl{grid-template-columns:1.2fr 1fr 1fr 1.4fr}.account-strip .money{overflow-wrap:anywhere}.decision-overview{margin-top:28px}.decision-inputs,.market-details{grid-column:1/-1;width:100%}.decision-inputs summary{padding:12px 0;font-weight:500;color:var(--secondary)}.market-details{margin-top:28px}.market-details>summary{font-size:15px}.decision-inputs .strategy-conditions{margin-bottom:16px}.market-details .overview-grid{margin-top:12px}
 @media(max-width:900px){.account-strip,.account-strip.no-pnl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.selection-board{margin:1.5rem 0;padding:1.25rem 0;border-block:1px solid var(--line)}
+.selection-candidate{padding:.85rem 0;border-bottom:1px solid var(--line)}
+.selection-candidate:last-child{border-bottom:0}

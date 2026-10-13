@@ -96,18 +96,59 @@ class CalendarSource:
 
 
 class MinuteSource:
-    def __init__(self, broker, *, now_fn=None):
+    def __init__(self, broker, *, now_fn=None,stream=None):
         self.broker=broker
         self.now=now_fn or (lambda:datetime.now(timezone.utc))
+        self.cache={}
+        self.stream=stream
+        self.last_source='REST_BOOTSTRAP_OR_GAP_REPAIR'
+        self.spot_source='NOT_OBSERVED'
 
     async def fetch(self, security, segment, instrument, start, end, *, oi=False):
+        key=(security,segment,instrument,oi,start)
+        saved=self.cache.get(key,{})
+        current=self.stream.current(self.now()) if self.stream and (security,segment,instrument,oi)==('13','IDX_I','INDEX',False) else None
+        if current and saved and current.available<=end:
+            latest=max(saved)
+            # A complete baseline plus every intervening provider minute is
+            # required. Never silently jump over a gap after reconnect.
+            t=latest+timedelta(minutes=1)
+            missing=False
+            while t<=current.available:
+                if t not in self.stream.rows:missing=True;break
+                t+=timedelta(minutes=1)
+            if not missing and latest>=current.available-timedelta(minutes=2):
+                result={t:b for t,b in saved.items() if start<=t<=min(end,self.now())}
+                result.update({t:b for t,b in self.stream.rows.items() if start<=t<=min(end,self.now())})
+                self.cache[key]=result
+                self.last_source='UPSTOX_COMPLETED_I1_STREAM'
+                self.spot_source=self.last_source
+                return dict(result)
+        self.last_source='REST_BOOTSTRAP_OR_GAP_REPAIR'
+        if (security,segment,instrument)==('13','IDX_I','INDEX'):self.spot_source=self.last_source
+        # Repair two overlapping completed minutes. Replace that interval,
+        # including omissions; a provider hole must not retain a cached bar.
+        boundary=max(start,max(saved)-timedelta(minutes=1)) if saved else start
         request={"securityId":security,"exchangeSegment":segment,"instrument":instrument,"interval":"1","oi":oi,
-                 "fromDate":(start-timedelta(minutes=1)).astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"),
+                 "fromDate":(boundary-timedelta(minutes=1)).astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"),
                  "toDate":end.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S")}
-        raw=await self.broker._request("POST","/charts/intraday",json=request)
+        try:raw=await self.broker._request("POST","/charts/intraday",json=request)
+        except Exception:
+            self.cache.pop(key,None)
+            raise
         received=self.now()
-        return {t:bar for t,bar in parse_bars(raw,received,require_oi=oi).items()
-                if start<=t<=min(end,received)}
+        try:
+            rows={t:bar for t,bar in parse_bars(raw,received,require_oi=oi).items()
+                  if boundary<=t<=min(end,received)}
+        except Exception:
+            self.cache.pop(key,None)
+            raise
+        result={t:bar for t,bar in saved.items() if start<=t<boundary and t<=min(end,received)}
+        result.update(rows)
+        # Old session/contracts cannot grow memory without a bound.
+        if key not in self.cache and len(self.cache)>=96:self.cache.pop(next(iter(self.cache)))
+        self.cache[key]=result
+        return dict(result)
 
 
 class StrategyInputWorker:
@@ -115,7 +156,10 @@ class StrategyInputWorker:
         self.directional=directional
         self.engine=directional.engine
         self.calendar_source=CalendarSource(token)
-        self.minutes=MinuteSource(self.engine.runtime.broker,now_fn=self.engine.now)
+        from .stream_minutes import CompletedIndexMinutes
+        self.stream_minutes=CompletedIndexMinutes()
+        self.bar_wake=asyncio.Event()
+        self.minutes=MinuteSource(self.engine.runtime.broker,now_fn=self.engine.now,stream=self.stream_minutes)
         self.future_id=future_id
         self.wake,self.stop=wake,stop
         self.calendar=None
@@ -124,6 +168,11 @@ class StrategyInputWorker:
         from .strategy_features import FeatureSource
         self.features=FeatureSource(self.engine.runtime.broker,token,self.engine.now)
         self.indexes=indexes or {}
+
+    def on_stream(self,frame,epoch,received):
+        if self.stream_minutes.accept(frame,epoch,received):self.bar_wake.set()
+
+    def stream_reset(self):self.stream_minutes.reset()
 
     async def refresh(self):
         now=self.engine.now().astimezone(IST)
@@ -146,15 +195,39 @@ class StrategyInputWorker:
                 if ((GAP in self.directional.enabled and time(9,44)<=now.time()<time(11,32) and now.date() not in expiries)
                         or any(name not in (GAP,REBOUND) for name in self.directional.enabled)):
                     if self.future_id:
-                        await asyncio.sleep(.25)
                         try:future=await self.minutes.fetch(self.future_id,"NSE_FNO","FUTIDX",self.calendar.opens,now,oi=True)
                         except Exception:future={}
+                # Publish completed core signals immediately. Optional feature
+                # requests cannot hold their entry behind a whole-universe scan.
+                core={}
+                from .expanded_strategies import evaluate as expanded
+                for strategy in self.directional.enabled:
+                    moment=self.engine.now()
+                    core[strategy]=(evaluate(strategy,moment,self.calendar,spot,future,expiries)
+                        if strategy in (GAP,REBOUND) else expanded(strategy,moment,self.calendar,spot,future,expiries,features={}))
+                self.directional.update(Inputs(self.calendar,core,dict(self.option_bars),self.engine.now()))
+                self.wake.set()
+                preload=set()
+                for sample in self.directional.signals.values():
+                    if not sample.side or not 0 <= (self.engine.now()-sample.evaluated_at).total_seconds()<120:continue
+                    contracts=[i for i in self.engine.instruments.values() if i.expiry>=sample.minimum_expiry and i.option_type.value==sample.side]
+                    if not contracts:continue
+                    expiry=min(i.expiry for i in contracts);contracts=[i for i in contracts if i.expiry==expiry]
+                    atm=min(contracts,key=lambda i:(abs(i.strike-sample.spot),i.strike)).strike
+                    direction=1 if sample.side=='CE' else -1
+                    preload.update(i.security_id for i in sorted((i for i in contracts if direction*(i.strike-atm)>=0),key=lambda i:(direction*(i.strike-atm),i.security_id))[:4])
+                active=self.engine.active
+                if active and json.loads(active["payload"]).get("strategy",CAS)!=CAS:preload.add(active["security_id"])
+                for security in sorted(preload):
+                    try:self.option_bars[security]=await self.minutes.fetch(security,'NSE_FNO','OPTIDX',self.calendar.opens,self.engine.now(),oi=True)
+                    except Exception:self.option_bars.pop(security,None)
+                self.directional.update(Inputs(self.calendar,core,dict(self.option_bars),self.engine.now()))
+                self.wake.set()
                 # Auxiliary endpoints affect only families which consume them.
                 for name in ('BANK','IT','VIX'):
                     required=(name in ('BANK','IT') and families&{'SECTOR_CATCHUP','SECTOR_CONFIRM'}) or (name=='VIX' and 'IV_CHEAP_TREND' in families)
                     if required and self.indexes.get(name):
                         try:
-                            await asyncio.sleep(.25)
                             features[name]=await self.minutes.fetch(self.indexes[name],'IDX_I','INDEX',self.calendar.opens,now)
                         except Exception:pass
                 if 'GIFT_CATCHUP' in families:
@@ -181,7 +254,6 @@ class StrategyInputWorker:
                         for inst in options:
                             if inst.strike not in wanted:continue
                             try:
-                                await asyncio.sleep(.25)
                                 rows=await self.minutes.fetch(inst.security_id,'NSE_FNO','OPTIDX',self.calendar.opens,now,oi=True)
                                 self.option_bars[inst.security_id]=rows
                                 features['options'][inst.option_type.value,inst.strike]=rows
@@ -213,7 +285,6 @@ class StrategyInputWorker:
             if active and json.loads(active["payload"]).get("strategy",CAS)!=CAS:
                 needed.add(active["security_id"])
             for security in sorted(needed):
-                await asyncio.sleep(.25)
                 start=self.calendar.opens or now.replace(hour=0,minute=0,second=0,microsecond=0)
                 if active and active["security_id"]==security:
                     start=datetime.fromisoformat(json.loads(active["payload"])["signal"]["evaluated_at"])
@@ -231,9 +302,11 @@ class StrategyInputWorker:
 
     async def run(self):
         while not self.stop.is_set():
+            self.bar_wake.clear()
             await self.refresh()
             # One bar refresh per minute, shortly after its close. Quotes and
             # actual fills still use the existing WebSockets; no fake ticks.
             now=self.engine.now()
             seconds=62-now.second-now.microsecond/1e6
-            await asyncio.sleep(max(2,min(60,seconds)))
+            try:await asyncio.wait_for(self.bar_wake.wait(),max(2,min(60,seconds)))
+            except asyncio.TimeoutError:pass
