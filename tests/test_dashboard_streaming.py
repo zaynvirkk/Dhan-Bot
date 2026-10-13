@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import json
+import gzip
 import subprocess
 from pathlib import Path
 
@@ -47,6 +48,19 @@ def test_compact_live_updates_do_not_queue_history_or_bypass_auth(dashboard, mon
     finally:
         stream.close()
     assert 'history' in json.loads(request(dashboard,'/api/status',credentials='operator:'+SECRET)[2])
+
+
+def test_full_journal_compression_preserves_history_and_negotiation(dashboard):
+    now=datetime.now(timezone.utc)
+    history={'status':'AVAILABLE','days':[],'events':[{'at':now.isoformat(),'state':'ARMED_WAITING_SIGNAL'}]*240}
+    write(dashboard.snapshot,{'schema':1,'collector_observed_at':now.isoformat(),'history':history})
+    status,headers,body=request(dashboard,'/api/status',cookie=dashboard.session_cookie(),overrides={'HTTP_ACCEPT_ENCODING':'br, gzip'})
+    assert status=='200 OK' and headers['Content-Encoding']=='gzip'
+    assert headers['Vary']=='Accept-Encoding'
+    assert json.loads(gzip.decompress(body))['history']==history
+    assert len(body)<len(json.dumps(history))//10
+    _,headers,body=request(dashboard,'/api/status',cookie=dashboard.session_cookie(),overrides={'HTTP_ACCEPT_ENCODING':'gzip;q=0'})
+    assert 'Content-Encoding' not in headers and json.loads(body)['history']==history
 
 
 def test_sse_authenticated_bounded_and_releases_on_early_disconnect(dashboard):

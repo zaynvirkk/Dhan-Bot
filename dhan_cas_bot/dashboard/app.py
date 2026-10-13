@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import gzip
 import hashlib
 import hmac
 from http.cookies import SimpleCookie, CookieError
@@ -30,6 +31,22 @@ HEADERS = [('Cache-Control', 'no-store'), ('X-Content-Type-Options', 'nosniff'),
            # same-origin form provenance while suppressing cross-origin referrers.
            ('X-Frame-Options', 'DENY'), ('Referrer-Policy', 'same-origin'),
            ('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")]
+
+
+def accepts_gzip(value):
+    if not isinstance(value,str) or len(value)>4096:
+        return False
+    for entry in value.lower().split(','):
+        parts=[p.strip() for p in entry.split(';')]
+        if parts[0]!='gzip':
+            continue
+        try:
+            quality=next((float(p[2:]) for p in parts[1:] if p.startswith('q=')),1)
+            if 0<quality<=1:
+                return True
+        except ValueError:
+            pass
+    return False
 
 
 def view_snapshot(path, now=None):
@@ -172,6 +189,12 @@ class Dashboard:
                     data['history_unchanged'] = True
                 status = '200 OK' if data['available'] else '503 Service Unavailable'
                 body = json.dumps(data, allow_nan=False).encode()
+                # Compress finite status/journal responses, never the live
+                # event stream. History must not starve small decision updates.
+                extra = [('Vary', 'Accept-Encoding')]
+                if accepts_gzip(environ.get('HTTP_ACCEPT_ENCODING')):
+                    body = gzip.compress(body, compresslevel=3)
+                    extra.append(('Content-Encoding','gzip'))
             except Exception:
                 status, body = '503 Service Unavailable', b'{"error":"SNAPSHOT_UNAVAILABLE","available":false}'
         elif path in ASSETS:
