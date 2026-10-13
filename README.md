@@ -11,6 +11,9 @@ missing reasons explicitly unknown. Local/VM funded verification passes 452
 tests; no profitability is established. Dashboard transport releases `ea03527`
 and `eeb1b5` are deployed without restarting the qualified trader; browser-verified
 history loads in 1.75 seconds with roughly 28 KB transferred instead of 723 KB.
+Read-only diagnostic release `e381a83` also removes parser-induced socket
+timeouts; all seven actual connection checks pass at 12:16 IST. The funded
+trader remains on its already-qualified release with zero restarts and fills.
 [Market, affordability and deployment evidence](docs/LIVE-ENTRY-AUDIT-2026-10-13.md).
 
 **12 October: funded order route recovered and browser-verified.** Release

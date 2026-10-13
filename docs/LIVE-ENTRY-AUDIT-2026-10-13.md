@@ -133,3 +133,35 @@ retained Upstox timeout diagnostics, separately from current live socket health.
 No signal, missed fill, software check or route qualification is credited as
 profitability. Infrastructure repair does not make the three experimental rules
 a validated profitable strategy or implement the other research hypotheses.
+
+## Final diagnostic repair and current confirmation
+
+The refreshed legacy check still reports Upstox TimeoutError. A separate
+read-only test authorizes, opens the socket and receives the NIFTY index in
+1.26 seconds. Instrumented combined checking opens Upstox at 2.5 seconds, blocks
+the event loop during contract parsing (12.23 seconds in load_dhan_master alone),
+then stalls closing its temporary stream and expires the outer check. The actual
+funded signal socket remains current. This is not evidence of a broker outage.
+
+Release `e381a8375ca4947cb6dc49e4f192ee6d2bdd459b` moves contract resolution to
+a worker thread and ends the bounded feed check on a usable positive NIFTY
+snapshot. A status-only frame cannot pass. The existing read-only connection
+unit now follows the current release; its read-only environment, account config
+and state directory are preserved. No funded unit or mandate is changed.
+Three negative cases cover snapshot completion, missing index rejection and
+nonblocking contract parsing. Full local verification passes 457 cases including
+60 acceptance cases and 15 mutations, digest
+`6b8cf12d3613d54adc0de1b4649de5dcfbd0be22f20da3b86eb27758a1f61ec4`.
+The VM installer passes 83 cases, then verifies private local status and public
+HTTPS authentication.
+
+At 12:16 IST the repaired real connection check exits successfully and all seven
+checks PASS, including Upstox with an observed index frame. Signed-in browser
+status shows fresh diagnostics, current open event stream, AVAILABLE history,
+enabled authority, verified broker route and current software proof. The full
+compressed status response is 28,174 bytes. The funded PID remains 338550 with
+zero restarts, three connected sockets, zero current errors/pending messages,
+INR 8,822.36 cash, zero positions, fills and incidents. Latest displayed completed
+NIFTY close is 22,510.45 at 12:14 IST, approximately +0.65% from the open. Browser
+focus emulation is restored after inspection. These are live infrastructure
+observations, not trading-profit evidence.
