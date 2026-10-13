@@ -1,5 +1,16 @@
 # SableStone Dhan CAS bot
 
+**13 October: missed-entry audit and selector repair deployed.** Funded release
+`197c4f8` runs all three strategies with enabled real-money authority and fresh
+broker-route proof. At 11:36 IST cash is INR 8,822.36, with zero positions and
+strategy fills. Yesterday's 15:10 CALL signal was real; all four permitted
+next-expiry contracts exceeded its INR 8,381.24 entry budget. The selector now
+skips known unaffordable contracts before requiring their live quote. The
+dashboard retains qualifying signals and recorded rejection reasons, with older
+missing reasons explicitly unknown. Local/VM funded verification passes 452
+tests; no profitability is established.
+[Market, affordability and deployment evidence](docs/LIVE-ENTRY-AUDIT-2026-10-13.md).
+
 **12 October: funded order route recovered and browser-verified.** Release
 `687d733` is running all three configured strategies with enabled real-money
 authority and current broker-route proof. Qualification can recover during the

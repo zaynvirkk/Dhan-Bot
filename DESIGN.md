@@ -105,3 +105,7 @@ recorded outcome and expandable candidate checks. An expired entry window is
 distinct from no signal. Unknown older blockers remain unknown; a committed
 decision is not labelled a fill. Current waiting states retain their own badge.
 The money-first journal layout and read-only authority model are preserved.
+Browser inspection also exposed repeated large journal transfers competing with
+live status. Compact status/events preserve the cached journal; a separate full
+refresh updates it once per minute without overwriting newer live observations.
+Unknown historical data and stale authority remain explicit.

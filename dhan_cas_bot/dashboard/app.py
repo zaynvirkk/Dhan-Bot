@@ -167,6 +167,9 @@ class Dashboard:
         elif path == '/api/status':
             try:
                 data = view_snapshot(self.snapshot)
+                if environ.get('QUERY_STRING') == 'history=omit':
+                    data.pop('history', None)
+                    data['history_unchanged'] = True
                 status = '200 OK' if data['available'] else '503 Service Unavailable'
                 body = json.dumps(data, allow_nan=False).encode()
             except Exception:
@@ -206,6 +209,9 @@ class EventStream:
             raise StopIteration
         try:
             data = view_snapshot(self.app.snapshot)
+            if self.environ.get('QUERY_STRING') == 'history=omit':
+                data.pop('history', None)
+                data['history_unchanged'] = True
             # Unchanged observations need only a small timestamp update. Freshness
             # transitions and actual feed/account changes still send full data.
             def stable(value):

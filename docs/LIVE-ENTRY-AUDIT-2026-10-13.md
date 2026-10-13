@@ -35,6 +35,26 @@ miss. Historical order-book frames exist around the entry window. Historical
 reconstruction uses current contract metadata cross-checked against recorded
 security IDs; the prior complete instrument-master payload was not archived.
 
+Read-only Dhan minute history reconstructs the three completed candles available
+at the signal. For the eligible 19 October calls, all four pass the policy's
+volume/OI gate. Recorded entry-window depth contains 39–40 matching observations
+per contract and adequate displayed quantity within the fixed limit. These are
+sampled book observations, not an executed order or a guaranteed queue fill.
+The blocking cash geometry under the unchanged policy is:
+
+| Strike | Fixed entry limit | One-lot cash with entry/exit reserve | Budget |
+| --- | ---: | ---: | ---: |
+| 22,300 CE | INR 217.10 | INR 14,269.84 | INR 8,381.24 |
+| 22,350 CE | INR 187.95 | INR 12,366.72 | INR 8,381.24 |
+| 22,400 CE | INR 161.45 | INR 10,637.04 | INR 8,381.24 |
+| 22,450 CE | INR 137.80 | INR 9,092.84 | INR 8,381.24 |
+
+No permitted contract can pass funding at these frozen limits. This independently
+establishes an affordability barrier; it does not retrospectively replace the
+missing recorded blocker with invented telemetry. A farther strike or shorter
+expiry would be a different selection experiment, requiring its own executable
+replay before being described as an improvement in profitability.
+
 ## Repair
 
 The selector previously required a current quote before computing one-lot
@@ -62,6 +82,31 @@ missed-window test verifies persistence of the binding reason. Dashboard tests
 cover private-field filtering, unknown legacy reasons and separation of a
 historical CALL signal from current Waiting status.
 
-Live rollout evidence is appended after the guarded deployment and browser check.
+Local and VM funded verification pass 452 cases including 60 acceptance cases
+and 15 guard mutations. Release `197c4f829eff890cbadf49ddb9f84090d2404d4e`
+is pushed to GitHub and applied directly. The first upgrade preflight rejects
+the restarted read-only monitor's stale observation before changing the trader.
+After the monitor publishes fresh inputs, the guarded retry succeeds. The
+existing mandate, capital allocation and probe caps are preserved.
+
+At 11:36 IST the funded service is PID 338550, active with zero restarts since
+the upgrade, current software digest and fresh broker-route proof. All three
+sockets are connected, with no pending messages or current error. Cash remains
+INR 8,822.36, zero positions, zero fills, zero incidents and zero strategy
+lifecycles. Both current-day qualification orders are cancelled with zero filled
+quantity. The second of the two permitted route attempts completed after restart;
+no limit was raised or counter reset. The matching funded source/marker digest is
+`d4c4d419b63d89bc2caf9a37a8eb85d29e1a1adfa5cffacf9a74653f83568fee`.
+
+Authenticated desktop/mobile inspection confirms the historical signal and
+unknown legacy blocker are visible, with no document overflow. Further browser
+checking exposes intermittent request timeouts: the live status/fallback path
+transfers roughly 740 KB of retained history repeatedly. Compact authenticated
+status and event modes now omit the journal from routine live transfers. The
+browser preserves cached history, requests it once per minute, and can merge an
+older journal response without replacing newer live authority. Default full
+status remains compatible, and omission does not bypass authentication. This
+read-only transport update does not restart the already-qualified trader.
+
 No signal, missed fill, software check or route qualification is credited as
-profitability.
+profitability. Final transport deployment evidence follows after live checking.

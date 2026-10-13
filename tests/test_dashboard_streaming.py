@@ -21,6 +21,34 @@ def open_stream(dashboard, *, cookie=None):
     return result, headers
 
 
+def test_compact_live_updates_do_not_queue_history_or_bypass_auth(dashboard, monkeypatch):
+    now=datetime.now(timezone.utc)
+    sample={'schema':1,'collector_observed_at':now.isoformat(),
+        'runtime':{'observed_at':now.isoformat(),'authority':'ENABLED'},
+        'history':{'status':'AVAILABLE','days':[],'events':[{'at':now.isoformat()}]}}
+    write(dashboard.snapshot,sample)
+    monkeypatch.setattr(app_module.time,'sleep',lambda seconds:None)
+    def request_compact(path,cookie=None):
+        headers={}
+        result=dashboard({'REQUEST_METHOD':'GET','PATH_INFO':path,'QUERY_STRING':'history=omit',
+            'HTTP_COOKIE':cookie or ''},lambda status,values:headers.update(status=status))
+        return result,headers
+    assert request_compact('/api/status')[1]['status'].startswith('401')
+    result,headers=request_compact('/api/status',dashboard.session_cookie())
+    raw=json.loads(b''.join(result))
+    assert headers['status']=='200 OK' and raw['runtime']['authority']=='ENABLED'
+    assert 'history' not in raw and raw['history_unchanged'] is True
+    stream,headers=request_compact('/api/events',dashboard.session_cookie())
+    try:
+        assert b'"history":' not in next(stream)
+        sample['history']['events'].append({'at':(now+timedelta(seconds=1)).isoformat()})
+        write(dashboard.snapshot,sample)
+        assert next(stream).startswith(b'event: pulse'), 'History updates must not flood the live feed'
+    finally:
+        stream.close()
+    assert 'history' in json.loads(request(dashboard,'/api/status',credentials='operator:'+SECRET)[2])
+
+
 def test_sse_authenticated_bounded_and_releases_on_early_disconnect(dashboard):
     assert request(dashboard, '/api/events')[0].startswith('401')
     streams = []

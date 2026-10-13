@@ -287,5 +287,29 @@ setImmediate(()=>{
  assert.match(row.children[0].children.map(c=>c.textContent).join(' '),/no current usable quote/);
  const detail=row.children[0].children.find(c=>c.children?.[0]?.textContent==='Contracts checked for this entry');
  assert.match(detail.children[1].textContent,/One lot exceeds.*9,000.00.*8,381.24/);
+ browser.signalHistory.ledger.last_signals[0].outcome='DECISION_COMMITTED';
+ vm.runInContext('renderStrategies(signalHistory)',browser);
+ assert.ok(!ids['strategy-checks'].children[0].children[0].children.some(c=>c.children?.[0]?.textContent==='Contracts checked for this entry'),'A committed order must not present an earlier failed retry as its final assessment');
  console.log('Historical qualifying signal, unknown legacy blocker and candidate costs verified');
+});
+
+setImmediate(async()=>{
+ const requests=[];
+ browser.fetch=async url=>{requests.push(url);return {ok:true,status:200,json:async()=>({available:true,server_time:new Date().toISOString(),collector:{fresh:true},history:url.includes('?')?undefined:{status:'AVAILABLE',days:[],events:[]},history_unchanged:url.includes('?')})};};
+ vm.runInContext('state.fetching=false;state.historyFetchedAt=null',browser);
+ await vm.runInContext('refresh()',browser);
+ await vm.runInContext('refresh()',browser);
+ assert.deepEqual(requests,['/api/status','/api/status?history=omit']);
+ assert.equal(vm.runInContext('state.data.history.status',browser),'AVAILABLE','Compact updates must preserve the journal');
+ vm.runInContext('state.historyFetchedAt=Date.now()-61000',browser);
+ await vm.runInContext('refresh()',browser);
+ assert.equal(requests[2],'/api/status','Journal must refresh after one minute');
+ const newest=new Date(Date.now()+1000).toISOString();
+ browser.newest=newest;
+ vm.runInContext('render({available:true,server_time:newest,collector:{fresh:true},runtime:{fresh:true,authority:"ENABLED"}});state.historyFetchedAt=null',browser);
+ browser.fetch=async()=>({ok:true,status:200,json:async()=>({available:true,server_time:new Date(Date.now()-1000).toISOString(),history:{status:'UNAVAILABLE',days:[],events:[]},runtime:{fresh:true,authority:'DISABLED'}})});
+ await vm.runInContext('refresh()',browser);
+ assert.equal(ids.authority.textContent,'Trading authority enabled','Older history response must not replace newer live authority');
+ assert.equal(vm.runInContext('state.data.history.status',browser),'UNAVAILABLE','An older journal response must still update history accurately');
+ console.log('Compact refresh, retained journal and periodic full refresh verified');
 });
