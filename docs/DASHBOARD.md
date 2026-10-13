@@ -1,15 +1,12 @@
 # Private dashboard
 
-The read-only dashboard and collector are deployed as `3e11b1c`, verified in
-the browser on 7 October at 11:29 IST. Dhan reports its Data API subscription
-as Deactive and REST market quotes return HTTP 401. The options WebSocket is
-disconnected; the page now explains the inactive subscription explicitly.
-See the [current feed incident and deployment receipt](FEED-DIAGNOSTICS-2026-10-07.md).
-History records observed coverage from
-6 October 18:51 IST; earlier dates are not reconstructed. The funded trader
-remains on `5596c5d` (CAS only), so new strategy and quote fields that require
-the newer trader stay unknown. See the [earlier deployment receipt](DASHBOARD-DEPLOYMENT-2026-10-07.md).
-Older sections below describe their dated checks and operation procedures.
+**Current audit, 13 October 2026:** the funded trader has all three implemented
+NIFTY engines enabled and actual CAS fills are confirmed. The data plan is Active;
+fresh API/feed checks pass. The page separates current received frames, accepted
+strategy inputs and the provider's closed auction. The older subscription and
+CAS-only deployment descriptions were dated incident records and are superseded.
+See [current live executions](LIVE-TRADING-2026-10-13.md) and
+[complete strategy/live audit](STRATEGY-LIVE-AUDIT-2026-10-13.md).
 
 URL: **https://dhan.34.100.255.111.sslip.io** on the existing
 `sablestone-dhan-cas` VM in `asia-south1-a`, project

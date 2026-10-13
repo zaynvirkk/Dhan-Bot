@@ -1,5 +1,14 @@
 # SableStone Dhan CAS bot
 
+**13 October complete strategy audit:** three implemented NIFTY engines are enabled;
+CAS has 16 filled closed lifecycles / 32 executed orders / 69 partial fills.
+The original nine gauntlet families and 175 research identifiers have no production
+order path. Final net profit remains unknown until charges are published.
+Read-side release `bde7887` refreshes diagnostics every ten minutes, distinguishes
+closed position records from open exposure, and labels closed-session history.
+The funded trader remains unchanged.
+[Full audit and strategy inventory](docs/STRATEGY-LIVE-AUDIT-2026-10-13.md).
+
 **13 October afternoon: real strategy executions confirmed.** The funded auction
 engine begins filling real Dhan orders after the provider opens CAS. At 15:28
 IST cash is INR 10,697.52, positions zero, recorded fill count 69, Dhan realised
@@ -25,7 +34,8 @@ and `eeb1b5` are deployed without restarting the qualified trader; browser-verif
 history loads in 1.75 seconds with roughly 28 KB transferred instead of 723 KB.
 Read-only diagnostic release `e381a83` also removes parser-induced socket
 timeouts; all seven actual connection checks pass at 12:16 IST. The funded
-trader remains on its already-qualified release with zero restarts and fills.
+trader remained on its qualified release with zero restarts through these midday
+checks; the subsequent auction executions are recorded above.
 [Market, affordability and deployment evidence](docs/LIVE-ENTRY-AUDIT-2026-10-13.md).
 
 **12 October: funded order route recovered and browser-verified.** Release

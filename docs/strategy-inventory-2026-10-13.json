@@ -1,0 +1,1615 @@
+{
+  "observed_date": "2026-10-13",
+  "scope": "Distinct recorded strategy identifiers include exit variants, not independent validated edges. CAS is separately implemented; EXPIRY_FORCED_FLOW is a different research rule.",
+  "configured_live_engines": [
+    "GAP_FADE_DOUBLE",
+    "NIFTY_SELLOFF_REBOUND_1510",
+    "CAS_LAG_V1"
+  ],
+  "distinct_research_ids": 177,
+  "inventory_ids": 178,
+  "live_engine_count": 3,
+  "profitability_proven": false,
+  "records": [
+    {
+      "strategy_id": "AFTERNOON_COMPRESSION_DOUBLE",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "AFTERNOON_COMPRESSION_FAST",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "AFTERNOON_COMPRESSION_SWING",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "BLIND_CE_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "BLIND_CE_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "BLIND_PE_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "BLIND_PE_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "BLOCK_OFS_DISLOCATION",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "CAS_LAG_V1",
+      "live_implemented": true,
+      "observed_enabled_on_vm": true,
+      "research_scoreboards": [],
+      "status": "LIVE_EXPERIMENTAL"
+    },
+    {
+      "strategy_id": "CHAIN_UNWIND_DOUBLE",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "CHAIN_UNWIND_FAST",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "CHAIN_UNWIND_SWING",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "CROSS_MARKET_LEAD_LAG",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EVENT_CONTINUATION",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_BASIS_LEAD_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_BASIS_LEAD_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_CHAIN_UNWIND_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_CHAIN_UNWIND_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_CHEAP_STRADDLE_1500",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/finalsearch/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_COMPRESSION_BREAK_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_COMPRESSION_BREAK_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_FAILED_ORB_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_FAILED_ORB_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_FORCED_FLOW",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_FUTURE_OI_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_FUTURE_OI_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_FUTURE_TREND_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_FUTURE_TREND_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_GIFT_CATCHUP_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_GIFT_CATCHUP_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_INSTITUTIONAL_ALIGN_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_INSTITUTIONAL_ALIGN_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_IV_CHEAP_TREND_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_IV_CHEAP_TREND_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_LATE_BREAK_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_LATE_BREAK_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_LATE_FADE_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_LATE_FADE_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_LATE_OI_EVACUATION",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/finalsearch/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_OPTION_ACCEL_OI_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_OPTION_ACCEL_OI_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_OPTION_ACCEL_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_OPTION_ACCEL_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_ORB30_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_ORB30_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_PAIN_ESCAPE_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_PAIN_ESCAPE_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_PCR_CONFIRM_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_PCR_CONFIRM_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_PRIOR_OI_WALL_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_PRIOR_OI_WALL_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_PUBLISHED_PAIN_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_PUBLISHED_PAIN_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_PUBLISHED_PCR_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_PUBLISHED_PCR_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_SECTOR_CONFIRM_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_SECTOR_CONFIRM_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_SKEW_UNWIND_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_SKEW_UNWIND_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_STRADDLE_1445",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/finalsearch/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_STRADDLE_1500",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/finalsearch/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_STRADDLE_1515",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/finalsearch/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_STRANGLE_1500",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/finalsearch/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_STRANGLE_1515",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/finalsearch/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_TREND1445_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_TREND1445_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_VWAP_RECLAIM_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "EXPIRY_VWAP_RECLAIM_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "FIRST_LAST_DOUBLE",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "FIRST_LAST_FAST",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "FIRST_LAST_SWING",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "GAP_FADE_DOUBLE",
+      "live_implemented": true,
+      "observed_enabled_on_vm": true,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "LIVE_EXPERIMENTAL"
+    },
+    {
+      "strategy_id": "GAP_FADE_FAST",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "GAP_FADE_SWING",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "INTRADAY_EVENT",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "LATE_BREAK_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "LATE_BREAK_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "LATE_FADE_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "LATE_FADE_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "MOMENTUM20_CALL5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "MOMENTUM20_CASH1",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "MOMENTUM20_CASH5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "NIFTY_DAY_CONTINUATION_0930",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "NIFTY_DAY_CONTINUATION_1510",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "NIFTY_SELLOFF_REBOUND_0930",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "NIFTY_SELLOFF_REBOUND_1510",
+      "live_implemented": true,
+      "observed_enabled_on_vm": true,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "LIVE_EXPERIMENTAL"
+    },
+    {
+      "strategy_id": "NIFTY_TREND_ALIGNMENT_0930",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "NIFTY_TREND_ALIGNMENT_1510",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "NIFTY_UNCONDITIONAL_0930",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "NIFTY_UNCONDITIONAL_1510",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "NONEXPIRY_FORCED_FLOW",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OI_BUILD_CALL5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OI_BUILD_CASH1",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OI_BUILD_CASH5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OI_SQUEEZE_CALL5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OI_SQUEEZE_CASH1",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OI_SQUEEZE_CASH5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OPEN_DRIVE_DOUBLE",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OPEN_DRIVE_FAST",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OPEN_DRIVE_SWING",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OPTION_ACCEL_OI_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OPTION_ACCEL_OI_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OPTION_ACCEL_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "OPTION_ACCEL_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORB30_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORB30_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_BASIS_LEAD_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_BASIS_LEAD_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_CHAIN_UNWIND_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_CHAIN_UNWIND_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_CHEAP_STRADDLE_1000",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/finalsearch/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_COMPRESSION_BREAK_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_COMPRESSION_BREAK_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_FAILED_ORB_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_FAILED_ORB_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_FUTURE_OI_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_FUTURE_OI_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_FUTURE_TREND_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_FUTURE_TREND_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_GIFT_CATCHUP_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_GIFT_CATCHUP_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_INSTITUTIONAL_ALIGN_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_INSTITUTIONAL_ALIGN_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_IV_CHEAP_TREND_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_IV_CHEAP_TREND_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_PAIN_ESCAPE_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_PAIN_ESCAPE_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_PCR_CONFIRM_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_PCR_CONFIRM_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_PRIOR_OI_WALL_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_PRIOR_OI_WALL_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_PUBLISHED_PAIN_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_PUBLISHED_PAIN_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_PUBLISHED_PCR_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_PUBLISHED_PCR_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_SECTOR_CONFIRM_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_SECTOR_CONFIRM_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_SKEW_UNWIND_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_SKEW_UNWIND_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/multifeature90/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_VWAP_RECLAIM_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "ORDINARY_VWAP_RECLAIM_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/readiness/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "PASSIVE_FLOW",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "RALLY_CALL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/execution_frontier/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "RALLY_PUT",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/execution_frontier/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "RANGE_FAILURE_DOUBLE",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "RANGE_FAILURE_FAST",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "RANGE_FAILURE_SWING",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SCHEDULED_EVENT_VOL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SECTOR_CATCHUP_DOUBLE",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SECTOR_CATCHUP_FAST",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SECTOR_CATCHUP_SWING",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SECTOR_SHOCK_LAG",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SELLOFF_CALL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/execution_frontier/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SELLOFF_PUT",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/execution_frontier/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SKEW_UNWIND_DOUBLE",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SKEW_UNWIND_FAST",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SKEW_UNWIND_SWING",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SMOOTH_MOMENTUM_CALL5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SMOOTH_MOMENTUM_CASH1",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "SMOOTH_MOMENTUM_CASH5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TREND1445_TARGET",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TREND1445_TRAIL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/expiry/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TREND_CONTINUATION",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/execution_frontier/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TREND_DIP_CALL5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TREND_DIP_CASH1",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TREND_DIP_CASH5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TREND_PULLBACK",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/execution_frontier/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TREND_PULLBACK_DOUBLE",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TREND_PULLBACK_FAST",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TREND_PULLBACK_SWING",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TWO_SIDED_CONTINUATION",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/execution_frontier/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "TWO_SIDED_REVERSAL",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/execution_frontier/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "VOLUME_BREAKOUT_CALL5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "VOLUME_BREAKOUT_CASH1",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "VOLUME_BREAKOUT_CASH5",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/broader/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "VOLUME_REVERSAL_DOUBLE",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "VOLUME_REVERSAL_FAST",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    },
+    {
+      "strategy_id": "VOLUME_REVERSAL_SWING",
+      "live_implemented": false,
+      "observed_enabled_on_vm": false,
+      "research_scoreboards": [
+        "research/results/intraday_challengers/scoreboard.csv"
+      ],
+      "status": "RESEARCH_ONLY_NO_PRODUCTION_ORDER_PATH"
+    }
+  ]
+}
