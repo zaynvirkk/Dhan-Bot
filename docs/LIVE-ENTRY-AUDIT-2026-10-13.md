@@ -108,5 +108,28 @@ older journal response without replacing newer live authority. Default full
 status remains compatible, and omission does not bypass authentication. This
 read-only transport update does not restart the already-qualified trader.
 
+Transport releases `ea03527` and `eeb1b5` are pushed and installed on the VM.
+Finite authenticated status/journal responses negotiate gzip; live event streams
+remain uncompressed. The full journal falls from 722,549 decoded bytes to 28,488
+transferred bytes and loads in 1.75 seconds in the actual signed-in browser after
+an uncached reload. History is AVAILABLE, live events are open and current, and
+the browser reports enabled authority and fresh collection. An independent
+authenticated request returns HTTP 200 with gzip; unauthenticated public status
+still returns HTTP 401. Default and gzip-disabled responses retain full history.
+The final local verification passes 454 tests, 60 acceptance cases and 15 mutation
+guards, with digest
+`712136e7480aa47025695b6ace6c6e99f5e4e5560c9276a11deb42482ba7fb11`.
+
+At 12:00 IST the funded process remains PID 338550 with zero restarts. All three
+sockets are connected, with no current errors or pending messages; current route
+and software verification remain true. Cash is INR 8,822.36, fills and incidents
+remain zero. The configured HTTPS service is dhan-dashboard-caddy.service, which
+is active; the distribution's separate caddy.service is intentionally disabled.
+NIFTY's latest displayed completed close is 22,516.95 at 11:58 IST, approximately
+0.68% above the session open. This does not satisfy the selloff threshold. A
+fresh read-only connection check is also requested to replace yesterday's
+retained Upstox timeout diagnostics, separately from current live socket health.
+
 No signal, missed fill, software check or route qualification is credited as
-profitability. Final transport deployment evidence follows after live checking.
+profitability. Infrastructure repair does not make the three experimental rules
+a validated profitable strategy or implement the other research hypotheses.

@@ -109,3 +109,8 @@ Browser inspection also exposed repeated large journal transfers competing with
 live status. Compact status/events preserve the cached journal; a separate full
 refresh updates it once per minute without overwriting newer live observations.
 Unknown historical data and stale authority remain explicit.
+Live finish: releases ea03527/eeb1b5 are installed. An uncached signed-in browser
+reload keeps the live event connection open and loads the complete journal in
+1.75 seconds (28,488 encoded bytes versus 722,549 decoded bytes). History reads
+AVAILABLE and current enabled authority matches the fresh backend snapshot.
+Finite responses use negotiated gzip; event streams remain uncompressed.

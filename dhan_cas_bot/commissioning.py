@@ -93,9 +93,7 @@ async def check_connections(config: dict) -> dict:
         nonlocal instruments
         master, freeze = await asyncio.gather(RuleSource(timeout=20).fetch(DHAN_MASTER_URL), RuleSource(timeout=20).fetch(NSE_FREEZE_URL))
         today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
-        expiry = RuleSource.current_expiry(master.payload, today=today)
-        quantity = RuleSource.parse_freeze(freeze.payload)["NIFTY"]
-        instruments = load_dhan_master(StringIO(master.payload.decode("utf-8-sig")), expiry=expiry, freeze_by_security={"__NIFTY__": quantity})
+        expiry, quantity, instruments = await resolve_check_contracts(master.payload, freeze.payload, today)
         return {"expiry": expiry.isoformat(), "is_expiry_today": expiry == today, "instruments": len(instruments), "lot_sizes": sorted({i.lot_size for i in instruments}), "tick_sizes": sorted({str(i.tick_size) for i in instruments}), "freeze_quantity": quantity, "master_digest": master.digest, "freeze_digest": freeze.digest}
 
     async def upstox():
@@ -113,27 +111,8 @@ async def check_connections(config: dict) -> dict:
         async with connect(endpoint, open_timeout=15, close_timeout=2) as socket:
             for msg in upstox_subscription([NIFTY_KEY]):
                 await socket.send(json.dumps(msg).encode())
-            frames, index_seen, iep_seen, cas_seen = 0, False, False, False
-            deadline = asyncio.get_running_loop().time() + 12
-            while asyncio.get_running_loop().time() < deadline:
-                try:
-                    frame = await asyncio.wait_for(socket.recv(), deadline - asyncio.get_running_loop().time())
-                except asyncio.TimeoutError:
-                    break
-                if not isinstance(frame, bytes):
-                    raise ContractError("Upstox did not send binary protobuf")
-                value = decode_binary(frame)
-                frames += 1
-                if NIFTY_KEY in value.feeds:
-                    index_seen = True
-                    price = value.feeds[NIFTY_KEY].fullFeed.indexFF.ltpc.ltp
-                    if price > 0:
-                        index_ltp = Decimal(str(price))
-                    iep_seen |= value.feeds[NIFTY_KEY].fullFeed.indexFF.ltpc.HasField("iep")
-                cas_seen |= bool(value.marketInfo.casMarketStatus)
-            if frames == 0:
-                raise ContractError("Upstox socket opened without a feed frame")
-            return {"websocket_connected": True, "protobuf_frames": frames, "index_seen": index_seen, "cas_status_seen": cas_seen, "index_iep_seen": iep_seen}
+            result, index_ltp = await read_upstox_check(socket)
+            return result
 
     await asyncio.gather(attempt("egress", egress), attempt("dhan_auth", authenticate), attempt("contract_metadata", metadata), attempt("upstox_feed", upstox))
 
@@ -209,3 +188,39 @@ async def check_connections(config: dict) -> dict:
     temporary.chmod(0o600)
     temporary.replace(path / "connections.json")
     return report
+
+
+async def resolve_check_contracts(master: bytes, freeze: bytes, today):
+    """Parse large exchange catalogues without starving concurrent socket checks."""
+    def resolve():
+        expiry = RuleSource.current_expiry(master, today=today)
+        quantity = RuleSource.parse_freeze(freeze)["NIFTY"]
+        instruments = load_dhan_master(StringIO(master.decode("utf-8-sig")), expiry=expiry,
+                                       freeze_by_security={"__NIFTY__": quantity})
+        return expiry, quantity, instruments
+    return await asyncio.to_thread(resolve)
+
+
+async def read_upstox_check(socket):
+    """A bounded snapshot check ends on a usable NIFTY frame, not stream silence."""
+    frames, iep_seen, cas_seen = 0, False, False
+    deadline = asyncio.get_running_loop().time() + 12
+    while asyncio.get_running_loop().time() < deadline:
+        try:
+            frame = await asyncio.wait_for(socket.recv(), deadline - asyncio.get_running_loop().time())
+        except asyncio.TimeoutError:
+            break
+        if not isinstance(frame, bytes):
+            raise ContractError("Upstox did not send binary protobuf")
+        value = decode_binary(frame)
+        frames += 1
+        cas_seen |= bool(value.marketInfo.casMarketStatus)
+        if NIFTY_KEY in value.feeds:
+            ltpc = value.feeds[NIFTY_KEY].fullFeed.indexFF.ltpc
+            price = Decimal(str(ltpc.ltp))
+            iep_seen |= ltpc.HasField("iep")
+            if price.is_finite() and price > 0:
+                return {"websocket_connected": True, "protobuf_frames": frames,
+                        "index_seen": True, "cas_status_seen": cas_seen,
+                        "index_iep_seen": iep_seen}, price
+    raise ContractError("Upstox socket did not provide a usable NIFTY frame")

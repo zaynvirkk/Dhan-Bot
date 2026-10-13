@@ -8,7 +8,9 @@ next-expiry contracts exceeded its INR 8,381.24 entry budget. The selector now
 skips known unaffordable contracts before requiring their live quote. The
 dashboard retains qualifying signals and recorded rejection reasons, with older
 missing reasons explicitly unknown. Local/VM funded verification passes 452
-tests; no profitability is established.
+tests; no profitability is established. Dashboard transport releases `ea03527`
+and `eeb1b5` are deployed without restarting the qualified trader; browser-verified
+history loads in 1.75 seconds with roughly 28 KB transferred instead of 723 KB.
 [Market, affordability and deployment evidence](docs/LIVE-ENTRY-AUDIT-2026-10-13.md).
 
 **12 October: funded order route recovered and browser-verified.** Release

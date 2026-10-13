@@ -83,6 +83,12 @@ sudo -u dhan-dashboard "$DASH_RELEASE/.venv/bin/python" -c 'from dhan_cas_bot.da
 DASH_PREVIOUS=$(readlink /opt/sablestone-dhan-dashboard/current || true)
 ln -s "$DASH_RELEASE" /opt/sablestone-dhan-dashboard/current.next
 mv -Tf /opt/sablestone-dhan-dashboard/current.next /opt/sablestone-dhan-dashboard/current
+# Keep the existing read-only diagnostic on current parser code. This neither
+# starts a new broker socket nor changes or restarts the funded trading unit.
+if [[ -f /etc/systemd/system/dhan-cas-connections.service ]]; then
+  install -d -m 0755 /etc/systemd/system/dhan-cas-connections.service.d
+  install -m 0644 "$DASH_RELEASE/ops/dhan-cas-connections-readonly.conf" /etc/systemd/system/dhan-cas-connections.service.d/95-dashboard-readonly.conf
+fi
 systemctl daemon-reload
 systemctl disable --now dhan-dashboard-collect.timer
 systemctl enable dhan-dashboard.service dhan-dashboard-collect.service dhan-dashboard-caddy.service
