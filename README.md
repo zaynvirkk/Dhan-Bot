@@ -1,5 +1,17 @@
 # SableStone Dhan CAS bot
 
+**13 October afternoon: real strategy executions confirmed.** The funded auction
+engine begins filling real Dhan orders after the provider opens CAS. At 15:28
+IST cash is INR 10,697.52, positions zero, recorded fill count 69, Dhan realised
+P&L INR 2,791.75 and unrealised P&L zero. These are live snapshots, not final net
+profit after all charges or proof of repeatability. Dashboard release `702fbea`
+separates current live frames from auction-entry eligibility and shows the
+provider's closed auction explicitly, removing false market-data outage warnings
+while preserving actual stale-feed warnings. At 15:43 IST the signed-in page
+shows a current idle session, the closed auction and enabled authority. The
+funded process remains unchanged and enabled.
+[Live execution and browser evidence](docs/LIVE-TRADING-2026-10-13.md).
+
 **13 October: missed-entry audit and selector repair deployed.** Funded release
 `197c4f8` runs all three strategies with enabled real-money authority and fresh
 broker-route proof. At 11:36 IST cash is INR 8,822.36, with zero positions and
