@@ -8,6 +8,51 @@ from dhan_cas_bot.commissioning import connection_failure
 from dhan_cas_bot.dashboard.data import connections_view
 
 
+def test_diagnostics_refresh_inside_dashboard_freshness_budget_all_day():
+    from configparser import ConfigParser
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    timer = ConfigParser()
+    timer.read(root / 'ops/dhan-cas-connections.timer')
+    # A once-per-afternoon check cannot support a morning strategy or a
+    # dashboard that expires diagnostic evidence after fifteen minutes.
+    assert 'OnCalendar' not in timer['Timer']
+    assert timer['Timer'].get('OnUnitInactiveSec') == '10min'
+    assert timer['Timer'].get('OnBootSec')
+    installer = (root / 'ops/install_dashboard.sh').read_text()
+    assert 'install -m 0644 "$DASH_RELEASE/ops/dhan-cas-connections.timer"' in installer
+    assert 'systemctl restart dhan-cas-connections.timer' in installer
+
+
+def test_account_diagnostics_distinguish_closed_records_from_open_exposure():
+    from dhan_cas_bot.commissioning import position_counts
+    rows = [{'netQty': 0}, {'netQuantity': '0'}]
+    assert position_counts(rows) == {'positions': 2, 'open_positions': 0}
+    assert position_counts([{'netQty': -65}, {'netQty': '65'}]) == {
+        'positions': 2, 'open_positions': 2}
+
+
+def test_account_diagnostics_do_not_invent_zero_for_unknown_quantity():
+    import pytest
+    from dhan_cas_bot.commissioning import position_counts
+    from dhan_cas_bot.domain import ContractError
+    for rows in ([{}], [{'netQty': 'bad'}], [{'netQty': '1.5'}], [{'netQty': True}]):
+        with pytest.raises(ContractError):
+            position_counts(rows)
+
+
+def test_dashboard_retains_only_explicit_open_position_count():
+    now = datetime.now(timezone.utc)
+    raw = {'observed_at': now.isoformat(), 'checks': {'dhan_account': {
+        'status': 'PASS', 'positions': 2, 'open_positions': 0,
+        'account_secret': 'DO_NOT_PUBLISH'}}}
+    item = next(r for r in connections_view(raw, now)['checks'] if r['name'] == 'dhan_account')
+    assert item['facts'] == {'positions': 2, 'open_positions': 0}
+    del raw['checks']['dhan_account']['open_positions']
+    legacy = next(r for r in connections_view(raw, now)['checks'] if r['name'] == 'dhan_account')
+    assert 'open_positions' not in legacy['facts']
+
+
 def test_upstox_check_finishes_on_index_snapshot_without_waiting_for_more_frames():
     import asyncio
     from dhan_cas_bot import commissioning as checks, MarketDataFeed_pb2 as proto

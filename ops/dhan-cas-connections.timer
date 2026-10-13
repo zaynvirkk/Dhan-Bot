@@ -1,8 +1,11 @@
 [Unit]
-Description=Check Dhan CAS connectivity before the weekday session
+Description=Refresh read-only Dhan connectivity evidence throughout the day
 
 [Timer]
-OnCalendar=Mon..Fri *-*-* 09:20:00 UTC
+OnBootSec=90s
+OnUnitInactiveSec=10min
+AccuracySec=10s
+RandomizedDelaySec=15s
 Persistent=false
 Unit=dhan-cas-connections.service
 

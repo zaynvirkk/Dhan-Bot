@@ -33,7 +33,7 @@ ORDER_STATES = {'PENDING_SEND', 'SEND_UNKNOWN', 'SENT', 'TRANSIT', 'PENDING', 'C
                 'EXPIRED', 'ABORTED'}
 CHECK_FIELDS = {
     'dhan_auth': ('account_matches', 'derivatives_enabled', 'data_plan'),
-    'dhan_account': ('orders', 'positions', 'trades', 'whitelist_resolved'),
+    'dhan_account': ('orders', 'positions', 'open_positions', 'trades', 'whitelist_resolved'),
     'egress': ('matches_expected',),
     'contract_metadata': ('expiry', 'instruments', 'freeze_quantity'),
     'upstox_feed': ('websocket_connected', 'index_seen', 'protobuf_frames', 'cas_status_seen', 'index_iep_seen', 'close_received_code', 'close_sent_code', 'keepalive_timeout'),

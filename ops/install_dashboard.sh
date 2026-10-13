@@ -89,7 +89,13 @@ if [[ -f /etc/systemd/system/dhan-cas-connections.service ]]; then
   install -d -m 0755 /etc/systemd/system/dhan-cas-connections.service.d
   install -m 0644 "$DASH_RELEASE/ops/dhan-cas-connections-readonly.conf" /etc/systemd/system/dhan-cas-connections.service.d/95-dashboard-readonly.conf
 fi
+if systemctl is-enabled --quiet dhan-cas-connections.timer; then
+  install -m 0644 "$DASH_RELEASE/ops/dhan-cas-connections.timer" /etc/systemd/system/dhan-cas-connections.timer
+fi
 systemctl daemon-reload
+if systemctl is-enabled --quiet dhan-cas-connections.timer; then
+  systemctl restart dhan-cas-connections.timer
+fi
 systemctl disable --now dhan-dashboard-collect.timer
 systemctl enable dhan-dashboard.service dhan-dashboard-collect.service dhan-dashboard-caddy.service
 systemctl restart dhan-dashboard.service

@@ -43,6 +43,8 @@ const browser=vm.createContext({console,Intl,Date,BigInt,Node:Element,structured
  fetch:()=>new Promise((resolve,reject)=>{failFetch=reject;})});
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../dhan_cas_bot/dashboard/static/stream.js'),'utf8'),browser);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../dhan_cas_bot/dashboard/static/app.js'),'utf8'),browser);
+assert.equal(vm.runInContext("details({name:'dhan_account',status:'PASS',facts:{positions:2,open_positions:0,orders:66}})",browser), '0 open positions · 2 position records · 66 orders');
+assert.equal(vm.runInContext("details({name:'dhan_account',status:'PASS',facts:{positions:2,orders:66}})",browser), 'Open-position count unavailable · 2 position records · 66 orders');
 vm.runInContext('render({available:false})',browser);
 assert.equal(ids.authority.textContent,'Trading status unknown');
 vm.runInContext(`render({available:true,server_time:'2026-10-01T09:00:00Z',collector:{fresh:true},account_read_ok:true,

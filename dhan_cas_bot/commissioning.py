@@ -48,6 +48,25 @@ def normalize_whitelist(value):
     return {"primary_ip": value.get("primaryIP"), "secondary_ip": value.get("secondaryIP"), "whitelist_resolved": bool(keys & value.keys())}
 
 
+def position_counts(rows):
+    """Closed broker position records are not open account exposure."""
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise ContractError("invalid position records")
+    quantities = []
+    for row in rows:
+        raw = row.get("netQty", row.get("netQuantity"))
+        if type(raw) not in (str, int, Decimal):
+            raise ContractError("position quantity unavailable")
+        try:
+            quantity = Decimal(raw)
+        except ArithmeticError as exc:
+            raise ContractError("invalid position quantity") from exc
+        if not quantity.is_finite() or quantity != quantity.to_integral_value():
+            raise ContractError("invalid position quantity")
+        quantities.append(quantity)
+    return {"positions": len(rows), "open_positions": sum(q != 0 for q in quantities)}
+
+
 async def check_connections(config: dict) -> dict:
     report = {"observed_at": datetime.now(timezone.utc).isoformat(), "writes": False, "connected": False, "checks": {}}
     checks = report["checks"]
@@ -123,7 +142,7 @@ async def check_connections(config: dict) -> dict:
             response = await client.get("https://api.dhan.co/v2/ip/getIP", headers={"access-token": token})
             response.raise_for_status()
             ips = response.json()
-        return {"orders": len(orders), "trades": len(trades), "positions": len(positions), "spendable_cash": str(funds.spendable_cash), **normalize_whitelist(ips)}
+        return {"orders": len(orders), "trades": len(trades), **position_counts(positions), "spendable_cash": str(funds.spendable_cash), **normalize_whitelist(ips)}
 
     async def order_socket():
         async with connect("wss://api-order-update.dhan.co", open_timeout=15, close_timeout=2) as socket:

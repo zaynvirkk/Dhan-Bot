@@ -307,7 +307,14 @@ def test_web_service_is_separated_from_trader_keys():
     assert 'ReadWritePaths=/var/lib/sablestone-dhan-dashboard\n' in collect
     assert 'secrets.env' in collect and 'EnvironmentFile=' not in collect
     installer=(root/'ops/install_dashboard.sh').read_text()
-    assert 'activate-live.py' not in installer and 'restart dhan-cas' not in installer
+    assert 'activate-live.py' not in installer
+    # Match the actual funded unit, including quoted names, rather than a
+    # prefix also shared by its separately authorized read-only timer.
+    import shlex
+    for line in installer.splitlines():
+        if line.strip().startswith('systemctl '):
+            tokens = shlex.split(line)
+            assert not {'dhan-cas', 'dhan-cas.service'} & set(tokens)
     html=(root/'dhan_cas_bot/dashboard/static/index.html').read_text()
     assert 'activate-live.py --capital available --check-only' in html
 
