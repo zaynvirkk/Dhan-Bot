@@ -61,7 +61,8 @@ class AutoLive:
             self.status.reason = "ACCOUNT_FUNDS_UNAVAILABLE:"+type(exc).__name__
 
     def permit_entry(self, *, settlement_add=False, strategy="CAS_LAG_V1") -> bool:
-        if strategy not in self.enabled_strategies or strategy not in {"CAS_LAG_V1", "GAP_FADE_DOUBLE", "NIFTY_SELLOFF_REBOUND_1510"}:
+        from .session_strategies import STRATEGIES
+        if strategy not in self.enabled_strategies or strategy not in STRATEGIES:
             return False
         if self.account_refresh is not None and not self.account_refresh.fresh:
             self.account_refresh.request()

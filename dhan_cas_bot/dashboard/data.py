@@ -10,6 +10,8 @@ import re
 import sqlite3
 from urllib.parse import quote
 from dhan_cas_bot.telemetry import METRICS, REASONS as TIMING_REASONS
+from dhan_cas_bot.session_strategies import STRATEGIES
+from dhan_cas_bot.expanded_strategies import SPECS,RULES
 
 UTC = timezone.utc
 # The collector can spend 20s reading Dhan, then waits 15s before its next run.
@@ -18,7 +20,7 @@ RUNTIME_TTL_SECONDS = 45
 STATES = {'DISARMED', 'RECOVERING', 'ARMED_WAITING_SESSION', 'ARMED_WAITING_SIGNAL',
           'ENTRY_HALTED', 'NO_TRADE_DAY', 'SETTLEMENT_PENDING', 'POSITION_OPEN', 'ENTRY_PENDING', 'EXIT_PENDING',
           'WAITING_EXCHANGE_SESSION', 'RECONCILING_DIRECTIONAL_POSITION'}
-STRATEGY_NAMES = {'CAS_LAG_V1', 'GAP_FADE_DOUBLE', 'NIFTY_SELLOFF_REBOUND_1510'}
+STRATEGY_NAMES = set(STRATEGIES)
 STRATEGY_REASONS = {
     'INPUTS_NOT_RECEIVED', 'CALENDAR_UNAVAILABLE', 'EXCHANGE_CLOSED', 'CONTRACT_CALENDAR_UNAVAILABLE',
     'EXPIRY_SESSION_OUTSIDE_RESEARCH_SCOPE', 'OUTSIDE_STRATEGY_WINDOW', 'SPECIAL_SESSION_OUTSIDE_RESEARCH_SCOPE',
@@ -28,6 +30,12 @@ STRATEGY_REASONS = {
     'ENTRY_NOT_PERMITTED', 'OPTION_MINUTES_UNAVAILABLE', 'OPTION_BOOK_UNAVAILABLE_OR_STALE',
     'FIXED_LIMIT_ALREADY_MISSED', 'NO_AFFORDABLE_LIQUID_CONTRACT', 'UNMANAGED_ACCOUNT_POSITION',
 }
+STRATEGY_REASONS.update({'EXPANDED_RULE_CONFIRMED','EXPANDED_RULE_NOT_MET','REQUIRES_EXPIRY_SESSION',
+    'MISSING_COMPLETED_BAR','MISSING_OHLC_RANGE','MISSING_VWAP_INPUTS','ZERO_FUTURE_VOLUME','ZERO_VOLUME_BASE',
+    'MISSING_FUTURE_OI','MISSING_SAME_STRIKE_OPTION','MISSING_CHAIN_NEIGHBOURS','MISSING_CHAIN_OI',
+    'MISSING_OPTION_OI','INVALID_OPEN_REFERENCE','SOURCE_NOT_YET_AVAILABLE','MISSING_CURRENT_IV',
+    'MISSING_PCR_INSIGHT','MISSING_MAX_PAIN_INSIGHT','MISSING_PRIOR_WALL','ZERO_PRIOR_WALL_OI','MISSING_PRIOR_OPTION_OI',
+    'MISSING_IV','MISSING_INSIGHTS','MISSING_PRIOR_CHAIN','MISSING_INSTITUTIONS','MISSING_PRIOR_TREND'})
 ORDER_STATES = {'PENDING_SEND', 'SEND_UNKNOWN', 'SENT', 'TRANSIT', 'PENDING', 'CLOSED',
                 'TRIGGERED', 'REJECTED', 'CANCELLED', 'PART_TRADED', 'TRADED', 'FILLED',
                 'EXPIRED', 'ABORTED'}
@@ -187,17 +195,31 @@ def condition_projection(raw):
 
 def strategy_projection(raw):
     result=[]
-    for row in raw[:3] if isinstance(raw, list) else []:
+    for row in raw[:256] if isinstance(raw, list) else []:
         if not isinstance(row, dict) or choice(row.get('strategy'), STRATEGY_NAMES) is None:
             continue
         details={}
-        for key in ('gap', 'fraction_filled', 'future_5m_return', 'open_return'):
+        for key in ('gap', 'fraction_filled', 'future_5m_return', 'open_return','spot_15m','future_15m',
+                    'future_vwap','future_oi_5m','future_5m','basis_change','bank_15m','it_15m','gift_15m',
+                    'trend_30m','pullback_10m','move_15m','volume_ratio','opening_high','opening_low',
+                    'compressed_high','compressed_low','compression_high','compression_low','box_high','box_low',
+                    'efficiency','first_half_hour_return','premium_return','premium_return_3m','oi_change','own_oi',
+                    'opposite_oi','opposite_return','strike','anchor_spot','prior_oi_wall','iv','realized_vol_30m',
+                    'vix_15m','pcr_change_5m','pcr_change','known_max_pain','fii_net_change','dii_net','prior_trend_20d'):
             value=(row.get('details') or {}).get(key) if isinstance(row.get('details'), dict) else None
             if money(value) is not None:
                 details[key]=str(Decimal(str(value)))
         if isinstance(row.get('details'),dict) and type(row['details'].get('persistent')) is bool:
             details['persistent']=row['details']['persistent']
+        spec=SPECS.get(row['strategy'])
         result.append({'strategy':row['strategy'],
+            'family':spec[0] if spec else 'GAP_FADE' if row['strategy']=='GAP_FADE_DOUBLE' else row['strategy'],
+            'scope':spec[2] if spec else 'ORDINARY' if row['strategy']=='GAP_FADE_DOUBLE' else 'ANY',
+            'exit_policy':spec[1] if spec else 'DOUBLE',
+            'entry_rule':RULES.get(spec[0]) if spec else None,
+            'filled_closed':integer(row.get('filled_closed')),
+            'ranking_available':row.get('ranking_available') if type(row.get('ranking_available')) is bool else False,
+            'mean_estimated_net_return':str(Decimal(str(row['mean_estimated_net_return']))) if money(row.get('mean_estimated_net_return')) is not None else None,
             'enabled':row.get('enabled') if type(row.get('enabled')) is bool else None,
             'state':choice(row.get('state'), {'UNKNOWN','WAITING','SIGNAL','NO_SIGNAL','NOT_APPLICABLE','DISABLED'},'UNKNOWN'),
             'reason':choice(str(row.get('reason','')).split(':')[0],STRATEGY_REASONS,'UNKNOWN'),
@@ -390,9 +412,9 @@ def last_signal_views(db):
         'OPTION_LIMIT_OUTSIDE_BAND','OPTION_DEPTH_BELOW_ONE_LOT'}
     result=[]
     seen=set()
-    for record in db.execute("SELECT key,value FROM metadata WHERE key LIKE 'directional-signal:%' ORDER BY key DESC LIMIT 128"):
-        match=re.fullmatch(r'directional-signal:(\d{4}-\d{2}-\d{2}):(GAP_FADE_DOUBLE|NIFTY_SELLOFF_REBOUND_1510)',record['key'])
-        if not match or match[2] in seen or len(record['value'])>100_000:
+    for record in db.execute("SELECT key,value FROM metadata WHERE key LIKE 'directional-signal:%' AND key NOT LIKE '%:assessment' AND key NOT LIKE '%:consumed' ORDER BY key DESC LIMIT 512"):
+        match=re.fullmatch(r'directional-signal:(\d{4}-\d{2}-\d{2}):([A-Z0-9_]{1,96})',record['key'])
+        if not match or match[2] not in STRATEGY_NAMES or match[2] in seen or len(record['value'])>100_000:
             continue
         try:
             raw=json.loads(record['value'])

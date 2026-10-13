@@ -32,6 +32,11 @@ class Element {
  addEventListener(){}
  setAttribute(){}
  removeAttribute(){}
+ querySelectorAll(selector){
+  assert.equal(selector,'details.strategy-family[open]');
+  const out=[];const visit=n=>{if((n.className||'').split(' ').includes('strategy-family')&&n.open)out.push(n);for(const c of n.children||[])visit(c);};
+  for(const n of this.children)visit(n);return out;
+ }
 }
 const ids={};
 const html=fs.readFileSync(path.join(__dirname,'../dhan_cas_bot/dashboard/static/index.html'),'utf8');

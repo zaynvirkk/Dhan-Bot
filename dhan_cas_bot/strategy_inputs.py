@@ -5,6 +5,7 @@ from dataclasses import asdict
 from datetime import datetime, time, timedelta, timezone
 from io import StringIO
 import json
+from decimal import Decimal
 
 import httpx
 
@@ -50,7 +51,8 @@ def route_window(enabled, now, calendar, expiry_today):
     # rebound enabled, permit bounded qualification throughout the verified
     # open session before its decision, including after a repaired restart.
     return ((GAP in enabled and not expiry_today and time(9,40)<=local.time()<time(11,31))
-            or (REBOUND in enabled and local.time()<time(15,10)))
+            or (REBOUND in enabled and local.time()<time(15,10))
+            or any(name not in (CAS,GAP,REBOUND) for name in enabled))
 
 
 class CalendarSource:
@@ -109,7 +111,7 @@ class MinuteSource:
 
 
 class StrategyInputWorker:
-    def __init__(self, directional, token, future_id, *, wake, stop):
+    def __init__(self, directional, token, future_id, *, wake, stop,indexes=None):
         self.directional=directional
         self.engine=directional.engine
         self.calendar_source=CalendarSource(token)
@@ -119,6 +121,9 @@ class StrategyInputWorker:
         self.calendar=None
         self.option_bars={}
         self.last_calendar_error=""
+        from .strategy_features import FeatureSource
+        self.features=FeatureSource(self.engine.runtime.broker,token,self.engine.now)
+        self.indexes=indexes or {}
 
     async def refresh(self):
         now=self.engine.now().astimezone(IST)
@@ -133,14 +138,60 @@ class StrategyInputWorker:
                     {"source":"https://api.upstox.com/v2/market/timings/", **asdict(self.calendar)})
             expiries={i.expiry for i in self.engine.instruments.values()}
             spot=future={}
+            features={}
+            from .expanded_strategies import SPECS
+            families={SPECS[n][0] for n in self.directional.enabled if n in SPECS}
             if self.calendar.is_open(now):
                 spot=await self.minutes.fetch("13","IDX_I","INDEX",self.calendar.previous_opens,now)
-                if GAP in self.directional.enabled and time(9,44)<=now.time()<time(11,32) and now.date() not in expiries:
+                if ((GAP in self.directional.enabled and time(9,44)<=now.time()<time(11,32) and now.date() not in expiries)
+                        or any(name not in (GAP,REBOUND) for name in self.directional.enabled)):
                     if self.future_id:
                         await asyncio.sleep(.25)
-                        future=await self.minutes.fetch(self.future_id,"NSE_FNO","FUTIDX",self.calendar.opens,now,oi=True)
+                        try:future=await self.minutes.fetch(self.future_id,"NSE_FNO","FUTIDX",self.calendar.opens,now,oi=True)
+                        except Exception:future={}
+                # Auxiliary endpoints affect only families which consume them.
+                for name in ('BANK','IT','VIX'):
+                    required=(name in ('BANK','IT') and families&{'SECTOR_CATCHUP','SECTOR_CONFIRM'}) or (name=='VIX' and 'IV_CHEAP_TREND' in families)
+                    if required and self.indexes.get(name):
+                        try:
+                            await asyncio.sleep(.25)
+                            features[name]=await self.minutes.fetch(self.indexes[name],'IDX_I','INDEX',self.calendar.opens,now)
+                        except Exception:pass
+                if 'GIFT_CATCHUP' in families:
+                    try:features['GIFT']=await self.features.gift(now)
+                    except Exception:pass
+                if families:
+                    expiry=min(e for e in expiries if e>=now.date())
+                    features.update(await self.features.refresh(now,self.calendar,expiry,families))
+                    # Freeze exact contract identities. Changing ATM does not
+                    # splice different strikes into one return/OI history.
+                    options=[i for i in self.engine.instruments.values() if i.expiry==expiry]
+                    current=spot.get(now.replace(second=0,microsecond=0))
+                    if current and families&{'CHAIN_UNWIND','SKEW_UNWIND','OPTION_ACCEL','OPTION_ACCEL_OI','PRIOR_OI_WALL'}:
+                        strikes=sorted({i.strike for i in options});atm=min(strikes,key=lambda k:(abs(k-current.close),k));j=strikes.index(atm)
+                        wanted=set(strikes[max(0,j-1):j+2])
+                        anchor=spot.get(now.replace(hour=14,minute=45,second=0,microsecond=0))
+                        if anchor:wanted.add(min(strikes,key=lambda k:(abs(k-anchor.close),k)))
+                        prior=features.get('prior_chain',{});wall_anchor=spot.get(now.replace(hour=9,minute=30,second=0,microsecond=0))
+                        if wall_anchor:
+                            for side in ('CE','PE'):
+                                ks=[(k,oi) for (s,k),oi in prior.get('oi',{}).items() if s==side and abs(k-wall_anchor.close)<=200]
+                                if ks:wanted.add(min(ks,key=lambda x:(-x[1],x[0]))[0])
+                        features['options']={}
+                        for inst in options:
+                            if inst.strike not in wanted:continue
+                            try:
+                                await asyncio.sleep(.25)
+                                rows=await self.minutes.fetch(inst.security_id,'NSE_FNO','OPTIDX',self.calendar.opens,now,oi=True)
+                                self.option_bars[inst.security_id]=rows
+                                features['options'][inst.option_type.value,inst.strike]=rows
+                            except Exception:pass
             for strategy in self.directional.enabled:
-                evaluations[strategy]=evaluate(strategy,now,self.calendar,spot,future,expiries)
+                decision_now=self.engine.now()
+                if strategy in (GAP,REBOUND):evaluations[strategy]=evaluate(strategy,decision_now,self.calendar,spot,future,expiries)
+                else:
+                    from .expanded_strategies import evaluate as expanded
+                    evaluations[strategy]=expanded(strategy,decision_now,self.calendar,spot,future,expiries,features=features)
             # Publish signals before option requests so their original minute
             # is never changed by a slow request, nor lost at a minute boundary.
             self.directional.update(Inputs(self.calendar,evaluations,self.option_bars,self.engine.now()))
@@ -166,7 +217,8 @@ class StrategyInputWorker:
                 start=self.calendar.opens or now.replace(hour=0,minute=0,second=0,microsecond=0)
                 if active and active["security_id"]==security:
                     start=datetime.fromisoformat(json.loads(active["payload"])["signal"]["evaluated_at"])
-                self.option_bars[security]=await self.minutes.fetch(security,"NSE_FNO","OPTIDX",start,self.engine.now(),oi=True)
+                try:self.option_bars[security]=await self.minutes.fetch(security,"NSE_FNO","OPTIDX",start,self.engine.now(),oi=True)
+                except Exception:self.option_bars.pop(security,None)
             self.directional.update(Inputs(self.calendar,evaluations,dict(self.option_bars),self.engine.now()))
             for sample in evaluations.values():
                 identity=f"strategy-evaluation:{sample.strategy}:{sample.evaluated_at.isoformat()}:{sample.state}"

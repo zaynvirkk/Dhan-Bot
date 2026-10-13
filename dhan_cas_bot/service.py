@@ -103,7 +103,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     now = now_fn or (lambda: datetime.now(timezone.utc))
     today = now().astimezone(IST).date()
     enabled = strategy_names(config)
-    has_directional = any(name in enabled for name in (GAP, REBOUND))
+    has_directional = any(name != CAS for name in enabled)
     started_before_session = not has_directional and now().astimezone(IST).time() < time(15,5)
     state_dir = Path(config["state_dir"])
     mandate = load_mandate(state_dir / "mandate.json")
@@ -138,6 +138,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         metadata_admitted = False
         expiry_today = False
         future_id = None
+        feature_indexes = {}
         instruments = []
         metadata_error = ""
         try:
@@ -145,6 +146,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             expiry = RuleSource.current_expiry(master.payload, today=today)
             if has_directional:
                 instruments, future_id = selected_contracts(master.payload, RuleSource.parse_freeze(freeze.payload), today)
+                from .strategy_features import index_inputs
+                feature_indexes = index_inputs(master.payload)
             else:
                 instruments = load_dhan_master(StringIO(master.payload.decode("utf-8-sig")), expiry=expiry, freeze_by_security={"__NIFTY__": RuleSource.parse_freeze(freeze.payload)["NIFTY"]})
             ledger.observe("master:"+master.digest, "MASTER", {"source": master.url, "retrieved_at": master.retrieved_at.isoformat(), "sha256": master.digest})
@@ -180,7 +183,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             publish=lambda funds, snapshot, stamp: write_account_observation(state_dir, funds, snapshot, stamp))
         account_task = asyncio.create_task(account_refresh.run())
         if has_directional or (active and json.loads(active["payload"]).get("strategy", CAS) != CAS):
-            input_worker = StrategyInputWorker(engine.directional, upstox_token, future_id, wake=wake, stop=stop)
+            input_worker = StrategyInputWorker(engine.directional, upstox_token, future_id, wake=wake, stop=stop,indexes=feature_indexes)
             strategy_task = asyncio.create_task(input_worker.run())
 
         async def clock_worker():

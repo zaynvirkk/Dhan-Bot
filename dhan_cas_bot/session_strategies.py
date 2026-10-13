@@ -15,7 +15,8 @@ IST = ZoneInfo("Asia/Kolkata")
 CAS = "CAS_LAG_V1"
 GAP = "GAP_FADE_DOUBLE"
 REBOUND = "NIFTY_SELLOFF_REBOUND_1510"
-STRATEGIES = (GAP, REBOUND, CAS)
+from .expanded_strategies import NAMES as EXPANDED_NAMES
+STRATEGIES = tuple(dict.fromkeys((GAP, REBOUND, CAS, *EXPANDED_NAMES)))
 D = Decimal
 
 
@@ -26,6 +27,8 @@ class Bar:
     close: Decimal
     volume: int
     oi: int
+    high: Decimal | None = None
+    low: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -127,7 +130,7 @@ def parse_bars(payload, received_at, *, require_oi=False):
         if any(type(v) is not int or v < 0 for v in (volume, interest)):
             raise ContractError("invalid minute quantities")
         if available <= received_at:
-            result[available] = Bar(available, op, close, volume, interest)
+            result[available] = Bar(available, op, close, volume, interest, hi, lo)
     return dict(sorted(result.items()))
 
 
@@ -196,7 +199,8 @@ def evaluate(strategy, now, calendar, spot, future, expiries):
                           conditions=condition_evidence(strategy,now,calendar,spot,future),
                           next_check_at=next_check(strategy,now,calendar,expiries))
     if strategy not in (GAP, REBOUND):
-        raise ContractError("unknown directional strategy")
+        from .expanded_strategies import evaluate as expanded_evaluate
+        return expanded_evaluate(strategy,now,calendar,spot,future,expiries)
     if calendar is None or not calendar.fresh(now):
         return result("UNKNOWN", "CALENDAR_UNAVAILABLE")
     if not calendar.is_open(now):

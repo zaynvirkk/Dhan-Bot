@@ -1,5 +1,13 @@
 # SableStone Dhan CAS bot
 
+**13 October strategy expansion:** the production registry now covers 137 NIFTY
+configurations across 41 rule families plus CAS. Shared-capital selection uses
+already closed executions, with unknown profitability explicitly unranked;
+unfillable signals no longer starve other engines. The dashboard groups families
+and exposes their actual inputs. Stock/event and multi-leg research still have
+no NIFTY order path. Deployment evidence is recorded in the
+[expansion record](docs/STRATEGY-EXPANSION-2026-10-13.md).
+
 **13 October complete strategy audit:** three implemented NIFTY engines are enabled;
 CAS has 16 filled closed lifecycles / 32 executed orders / 69 partial fills.
 The original nine gauntlet families and 175 research identifiers have no production

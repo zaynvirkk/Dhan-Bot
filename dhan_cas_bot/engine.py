@@ -340,8 +340,15 @@ class SessionEngine:
                         runtime.status.state = "EXIT_PENDING"
                         return True
                     runtime.status.state = "POSITION_OPEN"
-            if active is None and self.directional and await self.directional.enter_locked(snapshot):
-                return True
+            if active is None and self.directional:
+                # A qualified auction opportunity with measured positive
+                # closed returns competes with the minute engines. Failed CAS
+                # execution qualification still falls through to their rules.
+                if (runtime.permit_entry() and any(len(h)>=2 for h in self.streaks.values())
+                        and self.directional.cas_has_priority()
+                        and await self._enter(snapshot,active,positions,local_now)):
+                    return True
+                if await self.directional.enter_locked(snapshot):return True
             return await self._enter(snapshot, active, positions, local_now)
 
     async def _enter(self, snapshot, active, positions, local_now, *, settlement_add=False):

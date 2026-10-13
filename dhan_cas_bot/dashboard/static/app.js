@@ -118,7 +118,7 @@ function renderHistory(d){
 }
 const strategyNames={CAS_LAG_V1:'Expiry auction',GAP_FADE_DOUBLE:'Morning gap-fade',NIFTY_SELLOFF_REBOUND_1510:'Overnight rebound'};
 const strategyReasons={CALENDAR_UNAVAILABLE:'The exchange calendar is unavailable.',EXCHANGE_CLOSED:'The exchange is closed.',CONTRACT_CALENDAR_UNAVAILABLE:'Current contract dates are unavailable.',EXPIRY_SESSION_OUTSIDE_RESEARCH_SCOPE:'NIFTY expires today; gap-fade covers non-expiry sessions.',OUTSIDE_STRATEGY_WINDOW:'Waiting for the next scheduled check.',SPECIAL_SESSION_OUTSIDE_RESEARCH_SCOPE:'This is a special session outside the tested schedule.',NEXT_SESSION_EXIT_UNAVAILABLE:'The next session does not support the planned exit.',SELLOFF_THRESHOLD_MET:'The index decline crossed the 0.75% trigger.',SELLOFF_BELOW_THRESHOLD:'The index decline has not reached 0.75%.',GAP_FADE_CONFIRMED:'Gap, retracement, persistence and futures direction agree.',GAP_FADE_CONDITIONS_NOT_MET:'The gap-fade conditions do not all agree.',COMPLETED_INPUT_MISSING_OR_INVALID:'A required completed minute is missing or invalid.',NOT_CONFIGURED:'This engine is not enabled in the service configuration.',STRATEGY_INPUTS_STALE:'The minute inputs are stale.',STRATEGY_INPUT_UNAVAILABLE:'A market-data request failed.',INPUTS_NOT_RECEIVED:'Waiting for the first input check.'};
-const conditionNames={gap_size:'Opening gap',gap_fill:'Gap retracement',persistence:'Price persistence',futures_direction:'Futures confirmation',selloff:'Decline from open'};
+const conditionNames={rule:'Entry rule',gap_size:'Opening gap',gap_fill:'Gap retracement',persistence:'Price persistence',futures_direction:'Futures confirmation',selloff:'Decline from open'};
 function pct(value){return value==null?'Unavailable':`${(Number(value)*100).toFixed(2)}%`;}
 function conditionDetail(c){
  const direction=c.expected==='RISING'?'rising':c.expected==='FALLING'?'falling':null;
@@ -133,6 +133,12 @@ function conditionSummary(row){
  const checks=row.conditions||[],failed=checks.filter(c=>c.state==='FAIL'),missing=checks.filter(c=>c.state==='UNKNOWN');
  if(row.state==='NO_SIGNAL'&&failed.length)return `Skipped: ${failed.map(c=>conditionNames[c.key]).join(', ')} not met.`;
  if(row.state==='UNKNOWN'&&missing.length)return `Cannot decide: ${missing.map(c=>conditionNames[c.key]).join(', ')} ${missing.length===1?'is':'are'} unavailable.`;
+ if(row.family&&row.family!=='GAP_FADE'&&!['NIFTY_SELLOFF_REBOUND_1510','CAS_LAG_V1'].includes(row.strategy)){
+  if(row.reason==='EXPANDED_RULE_CONFIRMED')return `Entry conditions met · ${row.side==='CE'?'CALL':'PUT'}.`;
+  if(row.reason==='EXPANDED_RULE_NOT_MET')return 'Observed inputs do not meet the entry rule.';
+  if(row.reason.startsWith('MISSING_'))return `Cannot decide: ${row.reason.slice(8).replaceAll('_',' ').toLowerCase()} unavailable.`;
+  if(row.reason==='SOURCE_NOT_YET_AVAILABLE')return 'The required source was not available at this decision time.';
+ }
  return strategyReasons[row.reason]||row.state;
 }
 function conditionList(row,current){
@@ -150,7 +156,7 @@ function renderStrategies(d){
  const rt=d.runtime,observer=d.daily_monitor,configured=rt?.strategies||[],checks=rt?.strategy_evaluations||[];
  const usingObserver=(observer?.strategy_evaluations||[]).some(row=>!configured.includes(row.strategy)),calendar=observer||rt;
  $('calendar-stamp').textContent=calendar?.calendar_checked_at?`Calendar checked ${at(calendar.calendar_checked_at)}`:'No exchange calendar observation';
- $('strategy-mode').textContent=usingObserver?'Daily checks use live market data in read-only mode. They cannot submit orders. Funded execution is shown separately in the trading-service rows and account status.':'The rows below describe the engines reported by the trading service. A signal is not an executed trade.';
+ $('strategy-mode').textContent=usingObserver?'Daily checks use live market data in read-only mode. They cannot submit orders. Funded execution is shown separately in the trading-service rows and account status.':`${configured.length} enabled strategy variants share one bankroll and order manager. Closed executions inform selection; unranked rules have no measured profitability. Expand a family to inspect its checks.`;
  const market=observer?.spot!=null?`NIFTY completed close ${points(observer.spot)} · ${at(observer.spot_at)}${observer.opening!=null?` · Session open ${points(observer.opening)}`:''}${observer.previous_close!=null?` · Previous close ${points(observer.previous_close)}`:''}`:'';
  $('strategy-market').textContent=market;
  const display=checks.map(row=>({...row,current:rt?.fresh===true,source:'Trading service'}));
@@ -163,18 +169,29 @@ function renderStrategies(d){
  for(const row of display)row.lastSignal=(d.ledger?.last_signals||[]).find(v=>v.strategy===row.strategy);
  $('strategy-empty').hidden=display.length>0;
  if(!changed('strategy-checks',display))return;
+ const expanded=new Set([...$('strategy-checks').querySelectorAll('details.strategy-family[open]')].map(n=>n.dataset.family));
  $('strategy-checks').replaceChildren();
+ const groups=new Map();
  for(const row of display){
   const wrap=el('div',undefined,'connection-row'),info=el('div');
   const state=row.current?row.state:'UNKNOWN',label={WAITING:'Waiting',CLOSED:'Closed',NO_SIGNAL:'No signal',SIGNAL:'Signal observed',NOT_APPLICABLE:'Not applicable',DISABLED:'Disabled',UNKNOWN:'Unknown'}[state]||'Unknown';
-  const window=row.strategy==='GAP_FADE_DOUBLE'?'09:45–11:30 IST · every 5 minutes':row.strategy==='NIFTY_SELLOFF_REBOUND_1510'?'15:10 IST · may hold into the next session':'Eligible expiry · auction phase required';
-  info.append(el('p',strategyNames[row.strategy]||'Unknown strategy','connection-name'),el('p',`${row.source} · ${window}`,'connection-detail'));
+  const window=row.strategy==='GAP_FADE_DOUBLE'?'09:45–11:30 IST · every 5 minutes':row.strategy==='NIFTY_SELLOFF_REBOUND_1510'?'15:10 IST · may hold into the next session':row.strategy==='CAS_LAG_V1'?'Eligible expiry · auction phase required':`${row.scope==='EXPIRY'?'Expiry sessions':row.scope==='ORDINARY'?'Non-expiry sessions':'Verified trading sessions'} · ${row.exit_policy||'DOUBLE'} exit`;
+  info.append(el('p',strategyNames[row.strategy]||row.strategy.replaceAll('_',' ').toLowerCase(),'connection-name'),el('p',`${row.source} · ${window}`,'connection-detail'));
   const finished=row.current&&row.strategy==='GAP_FADE_DOUBLE'&&row.reason==='OUTSIDE_STRATEGY_WINDOW'&&new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(d.server_time))>='11:30';
   info.append(el('p',row.current?(finished?'Morning entry window finished. No new entry from this engine today.':row.strategy==='CAS_LAG_V1'?row.reason:conditionSummary(row)):'This observation is stale. Current checks are unknown.','connection-detail'));
-  const values=row.conditions?.length?[]:Object.entries(row.details||{}).filter(([key])=>key!=='persistent').map(([key,value])=>`${{gap:'Opening gap',fraction_filled:'Gap filled',future_5m_return:'Futures 5 min',open_return:'From open'}[key]||key}: ${(Number(value)*100).toFixed(2)}%`);
+  const values=row.conditions?.length?[]:[];
   if(row.spot!=null)values.unshift(`NIFTY minute close ${points(row.spot)}`);
+  if(row.entry_rule)info.append(el('p',row.entry_rule,'connection-detail'));
   if(row.evaluated_at)values.push(`Checked ${at(row.evaluated_at)}`);
   if(values.length)info.append(el('p',values.join(' · '),'connection-detail'));
+  if(row.family&&Object.keys(row.details||{}).length){
+   const inputs=el('details',undefined,'decision-inputs');inputs.append(el('summary','Observed market inputs'));
+   const ratios=new Set(['gap','fraction_filled','future_5m_return','open_return','spot_15m','future_15m','future_oi_5m','future_5m','basis_change','bank_15m','it_15m','gift_15m','trend_30m','pullback_10m','move_15m','first_half_hour_return','premium_return','premium_return_3m','oi_change','own_oi','opposite_oi','opposite_return','vix_15m','pcr_change_5m','pcr_change','prior_trend_20d']);
+   for(const [key,value] of Object.entries(row.details))inputs.append(el('p',`${key.replaceAll('_',' ')}: ${ratios.has(key)?pct(value):Number(value).toLocaleString('en-IN',{maximumFractionDigits:3})}`,'connection-detail'));
+   info.append(inputs);
+  }
+  if(row.ranking_available)info.append(el('p',`${row.filled_closed} filled closed trades · mean return after estimated costs ${pct(row.mean_estimated_net_return)}.`,'connection-detail'));
+  else if(row.family)info.append(el('p','Selection score unavailable: fewer than three filled closed trades.','connection-detail'));
   if(row.next_check_at)info.append(el('p',`Next scheduled check: ${at(row.next_check_at)}.`, 'connection-detail'));
   const signal=row.lastSignal;
   if(signal){
@@ -213,7 +230,15 @@ function renderStrategies(d){
    }
    wrap.append(detail);
   }
-  $('strategy-checks').append(wrap);
+  const family=row.family||row.strategy;
+  if(!groups.has(family))groups.set(family,[]);groups.get(family).push({row,wrap});
+ }
+ for(const [family,rows] of groups){
+  if(rows.length===1){$('strategy-checks').append(rows[0].wrap);continue;}
+  const group=el('details',undefined,'strategy-family');group.dataset.family=family;group.open=expanded.has(family);
+  const summary=el('summary'),counts=new Map();for(const {row} of rows){const status=row.current?row.state:'UNKNOWN';counts.set(status,(counts.get(status)||0)+1);}
+  summary.append(el('strong',family.replaceAll('_',' ').toLowerCase()),el('span',`${rows.length} variants · ${[...counts].map(([s,n])=>`${n} ${s.replaceAll('_',' ').toLowerCase()}`).join(' / ')}`,'connection-detail'));
+  group.append(summary);for(const {wrap} of rows)group.append(wrap);$('strategy-checks').append(group);
  }
 }
 function renderDecision(d){
@@ -300,7 +325,7 @@ function render(d){
  if(d.runtime&&!d.collector?.fresh)d.runtime.fresh=false;
  if(d.daily_monitor&&!d.collector?.fresh)d.daily_monitor.fresh=false;
  if(d.runtime&&!d.runtime.fresh)d.runtime.authority='UNKNOWN';
- state.generation++;state.data=d;const rt=d.runtime;renderTimings(rt);renderHistory(d);renderStrategies(d);const a=d.account;const cs=d.connections;const ledger=d.ledger;$('observation').textContent=rt?.observed_at?`${(rt.strategies||[]).map(s=>strategyNames[s]||s).join(' / ')||(rt.observation?.expiry?'Expiry auction service':'Strategy not reported')} · ${rt.fresh?'Updated':'Last observed'} ${at(rt.observed_at)}`:'Waiting for a bot observation.';
+ state.generation++;state.data=d;const rt=d.runtime;renderTimings(rt);renderHistory(d);renderStrategies(d);const a=d.account;const cs=d.connections;const ledger=d.ledger;$('observation').textContent=rt?.observed_at?`${((rt.strategies||[]).length>3?`${rt.strategies.length} enabled strategies`:(rt.strategies||[]).map(s=>strategyNames[s]||s).join(' / '))||(rt.observation?.expiry?'Expiry auction service':'Strategy not reported')} · ${rt.fresh?'Updated':'Last observed'} ${at(rt.observed_at)}`:'Waiting for a bot observation.';
  const feedState=renderFeeds(rt,d.server_time);
  const notice=$('notice');notice.className='notice';const message=monitoringNotice(d,feedState);notice.textContent=message.text;if(message.kind)notice.classList.add(message.kind);notice.hidden=message.kind==='healthy';
  $('cash-label').textContent=a?.fresh?'Available cash':'Last observed cash';$('cash').textContent=cash(a?.available_cash);$('cash-age').textContent=a?`${age(a.age_seconds)} · ${a.fresh?'broker read':'historical observation'}`:'No broker observation';pnl('realised',a?.realised_pnl);pnl('unrealised',a?.unrealised_pnl);$('position-count').textContent=a?.open_position_count??'—';$('position-note').textContent=a?.fresh?'Current broker snapshot':a?'Last observed account':'Awaiting account data';
