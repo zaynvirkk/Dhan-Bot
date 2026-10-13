@@ -122,3 +122,6 @@ values are an auction-entry condition, not a generic market-data outage.
 Fresh option books remain required for a healthy feed summary; stale index
 transport, disconnected sockets and delayed processing keep their warnings.
 No execution rule or strategy clock is changed by this read-only presentation.
+Provider-confirmed CAS_STOP is a closed auction entry phase, not missing feed
+data. Its strategy row says Closed, while exposure/settlement handling remains
+separate. Fresh incoming frames cannot conceal genuinely stale option books.

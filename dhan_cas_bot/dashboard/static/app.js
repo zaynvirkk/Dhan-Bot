@@ -36,6 +36,7 @@ function renderFeeds(rt,now){
  const idle=rt?.monitoring_mode==='IDLE';const fresh=rt?.fresh===true;
  const issues=[];let known=0;
  const auctionExpected=Number(rt?.observation?.reference)>0&&['CTS_CLOSE','CAS_LM_START','CAS_M_STOP'].includes(rt?.observation?.phase);
+ const auctionClosed=rt?.observation?.phase==='CAS_STOP';
  const rows=Object.entries(names).map(([key,name])=>{
   const f=feeds[key];let status='Unknown',kind='warn',detail='The deployed bot has not supplied live connection observations.';
   if(f){
@@ -55,7 +56,7 @@ function renderFeeds(rt,now){
     if(Number(f.oldest_pending_ms)>1000){status='Processing delayed';kind='warn';issues.push('delayed');}
     else if(!idle&&key==='signal'&&(usable===null||usable>5)&&seen!==null&&seen<=5&&processed!==null&&processed<=5){
      status='Receiving frames';
-     detail+=auctionExpected?' · auction entry awaits a current official indicative index value':' · no current strategy input accepted';
+     detail+=auctionClosed?' · provider has closed the auction':auctionExpected?' · auction entry awaits a current official indicative index value':' · no current strategy input accepted';
      issues.push('signal-pending');
     }
     else if(!idle&&key!=='order'&&(usable===null||usable>5)){status='Awaiting fresh data';kind='warn';issues.push('waiting');}
@@ -65,7 +66,7 @@ function renderFeeds(rt,now){
  });
  $('feed-context').textContent=!fresh?'Current feed health is unknown until a fresh bot status arrives.':idle?'The bot reports an idle session: entries are outside their active window. Market data may still arrive; receipt times and socket state are shown separately.':'Live socket observations. Connected does not mean the strategy has a usable signal or permission to trade.';
  if(changed('feed-rows',rows)){$('live-connections').replaceChildren();for(const r of rows){const row=el('div',undefined,'connection-row live-feed');const info=el('div');info.append(el('p',r.name,'connection-name'),el('p',r.detail,'connection-detail'));row.append(info,badge(r.status,r.kind));$('live-connections').append(row);}}
- return {issues,known,idle,auctionExpected,disconnected:rows.filter(r=>r.status==='Disconnected').map(r=>r.name)};
+ return {issues,known,idle,auctionExpected,auctionClosed,disconnected:rows.filter(r=>r.status==='Disconnected').map(r=>r.name)};
 }
 function monitoringNotice(d,feeds){
  if(!d.available)return {text:'No dashboard snapshot is available. The collector may not be running.',kind:'error'};
@@ -83,7 +84,8 @@ function monitoringNotice(d,feeds){
  if(feeds.known<3)return {text:'Account and bot updates are current. Live feed health is unavailable from the deployed version; dated diagnostics are shown separately.'};
  if(feeds.idle)return {text:'The bot reports an idle session. Account updates are current; live socket observations are shown below.',kind:'healthy'};
  if(feeds.issues.includes('waiting'))return {text:'Account updates are current. Waiting for fresh usable market data; inspect Live connections.'};
- if(feeds.issues.includes('signal-pending'))return feeds.auctionExpected?
+ if(feeds.issues.includes('signal-pending'))return feeds.auctionClosed?
+  {text:'Live feeds are receiving data. The provider has closed auction entries; position management continues.',kind:'healthy'}:feeds.auctionExpected?
   {text:'Live feeds are receiving data. Auction entries await a current official indicative index value.',kind:'healthy'}:
   {text:'Upstox frames are arriving, but no current strategy input has been accepted. Inspect index inputs in Live connections.'};
  return {text:'Account and feed observations are current. Trading authority and entry conditions are shown separately.',kind:'healthy'};
@@ -154,7 +156,8 @@ function renderStrategies(d){
  for(const row of observer?.strategy_evaluations||[])if(!configured.includes(row.strategy))display.push({...row,current:observer.fresh===true,source:'Read-only monitor',lastDecision:(observer.last_decisions||[]).find(v=>v.strategy===row.strategy)});
  if(configured.includes('CAS_LAG_V1')||(!configured.length&&rt?.observation?.expiry)){
   const expiryToday=rt.expiry_today??(istDay(rt.observation?.expiry)===istDay(d.server_time));
-  display.push({strategy:'CAS_LAG_V1',current:rt?.fresh===true,source:'Trading service',state:expiryToday?'WAITING':'NOT_APPLICABLE',enabled:true,reason:expiryToday?'Expiry confirmed from current contracts. Auction entry checks are below.':`Next loaded NIFTY expiry: ${shortDate(rt.observation?.expiry)}.`});
+  const closed=expiryToday&&rt?.observation?.phase==='CAS_STOP';
+  display.push({strategy:'CAS_LAG_V1',current:rt?.fresh===true,source:'Trading service',state:closed?'CLOSED':expiryToday?'WAITING':'NOT_APPLICABLE',enabled:true,reason:closed?'Provider reports the auction closed. No new auction entries; exit and settlement handling continue.':expiryToday?'Expiry confirmed from current contracts. Auction entry checks are below.':`Next loaded NIFTY expiry: ${shortDate(rt.observation?.expiry)}.`});
  }
  for(const row of display)row.lastSignal=(d.ledger?.last_signals||[]).find(v=>v.strategy===row.strategy);
  $('strategy-empty').hidden=display.length>0;
@@ -162,7 +165,7 @@ function renderStrategies(d){
  $('strategy-checks').replaceChildren();
  for(const row of display){
   const wrap=el('div',undefined,'connection-row'),info=el('div');
-  const state=row.current?row.state:'UNKNOWN',label={WAITING:'Waiting',NO_SIGNAL:'No signal',SIGNAL:'Signal observed',NOT_APPLICABLE:'Not applicable',DISABLED:'Disabled',UNKNOWN:'Unknown'}[state]||'Unknown';
+  const state=row.current?row.state:'UNKNOWN',label={WAITING:'Waiting',CLOSED:'Closed',NO_SIGNAL:'No signal',SIGNAL:'Signal observed',NOT_APPLICABLE:'Not applicable',DISABLED:'Disabled',UNKNOWN:'Unknown'}[state]||'Unknown';
   const window=row.strategy==='GAP_FADE_DOUBLE'?'09:45–11:30 IST · every 5 minutes':row.strategy==='NIFTY_SELLOFF_REBOUND_1510'?'15:10 IST · may hold into the next session':'Eligible expiry · auction phase required';
   info.append(el('p',strategyNames[row.strategy]||'Unknown strategy','connection-name'),el('p',`${row.source} · ${window}`,'connection-detail'));
   const finished=row.current&&row.strategy==='GAP_FADE_DOUBLE'&&row.reason==='OUTSIDE_STRATEGY_WINDOW'&&new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(d.server_time))>='11:30';
