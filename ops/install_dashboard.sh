@@ -39,7 +39,7 @@ if [[ ! -f "$DASH_RELEASE/.ready" ]]; then
   python3 -m venv "$DASH_RELEASE/.venv"
   "$DASH_RELEASE/.venv/bin/pip" install --disable-pip-version-check -q -r "$DASH_RELEASE/requirements-dashboard.lock"
   "$DASH_RELEASE/.venv/bin/pip" install --disable-pip-version-check -q --no-deps "$DASH_RELEASE"
-  (cd "$DASH_RELEASE" && .venv/bin/python -m pytest tests/test_dashboard.py tests/test_dashboard_streaming.py tests/test_daily_monitor.py tests/test_strategy_dashboard.py tests/test_session_strategies.py)
+  (cd "$DASH_RELEASE" && .venv/bin/python -m pytest tests/test_dashboard.py tests/test_dashboard_streaming.py tests/test_daily_monitor.py tests/test_strategy_dashboard.py tests/test_session_strategies.py tests/test_strategy_performance.py)
   touch "$DASH_RELEASE/.ready"
 fi
 install -d -m 0755 -o root -g root /etc/sablestone-dhan-dashboard

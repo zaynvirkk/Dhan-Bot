@@ -43,3 +43,11 @@ def test_funded_projection_and_exit_suffix_do_not_hide_actual_policy():
         'reason':'ORDINARY_PUBLISHED_PCR_TRAIL:TIME_EXIT'},now)
     assert r['funded_strategies']==['CAS_LAG_V1']
     assert 'deadline' in r['reason'].lower()
+
+
+def test_fractional_broker_charges_are_displayable_currency(tmp_path):
+    l=populate(tmp_path)
+    l.db.execute("UPDATE order_charges SET fees='20.1234'")
+    row=strategy_performance(l.db)[0]
+    assert row['reported_charges']=='40.25'
+    assert row['net_pnl']=='89.75'

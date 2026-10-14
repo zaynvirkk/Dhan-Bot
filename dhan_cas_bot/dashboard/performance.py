@@ -5,6 +5,12 @@ from decimal import Decimal as D
 from dhan_cas_bot.session_strategies import STRATEGIES
 
 
+def currency(value):
+    """Display rupees without discarding sub-paise input before aggregation."""
+    if value.as_tuple().exponent < -2:value=value.quantize(D('.01'))
+    return format(value,'f')
+
+
 def strategy_performance(db):
     result={}
     has_charges=db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='order_charges'").fetchone() is not None
@@ -29,12 +35,12 @@ def strategy_performance(db):
         value['wins']+=net is not None and net>0;value['losses']+=net is not None and net<0
         if len(value['trades'])<20:
             value['trades'].append({'entry_at':buys[0]['occurred_at'],'exit_at':sells[-1]['occurred_at'],
-                'quantity':quantity,'entry_price':str(debit/quantity),'exit_price':str(credit/quantity),
-                'gross_pnl':str(gross),'reported_charges':str(fees) if charges else None,
-                'net_pnl':str(net) if net is not None else None,'charges_complete':complete,
+                'quantity':quantity,'entry_price':currency(debit/quantity),'exit_price':currency(credit/quantity),
+                'gross_pnl':currency(gross),'reported_charges':currency(fees) if charges else None,
+                'net_pnl':currency(net) if net is not None else None,'charges_complete':complete,
                 'holding_seconds':str((datetime.fromisoformat(sells[-1]['occurred_at'])-datetime.fromisoformat(buys[0]['occurred_at'])).total_seconds())})
-    return [{'strategy':r['strategy'],'filled_closed':r['filled_closed'],'gross_pnl':str(r['gross']),
-        'reported_charges':str(r['fees']) if r['complete'] else None,
-        'charges_complete':r['complete'],'net_pnl':str(r['gross']-r['fees']) if r['complete'] else None,
+    return [{'strategy':r['strategy'],'filled_closed':r['filled_closed'],'gross_pnl':currency(r['gross']),
+        'reported_charges':currency(r['fees']) if r['complete'] else None,
+        'charges_complete':r['complete'],'net_pnl':currency(r['gross']-r['fees']) if r['complete'] else None,
         'net_wins':r['wins'] if r['complete'] else None,'net_losses':r['losses'] if r['complete'] else None,
         'trades':r['trades']} for r in result.values()]
