@@ -305,6 +305,7 @@ function renderDecision(d){
  const titles={NO_TRADE_DAY:'Waiting for an expiry session',ARMED_WAITING_SESSION:'Waiting for the trading window',ARMED_WAITING_SIGNAL:'Watching for an auction signal',POSITION_OPEN:'Managing an open position',ENTRY_PENDING:'Entry submitted · awaiting execution',EXIT_PENDING:'Reducing the position',SETTLEMENT_PENDING:'Waiting for settlement',RECOVERING:'Reconciling the account',ENTRY_HALTED:'New entries are blocked',DISARMED:'New entries are disabled'};
  let title=current?(titles[rt.state]||'Waiting for a decision update'):'Current bot state is unknown';
  let reason=current?rt.reason:'The dashboard needs a fresh bot observation before it can describe the current state.';
+ if(current&&rt.state==='POSITION_OPEN'&&(!reason||reason==='No specific decision reason was recorded.'))reason='The position is open. The bot is monitoring its recorded exit rules; current P&L is shown above.';
  let next='';
  const directional=(rt?.strategies||[]).some(name=>name!=='CAS_LAG_V1');
  if(current&&rt.state==='NO_TRADE_DAY'){
@@ -376,7 +377,7 @@ function renderDecision(d){
  $('watch-empty').textContent=!o?'Market input observations are not available from this bot version.':'No usable option books retained. Check the options feed receipt above; waiting for the trading window does not confirm that data is arriving.';
  $('watch-stamp').textContent=rt?.books_observed==null?'':`${rt.books_observed} retained books`;
  const entry=d.ledger?.last_entry;
- $('last-entry').textContent=entry?`${at(entry.occurred_at)} · ${strategyNames[entry.strategy]||'Auction'} · NIFTY ${points(entry.strike)} ${entry.option_type||''}. Selected ${entry.quantity??'unknown'} units at a limit of ${cash(entry.limit)}.${entry.reference!=null?` Reference ${points(entry.reference)}; ${entry.confirmations??'unknown'} confirmations.`:''}`:d.ledger?.available?'No entry decision has been recorded.':'The decision ledger is unavailable.';
+ $('last-entry').textContent=entry?`${at(entry.occurred_at)} · ${strategyNames[entry.strategy]||(entry.strategy?entry.strategy.replaceAll('_',' ').toLowerCase():'Strategy not reported')} · NIFTY ${points(entry.strike)} ${entry.option_type||''}. Selected ${entry.quantity??'unknown'} units at a limit of ${cash(entry.limit)}.${entry.reference!=null?` Reference ${points(entry.reference)}; ${entry.confirmations??'unknown'} confirmations.`:''}`:d.ledger?.available?'No entry decision has been recorded.':'The decision ledger is unavailable.';
  $('positions-table').hidden=!a?.positions?.length;$('positions-section').hidden=Array.isArray(a?.positions)&&a.positions.length===0&&a.fresh===true;
  const feeds=rt?.feed_health||{};const values=Object.values(feeds);const connected=values.filter(f=>f.connected===true).length;
  $('system-summary').textContent=!current?'Current health unknown':`${connected} of 3 sockets connected`;

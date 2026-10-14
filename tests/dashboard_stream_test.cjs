@@ -308,9 +308,11 @@ setImmediate(()=>{
  assert.equal(ids['pnl-unreported'].hidden,false);
  browser.moneyFixture.ledger={available:false};
  browser.moneyFixture.runtime.state='POSITION_OPEN';
+ browser.moneyFixture.runtime.reason='No specific decision reason was recorded.';
  vm.runInContext('render(moneyFixture)',browser);
  assert.equal(ids['fill-count'].textContent,'—','Unavailable execution records must not imply zero fills');
  assert.equal(ids['now-title'].textContent,'Managing an open position','Route blocker must not hide position management');
+ assert.match(ids['now-reason'].textContent,/monitoring its recorded exit rules/);
  browser.moneyFixture.runtime.fresh=false;
  vm.runInContext('render(moneyFixture)',browser);
  assert.equal(ids['now-title'].textContent,'Current bot state is unknown','Stale route observations cannot establish current blockage');
