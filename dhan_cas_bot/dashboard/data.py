@@ -59,6 +59,7 @@ REASONS = {
     'LAG_CONVERGED': 'The option price caught up with the auction value. The bot is reducing its position.',
     'JOINT_REVERSAL': 'Both intrinsic value and bid reversed. The bot is reducing its position.',
     'TIME_EXIT': 'The exit deadline was reached. The bot is reducing its position.',
+    'NET_PROFIT_FLOOR': 'Executable net profit fell through its recorded profit floor. The bot is reducing the position.',
     'OPTION_BOOK_UNAVAILABLE': 'The option book is unavailable. The bot is handling the open position.',
     'RECOVERY_OR_SIGNAL_UNAVAILABLE': 'Signal or connection recovery is required. The bot is handling the open position.',
     'SIGNAL_UNAVAILABLE': 'No usable auction state is available.',

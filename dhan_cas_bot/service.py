@@ -179,6 +179,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         usable_at = {}
         received_seq = 0
         echoed = {}
+        order_connected_at = None
         uncertainty = await clock_uncertainty()
         account_refresh = AccountRefresh(runtime, wake, busy=lambda: bool(engine.active or ledger.pending_intents()),
             publish=lambda funds, snapshot, stamp: write_account_observation(state_dir, funds, snapshot, stamp))
@@ -393,10 +394,14 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             engine.market_reconnect(None)
             wake.set()
         def order_connect():
+            nonlocal order_connected_at
+            order_connected_at=now()
             usable_at.pop("order", None)
             orders.protocol.on_connect()
             account_refresh.invalidate()
         def order_disconnect():
+            nonlocal order_connected_at
+            order_connected_at=None
             orders.protocol.on_disconnect()
             runtime.status.broker_route_verified = False
             echoed.clear()
@@ -459,6 +464,12 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                             if totals["quantity"] == 0:
                                 runtime.status.broker_route_verified = True
                 may_probe = (account_refresh.fresh and account_admitted and broker.allow_writes and runtime.status.auto_live_armed and runtime.status.software_verified and uncertainty <= 100 and not runtime.status.broker_route_verified and engine.active is None and not ledger.pending_intents() and orders.protocol.epoch.connected and orders.protocol.epoch.id not in route_failed_epochs and route_window(enabled, current, calendar, expiry_today))
+                if (account_refresh.fresh and orders.protocol.epoch.connected
+                        and not runtime.status.broker_route_verified):
+                    from .route import managed_exit_route
+                    if managed_exit_route(ledger,broker.account_id,orders.protocol.epoch.id,order_connected_at,echoed):
+                        runtime.status.broker_route_verified=True
+                        may_probe=False
                 if may_probe:
                     choices = [book for book in engine.books.values() if (book.instrument.expiry >= today if has_directional else book.instrument.expiry == today) and book.top_bid and book.top_bid.quantity >= book.instrument.lot_size and book.top_bid.price > max(book.instrument.tick_size, book.instrument.lower_limit or 0)]
                     choices.sort(key=lambda book: (book.instrument.lot_size*max(book.instrument.tick_size,book.instrument.lower_limit or 0), int(book.instrument.security_id)))

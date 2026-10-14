@@ -20,6 +20,28 @@ class RouteProof:
     zero_fill: bool
 
 
+def managed_exit_route(ledger, account, epoch, connected_at, echoed):
+    """A real reduction fill can prove the current socket without a new buy.
+
+    Historical or replayed trades cannot establish a newly connected route.
+    This consumes no probe allowance and never submits an order itself.
+    """
+    if not connected_at or not epoch:return None
+    for row in ledger.db.execute("SELECT i.intent_id,i.created_at,i.quantity,i.security_id,i.state,o.order_id,o.broker_account,o.state AS broker_state FROM intents i JOIN orders o ON o.intent_id=i.intent_id JOIN lifecycles l ON l.lifecycle_id=i.lifecycle_id WHERE i.side='SELL' AND i.lifecycle_id!='route-probe' AND i.security_id=l.security_id ORDER BY i.created_at DESC LIMIT 64"):
+        try:
+            submitted=datetime.fromisoformat(row['created_at'])
+            if submitted.tzinfo is None or submitted<connected_at:continue
+        except (ValueError,TypeError):continue
+        evidence=echoed.get(row['order_id'])
+        if (row['broker_account']!=account or row['state'] not in {'FILLED','CANCELLED','EXPIRED'}
+                or row['broker_state']=='REJECTED' or not evidence or evidence[0]!=epoch
+                or evidence[1] not in {'PART_TRADED','TRADED','CANCELLED','EXPIRED'}):continue
+        fills=list(ledger.db.execute('SELECT security_id,quantity FROM fills WHERE order_id=? AND intent_id=?',(row['order_id'],row['intent_id'])))
+        if (fills and all(f['security_id']==row['security_id'] and f['quantity']>0 for f in fills)
+                and 0<sum(f['quantity'] for f in fills)<=row['quantity']):return row['order_id']
+    return None
+
+
 class RouteQualifier:
     def __init__(self, ledger: Ledger, broker: Broker, *, session_id: str, max_attempts: int, debit_cap: Decimal, mandate_spend_cap: Decimal):
         if max_attempts <= 0 or debit_cap <= 0 or mandate_spend_cap <= 0:
