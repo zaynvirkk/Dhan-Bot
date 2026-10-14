@@ -9,6 +9,16 @@ import tomllib
 from .domain import ContractError, Mandate, dec
 
 
+def funded_strategies(config, scanned):
+    """Explicit order authority subset; scanning never grants money authority."""
+    if 'funded_strategies' not in config:return tuple(scanned)
+    names=config['funded_strategies']
+    if (not isinstance(names,list) or any(not isinstance(n,str) for n in names)
+            or len(names)!=len(set(names)) or not set(names)<=set(scanned)):
+        raise ValueError('funded strategies must be a unique subset of scanned strategies')
+    return tuple(names)
+
+
 def load_config(path: str | Path) -> dict:
     raw = tomllib.loads(Path(path).read_text(encoding="utf-8"))
     required = {"state_dir", "live_order_authority", "account_id", "dhan_api_base", "expected_egress_ip"}
@@ -19,7 +29,7 @@ def load_config(path: str | Path) -> dict:
     if not raw["account_id"]:
         raise ContractError("account_id is required")
     from .strategy_inputs import strategy_names
-    strategy_names(raw)
+    funded_strategies(raw,strategy_names(raw))
     policy=raw.get('profit_exit_policy')
     if policy is not None:
         if policy!='NET_PROFIT_RATCHET_V1' or 'profit_exit_retain' not in raw:

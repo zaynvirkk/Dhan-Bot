@@ -112,7 +112,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     token = await session_token(config, state_dir)
     broker = DhanBroker(config["account_id"], token, config["dhan_api_base"], allow_writes=config["live_order_authority"] and mandate.live_order_authority)
     runtime = AutoLive(ledger, broker, mandate, software_verified=current_verification(Path(__file__).resolve().parents[1], state_dir))
-    runtime.enabled_strategies = frozenset(enabled)
+    from .config import funded_strategies
+    runtime.enabled_strategies = frozenset(funded_strategies(config,enabled))
     runtime.status.auto_live_armed = broker.allow_writes and not ledger.metadata("disarmed", False)
     tasks = []
     runners = []
@@ -532,7 +533,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                              final_source_error=final_error, telemetry=runtime.telemetry.snapshot(),
                              account_snapshot_fresh=account_refresh.fresh, feed_health=feed_health,
                              monitoring_mode="IDLE" if idle else "ACTIVE", recorder_pending=records.qsize(),
-                             strategies=list(enabled), strategy_evaluations=engine.directional.view(),
+                             strategies=list(enabled), funded_strategies=sorted(runtime.enabled_strategies), strategy_evaluations=engine.directional.view(),
                              strategy_selection=engine.directional.selection,
                              execution_feedback=engine.directional.ranking,
                              minute_source=input_worker.minutes.spot_source if has_directional else None,

@@ -186,6 +186,10 @@ class DirectionalEngine:
         for signal in rank_signals(self.signals.values(),ledger,now,ranking=self.ranking):
             if signal.strategy not in self.enabled:
                 continue
+            if signal.strategy not in runtime.enabled_strategies:
+                self.last_reason='FUNDED_STRATEGY_DISABLED'
+                self.record_assessment(signal,self.last_reason)
+                continue
             key = self.signal_key(signal)+":consumed"
             if ledger.metadata(key) or ledger.metadata(self.family_key(signal)) or signal.evaluated_at.astimezone(IST).date() != now.astimezone(IST).date():
                 continue
@@ -394,6 +398,7 @@ class DirectionalEngine:
             sample=self.inputs.evaluations.get(strategy) if self.inputs else None
             row=json_safe(asdict(sample)) if sample else {"strategy":strategy,"state":"UNKNOWN","reason":"INPUTS_NOT_RECEIVED"}
             row["enabled"]=strategy in self.enabled
+            row['funded_enabled']=strategy in self.engine.runtime.enabled_strategies
             if strategy not in self.enabled:
                 row.update(state="DISABLED",reason="NOT_CONFIGURED")
             elif not self.inputs or not 0 <= (now-self.inputs.received_at).total_seconds()<=90:

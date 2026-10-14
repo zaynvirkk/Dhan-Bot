@@ -1,0 +1,200 @@
+{
+  "quote_stats": {
+    "scanned": 5726400,
+    "decoded_held_quotes": 18705,
+    "invalid_packets": 49907,
+    "elapsed_seconds": 58.33123820787296
+  },
+  "sampling": "Last quote per second with its true receipt timestamp; not an exact tick replay.",
+  "today_profit_exits": [
+    {
+      "retain": "0.25",
+      "trigger_ns": 1791959086749766144,
+      "peak": "425.2800",
+      "floor": "106.320000",
+      "delay_seconds": 1,
+      "arrival_ns": 1791959088282247936,
+      "limit": "125.9500",
+      "status": "DISPLAYED_DEPTH_SCENARIO",
+      "exit_price": "125.9500",
+      "net": "146.4600",
+      "trigger_at": "2026-10-14T06:24:46.749766+00:00",
+      "arrival_at": "2026-10-14T06:24:48.282248+00:00"
+    },
+    {
+      "retain": "0.25",
+      "trigger_ns": 1791959086749766144,
+      "peak": "425.2800",
+      "floor": "106.320000",
+      "delay_seconds": 3,
+      "arrival_ns": 1791959089980534016,
+      "limit": "125.9500",
+      "status": "DISPLAYED_DEPTH_SCENARIO",
+      "exit_price": "126.4500",
+      "net": "178.9300",
+      "trigger_at": "2026-10-14T06:24:46.749766+00:00",
+      "arrival_at": "2026-10-14T06:24:49.980534+00:00"
+    },
+    {
+      "retain": "0.25",
+      "trigger_ns": 1791959086749766144,
+      "peak": "425.2800",
+      "floor": "106.320000",
+      "delay_seconds": 5,
+      "arrival_ns": 1791959091837810944,
+      "limit": "125.9500",
+      "status": "DISPLAYED_DEPTH_SCENARIO",
+      "exit_price": "126.6000",
+      "net": "188.6800",
+      "trigger_at": "2026-10-14T06:24:46.749766+00:00",
+      "arrival_at": "2026-10-14T06:24:51.837811+00:00"
+    },
+    {
+      "retain": "0.25",
+      "trigger_ns": 1791959086749766144,
+      "peak": "425.2800",
+      "floor": "106.320000",
+      "delay_seconds": 15,
+      "arrival_ns": 1791959101784950016,
+      "limit": "125.9500",
+      "status": "DISPLAYED_DEPTH_SCENARIO",
+      "exit_price": "127.1000",
+      "net": "221.1700",
+      "trigger_at": "2026-10-14T06:24:46.749766+00:00",
+      "arrival_at": "2026-10-14T06:25:01.784950+00:00"
+    },
+    {
+      "retain": "0.50",
+      "trigger_ns": 1791959078523736832,
+      "peak": "425.2800",
+      "floor": "212.640000",
+      "delay_seconds": 1,
+      "arrival_ns": 1791959079974041088,
+      "limit": "127.3500",
+      "status": "DISPLAYED_DEPTH_SCENARIO",
+      "exit_price": "127.5500",
+      "net": "250.4100",
+      "trigger_at": "2026-10-14T06:24:38.523737+00:00",
+      "arrival_at": "2026-10-14T06:24:39.974041+00:00"
+    },
+    {
+      "retain": "0.50",
+      "trigger_ns": 1791959078523736832,
+      "peak": "425.2800",
+      "floor": "212.640000",
+      "delay_seconds": 3,
+      "arrival_ns": 1791959081748269056,
+      "limit": "127.3500",
+      "status": "LIMIT_MISS",
+      "trigger_at": "2026-10-14T06:24:38.523737+00:00",
+      "arrival_at": "2026-10-14T06:24:41.748269+00:00"
+    },
+    {
+      "retain": "0.50",
+      "trigger_ns": 1791959078523736832,
+      "peak": "425.2800",
+      "floor": "212.640000",
+      "delay_seconds": 5,
+      "arrival_ns": 1791959084983223040,
+      "limit": "127.3500",
+      "status": "LIMIT_MISS",
+      "trigger_at": "2026-10-14T06:24:38.523737+00:00",
+      "arrival_at": "2026-10-14T06:24:44.983223+00:00"
+    },
+    {
+      "retain": "0.50",
+      "trigger_ns": 1791959078523736832,
+      "peak": "425.2800",
+      "floor": "212.640000",
+      "delay_seconds": 15,
+      "arrival_ns": 1791959094977225984,
+      "limit": "127.3500",
+      "status": "LIMIT_MISS",
+      "trigger_at": "2026-10-14T06:24:38.523737+00:00",
+      "arrival_at": "2026-10-14T06:24:54.977226+00:00"
+    },
+    {
+      "retain": "0.75",
+      "trigger_ns": 1791959066779435008,
+      "peak": "425.2800",
+      "floor": "318.960000",
+      "delay_seconds": 1,
+      "arrival_ns": 1791959068726788096,
+      "limit": "129.1500",
+      "status": "LIMIT_MISS",
+      "trigger_at": "2026-10-14T06:24:26.779435+00:00",
+      "arrival_at": "2026-10-14T06:24:28.726788+00:00"
+    },
+    {
+      "retain": "0.75",
+      "trigger_ns": 1791959066779435008,
+      "peak": "425.2800",
+      "floor": "318.960000",
+      "delay_seconds": 3,
+      "arrival_ns": 1791959070020924928,
+      "limit": "129.1500",
+      "status": "LIMIT_MISS",
+      "trigger_at": "2026-10-14T06:24:26.779435+00:00",
+      "arrival_at": "2026-10-14T06:24:30.020925+00:00"
+    },
+    {
+      "retain": "0.75",
+      "trigger_ns": 1791959066779435008,
+      "peak": "425.2800",
+      "floor": "318.960000",
+      "delay_seconds": 5,
+      "arrival_ns": 1791959071989104128,
+      "limit": "129.1500",
+      "status": "LIMIT_MISS",
+      "trigger_at": "2026-10-14T06:24:26.779435+00:00",
+      "arrival_at": "2026-10-14T06:24:31.989104+00:00"
+    },
+    {
+      "retain": "0.75",
+      "trigger_ns": 1791959066779435008,
+      "peak": "425.2800",
+      "floor": "318.960000",
+      "delay_seconds": 15,
+      "arrival_ns": 1791959083263622144,
+      "limit": "129.1500",
+      "status": "LIMIT_MISS",
+      "trigger_at": "2026-10-14T06:24:26.779435+00:00",
+      "arrival_at": "2026-10-14T06:24:43.263622+00:00"
+    }
+  ],
+  "yesterday_session_stop": [
+    {
+      "retain": "0.5",
+      "closed_through": 14,
+      "net": "1886.48",
+      "floor": "2349.155",
+      "stopped": true
+    },
+    {
+      "retain": "0.75",
+      "closed_through": 13,
+      "net": "3364.05",
+      "floor": "3523.7325",
+      "stopped": true
+    },
+    {
+      "retain": "0.9",
+      "closed_through": 5,
+      "net": "3454.21",
+      "floor": "3682.467",
+      "stopped": true
+    }
+  ],
+  "actual_days": {
+    "2026-10-13": {
+      "gross": "2791.75",
+      "reported_charges": "1082.3916",
+      "net": "1709.3584"
+    },
+    "2026-10-14": {
+      "gross": "-2665.00",
+      "net": null,
+      "charges_status": "AWAITING_FINAL_RECEIPTS"
+    }
+  }
+}

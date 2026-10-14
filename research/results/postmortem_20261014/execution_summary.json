@@ -1,0 +1,291 @@
+[
+  {
+    "sequence": 1,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 3510,
+    "strike": "22850.00000",
+    "entry": "0.55",
+    "exit": "0.5",
+    "gross": "-175.50",
+    "reported_fees": "51.4396",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:50:09.407484+00:00",
+    "last_sell": "2026-10-13T09:50:13.885185+00:00",
+    "holding_seconds": 4.477701
+  },
+  {
+    "sequence": 2,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "21.05",
+    "exit": "27.25",
+    "gross": "2015.00",
+    "reported_fees": "53.7999",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:50:25.853017+00:00",
+    "last_sell": "2026-10-13T09:50:35.639122+00:00",
+    "holding_seconds": 9.786105
+  },
+  {
+    "sequence": 3,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "28.75",
+    "exit": "34.0",
+    "gross": "1706.25",
+    "reported_fees": "265.0756",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:50:37.902507+00:00",
+    "last_sell": "2026-10-13T09:50:42.370705+00:00",
+    "holding_seconds": 4.468198
+  },
+  {
+    "sequence": 4,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "27.6",
+    "exit": "30.1",
+    "gross": "812.5",
+    "reported_fees": "55.0842",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:50:49.622135+00:00",
+    "last_sell": "2026-10-13T09:50:57.873243+00:00",
+    "holding_seconds": 8.251108
+  },
+  {
+    "sequence": 5,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "28.0",
+    "exit": "26.25",
+    "gross": "-568.75",
+    "reported_fees": "54.6126",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:51:07.418969+00:00",
+    "last_sell": "2026-10-13T09:51:11.107146+00:00",
+    "holding_seconds": 3.688177
+  },
+  {
+    "sequence": 6,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "26.85",
+    "exit": "30.9",
+    "gross": "1316.25",
+    "reported_fees": "55.0910",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:51:42.637855+00:00",
+    "last_sell": "2026-10-13T09:51:51.856819+00:00",
+    "holding_seconds": 9.218964
+  },
+  {
+    "sequence": 7,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "29.1",
+    "exit": "29.1",
+    "gross": "0.0",
+    "reported_fees": "55.1524",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:51:59.131064+00:00",
+    "last_sell": "2026-10-13T09:52:06.142924+00:00",
+    "holding_seconds": 7.01186
+  },
+  {
+    "sequence": 8,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "27.4",
+    "exit": "26.05",
+    "gross": "-438.75",
+    "reported_fees": "54.5034",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:52:09.422103+00:00",
+    "last_sell": "2026-10-13T09:52:13.261346+00:00",
+    "holding_seconds": 3.839243
+  },
+  {
+    "sequence": 9,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "27.0",
+    "exit": "26.45",
+    "gross": "-178.75",
+    "reported_fees": "54.5034",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:52:15.623349+00:00",
+    "last_sell": "2026-10-13T09:52:20.148852+00:00",
+    "holding_seconds": 4.525503
+  },
+  {
+    "sequence": 10,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "29.2",
+    "exit": "28.65",
+    "gross": "-178.75",
+    "reported_fees": "55.1047",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:52:30.112368+00:00",
+    "last_sell": "2026-10-13T09:52:34.377664+00:00",
+    "holding_seconds": 4.265296
+  },
+  {
+    "sequence": 11,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "27.4",
+    "exit": "27.8",
+    "gross": "130.0",
+    "reported_fees": "54.7427",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:52:37.615629+00:00",
+    "last_sell": "2026-10-13T09:52:43.884846+00:00",
+    "holding_seconds": 6.269217
+  },
+  {
+    "sequence": 12,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "29.35",
+    "exit": "29.4",
+    "gross": "16.25",
+    "reported_fees": "55.2275",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:53:07.173624+00:00",
+    "last_sell": "2026-10-13T09:53:12.908297+00:00",
+    "holding_seconds": 5.734673
+  },
+  {
+    "sequence": 13,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "27.7",
+    "exit": "27.1",
+    "gross": "-195.0",
+    "reported_fees": "54.6877",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:53:16.355018+00:00",
+    "last_sell": "2026-10-13T09:53:24.597767+00:00",
+    "holding_seconds": 8.242749
+  },
+  {
+    "sequence": 14,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 325,
+    "strike": "22700.00000",
+    "entry": "27.19",
+    "exit": "22.85",
+    "gross": "-1410.50",
+    "reported_fees": "54.0377",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:53:27.377834+00:00",
+    "last_sell": "2026-10-13T09:53:41.119893+00:00",
+    "holding_seconds": 13.742059
+  },
+  {
+    "sequence": 15,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 390,
+    "strike": "22700.00000",
+    "entry": "23.0",
+    "exit": "22.35",
+    "gross": "-253.50",
+    "reported_fees": "54.6359",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:53:54.656623+00:00",
+    "last_sell": "2026-10-13T09:54:03.135200+00:00",
+    "holding_seconds": 8.478577
+  },
+  {
+    "sequence": 16,
+    "dates": [
+      "2026-10-13"
+    ],
+    "strategy": "CAS_LAG_V1",
+    "quantity": 390,
+    "strike": "22700.00000",
+    "entry": "22.6",
+    "exit": "23.1",
+    "gross": "195.0",
+    "reported_fees": "54.6933",
+    "complete_fee_receipts": 2,
+    "first_buy": "2026-10-13T09:54:06.394974+00:00",
+    "last_sell": "2026-10-13T09:54:09.849739+00:00",
+    "holding_seconds": 3.454765
+  },
+  {
+    "sequence": 17,
+    "dates": [
+      "2026-10-14"
+    ],
+    "strategy": "ORDINARY_PUBLISHED_PCR_TRAIL",
+    "quantity": 65,
+    "strike": "22750.00000",
+    "entry": "122.65",
+    "exit": "81.65",
+    "gross": "-2665.00",
+    "reported_fees": "0",
+    "complete_fee_receipts": 0,
+    "first_buy": "2026-10-14T06:21:03.492621+00:00",
+    "last_sell": "2026-10-14T10:04:02.430814+00:00",
+    "holding_seconds": 13378.938193
+  }
+]

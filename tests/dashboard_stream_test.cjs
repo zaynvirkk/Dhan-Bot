@@ -426,6 +426,16 @@ setImmediate(()=>{
  vm.runInContext('renderSelection(selectionFixture)',browser);
  assert.ok(!ids['selection-reason'].textContent.includes('retained below'),'An initialized empty comparison is not a recorded comparison');
  console.log('Cash/time selection, conflict abstention and closed-session explanation verified');
+
+ browser.strategyResults={server_time:'2026-10-14T10:10:00+00:00',runtime:{fresh:true,strategies:['CAS_LAG_V1','ORDINARY_PUBLISHED_PCR_TRAIL'],funded_strategies:['CAS_LAG_V1'],strategy_evaluations:[{strategy:'ORDINARY_PUBLISHED_PCR_TRAIL',state:'WAITING',enabled:true,funded_enabled:false,reason:'EXCHANGE_CLOSED'}],expiry_today:false},ledger:{available:true,strategy_performance:[{strategy:'CAS_LAG_V1',filled_closed:16,gross_pnl:'2791.75',reported_charges:'1082.39',net_pnl:'1709.36',charges_complete:true,trades:[]},{strategy:'ORDINARY_PUBLISHED_PCR_TRAIL',filled_closed:1,gross_pnl:'-2665.00',charges_complete:false,trades:[]}]}};
+ vm.runInContext('renderStrategies(strategyResults)',browser);
+ assert.match(ids['strategy-mode'].textContent,/1 permitted to trade real money/);
+ const content=node=>[node.textContent,...node.children.map(content)].join(' ');
+ assert.match(content(ids['strategy-performance']),/1,709.36/);
+ assert.match(content(ids['strategy-performance']),/Awaiting final fees/);
+ assert.match(content(ids['strategy-checks']),/Observation only/);
+ assert.match(content(ids['strategy-checks']),/Real-money entries permitted/);
+ console.log('Funded versus observed permissions and actual strategy results verified');
  browser.exitFixture={runtime:{fresh:true,state:'POSITION_OPEN'},account:{fresh:true,positions:[{quantity:65}]},
   ledger:{active_trades:[{strategy:'ORDINARY_PUBLISHED_PCR_TRAIL',quantity:65,trailing:true,stop_fraction:'0.50',target_known:true,target_multiple:null,exit_due:'2026-10-14T10:04:00Z',exit_trigger:null}]}};
  vm.runInContext('renderDecision(exitFixture)',browser);

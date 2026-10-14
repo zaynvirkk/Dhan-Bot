@@ -32,6 +32,7 @@ STRATEGY_REASONS = {
     'CONFLICTING_UNRANKED_SIGNALS','NO_POSITIVE_ESTIMATED_EDGE',
 }
 STRATEGY_REASONS.update({'EXPANDED_RULE_CONFIRMED','EXPANDED_RULE_NOT_MET','REQUIRES_EXPIRY_SESSION',
+    'FUNDED_STRATEGY_DISABLED',
     'MISSING_COMPLETED_BAR','MISSING_OHLC_RANGE','MISSING_VWAP_INPUTS','ZERO_FUTURE_VOLUME','ZERO_VOLUME_BASE',
     'MISSING_FUTURE_OI','MISSING_SAME_STRIKE_OPTION','MISSING_CHAIN_NEIGHBOURS','MISSING_CHAIN_OI',
     'MISSING_OPTION_OI','INVALID_OPEN_REFERENCE','SOURCE_NOT_YET_AVAILABLE','MISSING_CURRENT_IV',
@@ -158,18 +159,22 @@ def runtime_view(raw, now):
     flags = {k: raw.get(k) if type(raw.get(k)) is bool else None for k in
              ('software_verified', 'current_account_funded', 'broker_route_verified',
               'official_cas_signal_seen', 'final_value_source_verified', 'auto_live_armed', 'writes', 'account_snapshot_fresh')}
-    prefix = str(raw.get('reason', '')).split(':')[0]
+    parts = str(raw.get('reason', '')).split(':')
+    prefix = parts[0]
+    reason=REASONS.get(parts[-1]) if prefix in STRATEGY_NAMES and len(parts)>1 else None
+    if prefix in STRATEGY_NAMES and parts[-1]=='HOLDING':reason='The bot is holding this strategy position and checking its recorded profit, loss and session exit rules.'
     return {**timing, **flags, 'authority': authority,
             'route_attempts_used': integer(raw.get('route_attempts_used')),
             'route_attempt_limit': integer(raw.get('route_attempt_limit')),
             'state': choice(raw.get('state'), STATES, 'UNKNOWN'),
-            'reason': REASONS.get(prefix, 'No specific decision reason was recorded.'),
+            'reason': reason or REASONS.get(prefix, 'No specific decision reason was recorded.'),
             'session': timestamp(str(raw.get('session', '')) + 'T00:00:00+05:30'),
             'books_observed': integer(raw.get('books_observed')),
             'contract_count': integer(raw.get('contract_count')),
             'clock_uncertainty_ms': integer(raw.get('clock_uncertainty_ms')),
             'monitoring_mode': choice(raw.get('monitoring_mode'), {'IDLE', 'ACTIVE'}, 'UNKNOWN'),
             'strategies': [s for s in raw.get('strategies', []) if isinstance(s, str) and s in STRATEGY_NAMES] if isinstance(raw.get('strategies'), list) else [],
+            'funded_strategies': [s for s in raw['funded_strategies'] if isinstance(s,str) and s in STRATEGY_NAMES] if isinstance(raw.get('funded_strategies'),list) else None,
             'strategy_evaluations': strategy_projection(raw.get('strategy_evaluations')),
             'input_health':input_health_projection(raw.get('input_health'),now),
             'strategy_selection':selection_projection(raw.get('strategy_selection')),
@@ -280,6 +285,7 @@ def strategy_projection(raw):
             'ranking_available':row.get('ranking_available') if type(row.get('ranking_available')) is bool else False,
             'mean_estimated_net_return':str(Decimal(str(row['mean_estimated_net_return']))) if money(row.get('mean_estimated_net_return')) is not None else None,
             'enabled':row.get('enabled') if type(row.get('enabled')) is bool else None,
+            'funded_enabled':row.get('funded_enabled') if type(row.get('funded_enabled')) is bool else None,
             'state':choice(row.get('state'), {'UNKNOWN','WAITING','SIGNAL','NO_SIGNAL','NOT_APPLICABLE','DISABLED'},'UNKNOWN'),
             'reason':choice(str(row.get('reason','')).split(':')[0],STRATEGY_REASONS,'UNKNOWN'),
             'evaluated_at':timestamp(row.get('evaluated_at')), 'side':choice(row.get('side'), {'CE','PE'}),
@@ -615,7 +621,9 @@ def ledger_view(path):
                              'confirmations': len(raw['history']) if isinstance(raw.get('history'), list) else None}
                 except (ValueError, KeyError, TypeError, AttributeError):
                     entry = None
+            from .performance import strategy_performance
             return {'available': True, 'orders': orders, 'fills': fills, 'incidents': incidents, 'counts': counts, 'last_entry': entry,
+                    'strategy_performance':strategy_performance(db),
                     'last_signals':last_signal_views(db),'cash_reconciliation':cash_reconciliation(db),
                     'active_trades':active_trade_views(db)}
     except (sqlite3.Error, OSError, ValueError):

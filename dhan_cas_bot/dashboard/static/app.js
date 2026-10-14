@@ -209,9 +209,21 @@ function renderSelection(d){
 
 function renderStrategies(d){
  const rt=d.runtime,observer=d.daily_monitor,configured=rt?.strategies||[],checks=rt?.strategy_evaluations||[];
+ const funded=rt?.funded_strategies,performance=d.ledger?.strategy_performance||[];
+ const performanceAt=name=>performance.find(x=>x.strategy===name);
  const usingObserver=(observer?.strategy_evaluations||[]).some(row=>!configured.includes(row.strategy)),calendar=observer||rt;
  $('calendar-stamp').textContent=calendar?.calendar_checked_at?`Calendar checked ${at(calendar.calendar_checked_at)}`:'No exchange calendar observation';
- $('strategy-mode').textContent=usingObserver?'Daily checks use live market data in read-only mode. They cannot submit orders. Funded execution is shown separately in the trading-service rows and account status.':`${configured.length} enabled strategy variants share one bankroll and order manager. Closed executions inform selection; unranked rules have no measured profitability. Expand a family to inspect its checks.`;
+ $('strategy-mode').textContent=Array.isArray(funded)?`${funded.length} permitted to trade real money · ${configured.length} scanned configurations. Observation-only rules cannot place new entries. Expand a family for its live inputs and execution history.`:usingObserver?'Daily checks are read-only and cannot submit orders. Funded permissions have not been reported by the trading service.':`${configured.length} scanned configurations. Separate funded permissions have not been reported by this service version.`;
+ if(changed('strategy-performance',performance)){
+  $('strategy-performance').replaceChildren();
+  if(performance.length){
+   const wrap=el('div',undefined,'table-wrap'),table=el('table'),head=el('tr');
+   for(const text of ['Strategy','Closed trades','Gross P&L','Broker charges','Net P&L'])head.append(el('th',text));
+   table.append(head);
+   for(const row of performance){const tr=el('tr');for(const text of [strategyNames[row.strategy]||row.strategy.replaceAll('_',' ').toLowerCase(),String(row.filled_closed),cash(row.gross_pnl),row.charges_complete?cash(row.reported_charges):'Awaiting final fees',row.charges_complete?cash(row.net_pnl):'Awaiting final fees'])tr.append(el('td',text));table.append(tr);}
+   wrap.append(table);$('strategy-performance').append(wrap);
+  }else $('strategy-performance').append(el('p',d.ledger?.available?'No completed filled trades recorded.':'Execution history is unavailable.','subtle'));
+ }
  const market=observer?.spot!=null?`NIFTY completed close ${points(observer.spot)} · ${at(observer.spot_at)}${observer.opening!=null?` · Session open ${points(observer.opening)}`:''}${observer.previous_close!=null?` · Previous close ${points(observer.previous_close)}`:''}`:'';
  $('strategy-market').textContent=market;
  const health=rt?.input_health;
@@ -223,11 +235,12 @@ function renderStrategies(d){
  if(configured.includes('CAS_LAG_V1')||(!configured.length&&rt?.observation?.expiry)){
   const expiryToday=rt.expiry_today??(istDay(rt.observation?.expiry)===istDay(d.server_time));
   const closed=expiryToday&&rt?.observation?.phase==='CAS_STOP';
-  display.push({strategy:'CAS_LAG_V1',current:rt?.fresh===true,source:'Trading service',state:closed?'CLOSED':expiryToday?'WAITING':'NOT_APPLICABLE',enabled:true,reason:closed?'Provider reports the auction closed. No new auction entries; exit and settlement handling continue.':expiryToday?'Expiry confirmed from current contracts. Auction entry checks are below.':`Next loaded NIFTY expiry: ${shortDate(rt.observation?.expiry)}.`});
+  display.push({strategy:'CAS_LAG_V1',current:rt?.fresh===true,source:'Trading service',state:closed?'CLOSED':expiryToday?'WAITING':'NOT_APPLICABLE',enabled:true,funded_enabled:Array.isArray(funded)?funded.includes('CAS_LAG_V1'):null,reason:closed?'Provider reports the auction closed. No new auction entries; exit and settlement handling continue.':expiryToday?'Expiry confirmed from current contracts. Auction entry checks are below.':`Next loaded NIFTY expiry: ${shortDate(rt.observation?.expiry)}.`});
  }
  for(const row of display)row.lastSignal=(d.ledger?.last_signals||[]).find(v=>v.strategy===row.strategy);
  $('strategy-empty').hidden=display.length>0;
- if(!changed('strategy-checks',display))return;
+ display.sort((a,b)=>Number(b.funded_enabled===true)-Number(a.funded_enabled===true));
+ if(!changed('strategy-checks',{display,performance}))return;
  const expanded=new Set([...$('strategy-checks').querySelectorAll('details.strategy-family[open]')].map(n=>n.dataset.family));
  $('strategy-checks').replaceChildren();
  const groups=new Map();
@@ -271,6 +284,14 @@ function renderStrategies(d){
   }
   const last=row.lastDecision;
   if(last&&last.evaluated_at!==row.evaluated_at&&['SIGNAL','NO_SIGNAL'].includes(last.state))info.append(el('p',`Last completed decision · ${at(last.evaluated_at)}: ${conditionSummary(last)}`, 'last-strategy-decision'));
+  info.append(el('p',row.current?(row.funded_enabled===true?'Real-money entries permitted':row.funded_enabled===false?'Observation only · new money entries disabled':'Funded permission not reported'):'Funded permission is historical until the service updates.','connection-detail'));
+  const perf=performanceAt(row.strategy);
+  if(perf){
+   info.append(el('p',`${perf.filled_closed} completed trades · gross ${cash(perf.gross_pnl)} · ${perf.charges_complete?`net ${cash(perf.net_pnl)} after ${cash(perf.reported_charges)} broker charges`:'final net awaiting broker fees'}`,'connection-detail'));
+   const history=el('details',undefined,'decision-inputs');history.append(el('summary',`Execution history · latest ${perf.trades?.length||0} trades`));
+   for(const trade of perf.trades||[])history.append(el('p',`${at(trade.entry_at)} → ${at(trade.exit_at)} · ${trade.quantity} units · bought ${cash(trade.entry_price)}, sold ${cash(trade.exit_price)} · gross ${cash(trade.gross_pnl)}${trade.charges_complete?` · net ${cash(trade.net_pnl)}`:' · final fees pending'}`,'connection-detail'));
+   info.append(history);
+  }else info.append(el('p',d.ledger?.available?'No completed filled trades recorded for this configuration.':'Execution history is unavailable.','connection-detail'));
   wrap.append(info,badge(label,state==='UNKNOWN'?'warn':''));
   if(row.conditions?.length){
    const detail=el('details',undefined,'decision-inputs');
@@ -296,7 +317,8 @@ function renderStrategies(d){
   if(rows.length===1){$('strategy-checks').append(rows[0].wrap);continue;}
   const group=el('details',undefined,'strategy-family');group.dataset.family=family;group.open=expanded.has(family);
   const summary=el('summary'),counts=new Map();for(const {row} of rows){const status=row.current?row.state:'UNKNOWN';counts.set(status,(counts.get(status)||0)+1);}
-  summary.append(el('strong',family.replaceAll('_',' ').toLowerCase()),el('span',`${rows.length} variants · ${[...counts].map(([s,n])=>`${n} ${s.replaceAll('_',' ').toLowerCase()}`).join(' / ')}`,'connection-detail'));
+  const fundedCount=rows.filter(x=>x.row.current&&x.row.funded_enabled===true).length;
+  summary.append(el('strong',family.replaceAll('_',' ').toLowerCase()),el('span',`${rows.length} variants · ${fundedCount} funded · ${[...counts].map(([s,n])=>`${n} ${s.replaceAll('_',' ').toLowerCase()}`).join(' / ')}`,'connection-detail'));
   group.append(summary);for(const {wrap} of rows)group.append(wrap);$('strategy-checks').append(group);
  }
 }
