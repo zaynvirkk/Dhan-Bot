@@ -524,6 +524,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                              strategy_selection=engine.directional.selection,
                              execution_feedback=engine.directional.ranking,
                              minute_source=input_worker.minutes.spot_source if has_directional else None,
+                             input_health=input_worker.input_health if input_worker else None,
                              calendar_checked_at=calendar.checked_at.isoformat() if calendar else None,
                              route_attempts_used=int(ledger.counter(f"probe.attempts:{today.isoformat()}")),
                              route_attempt_limit=mandate.probe_max_attempts_per_session,

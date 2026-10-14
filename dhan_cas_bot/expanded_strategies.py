@@ -137,12 +137,12 @@ def option(series,at,side,strike):
     return row
 
 
-def evaluate(strategy,now,calendar,spot,future,expiries,*,features=None):
+def evaluate(strategy,now,calendar,spot,future,expiries,*,features=None,bar_at=None):
     from .session_strategies import Evaluation, IST
     from .domain import ContractError
     if strategy not in SPECS:raise ContractError('unknown directional strategy')
     family,style,scope,schedule=SPECS[strategy];now=now.astimezone(IST)
-    at=now.replace(second=0,microsecond=0);features=features or {}
+    at=(bar_at or now).astimezone(IST).replace(second=0,microsecond=0);features=features or {}
     policy=exit_policy(strategy)
     def result(state,reason,side=None,detail=None,exit_at=None):
         return Evaluation(strategy,state,reason,at,side,D(detail['anchor_spot']) if detail and detail.get('anchor_spot') else spot.get(at).close if at in spot else None,
@@ -150,6 +150,7 @@ def evaluate(strategy,now,calendar,spot,future,expiries,*,features=None):
             exit_at,{**(detail or {}),**policy},
             [{'key':'rule','state':'PASS' if state=='SIGNAL' else 'FAIL' if state=='NO_SIGNAL' else 'UNKNOWN',
               'family':family,'value':reason}])
+    if not 0 <= (now-at).total_seconds() <= 90:return result('UNKNOWN','STRATEGY_INPUTS_STALE')
     if not calendar or not calendar.fresh(now):return result('UNKNOWN','CALENDAR_UNAVAILABLE')
     if not calendar.is_open(now):return result('WAITING','EXCHANGE_CLOSED')
     if not expiries:return result('UNKNOWN','CONTRACT_CALENDAR_UNAVAILABLE')

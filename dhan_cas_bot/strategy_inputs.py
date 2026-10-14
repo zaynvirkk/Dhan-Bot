@@ -1,7 +1,7 @@
 """Read-only minute inputs alongside the existing WebSocket execution feeds."""
 import asyncio
 from csv import DictReader
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, time, timedelta, timezone
 from io import StringIO
 import json
@@ -130,7 +130,11 @@ class MinuteSource:
         # including omissions; a provider hole must not retain a cached bar.
         boundary=max(start,max(saved)-timedelta(minutes=1)) if saved else start
         request={"securityId":security,"exchangeSegment":segment,"instrument":instrument,"interval":"1","oi":oi,
-                 "fromDate":(boundary-timedelta(minutes=1)).astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"),
+                 # Live chart responses exclude the bar starting at fromDate.
+                 # Two minutes cover its start and close boundaries when
+                 # replacing cached completed candles. Cold opening requests
+                 # still begin one minute before the session boundary.
+                 "fromDate":(boundary-timedelta(minutes=2 if saved else 1)).astimezone(IST).strftime("%Y-%m-%d %H:%M:%S"),
                  "toDate":end.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S")}
         try:raw=await self.broker._request("POST","/charts/intraday",json=request)
         except Exception:
@@ -168,145 +172,233 @@ class StrategyInputWorker:
         from .strategy_features import FeatureSource
         self.features=FeatureSource(self.engine.runtime.broker,token,self.engine.now)
         self.indexes=indexes or {}
+        self.aux_task=None
+        self.aux_context=None
+        self.aux_features={}
+        self.aux_received=None
+        self.aux_started=None
+        self.aux_error=''
+        self.input_health={}
+
 
     def on_stream(self,frame,epoch,received):
         if self.stream_minutes.accept(frame,epoch,received):self.bar_wake.set()
 
     def stream_reset(self):self.stream_minutes.reset()
 
+    def evaluations(self, bar_at, spot, future, expiries, features):
+        """Use one completed-bar boundary, actual receipt time for admission."""
+        moment=self.engine.now()
+        return {strategy:evaluate(strategy,moment,self.calendar,spot,future,expiries,bar_at=bar_at)
+                if strategy in (GAP,REBOUND) else self.expanded(strategy,moment,self.calendar,spot,future,expiries,
+                    features=features,bar_at=bar_at)
+                for strategy in self.directional.enabled}
+
+    @staticmethod
+    def expanded(*args,**kwargs):
+        from .expanded_strategies import evaluate as expanded
+        return expanded(*args,**kwargs)
+
+    def publish(self,evaluations):
+        self.directional.update(Inputs(self.calendar,evaluations,dict(self.option_bars),self.engine.now()))
+        self.wake.set()
+
+    def wanted_options(self,spot,bar_at,expiries):
+        """Warm actual near contracts before a signal, bounded to 18 contracts."""
+        wanted=set()
+        current=spot.get(bar_at)
+        expiry=min(expiries)
+        instruments=list(self.engine.instruments.values())
+        if current:
+            for side in ('CE','PE'):
+                rows=[i for i in instruments if i.expiry==expiry and i.option_type.value==side]
+                if not rows:continue
+                atm=min(rows,key=lambda i:(abs(i.strike-current.close),i.strike)).strike
+                direction=1 if side=='CE' else -1
+                outward=sorted((i for i in rows if direction*(i.strike-atm)>=0),key=lambda i:(direction*(i.strike-atm),i.security_id))[:4]
+                inward=sorted((i for i in rows if direction*(i.strike-atm)<0),key=lambda i:(abs(i.strike-atm),i.security_id))[:1]
+                wanted.update(i.security_id for i in (*outward,*inward))
+        anchors_wanted=set()
+        # Frozen acceleration anchors and published OI walls can move away
+        # from current ATM. Keep their exact identities warm as well.
+        anchors=[]
+        anchor=spot.get(bar_at.replace(hour=14,minute=45))
+        if anchor:anchors.append(anchor.close)
+        wall_anchor=spot.get(bar_at.replace(hour=9,minute=30))
+        prior=self.aux_features.get('prior_chain',{})
+        for side in ('CE','PE'):
+            rows=[i for i in instruments if i.expiry==expiry and i.option_type.value==side]
+            for anchor_spot in anchors:
+                if rows:anchors_wanted.add(min(rows,key=lambda i:(abs(i.strike-anchor_spot),i.strike)).security_id)
+            if wall_anchor:
+                walls=[(k,oi) for (s,k),oi in prior.get('oi',{}).items() if s==side and abs(k-wall_anchor.close)<=200]
+                if walls:
+                    strike=min(walls,key=lambda x:(-x[1],x[0]))[0]
+                    anchors_wanted.update(i.security_id for i in rows if i.strike==strike)
+        urgent=[]
+        if self.engine.active:urgent.append(self.engine.active['security_id'])
+        samples=sorted(self.directional.signals.values(),key=lambda s:(s.evaluated_at,s.strategy),reverse=True)
+        for sample in samples:
+            if not sample.side or not 0 <= (self.engine.now()-sample.evaluated_at).total_seconds()<120:continue
+            rows=[i for i in instruments if i.expiry>=sample.minimum_expiry and i.option_type.value==sample.side]
+            if not rows:continue
+            expiry=min(i.expiry for i in rows);rows=[i for i in rows if i.expiry==expiry]
+            atm=min(rows,key=lambda i:(abs(i.strike-sample.spot),i.strike)).strike
+            direction=1 if sample.side=='CE' else -1
+            urgent.extend(i.security_id for i in sorted((i for i in rows if direction*(i.strike-atm)>=0),key=lambda i:(direction*(i.strike-atm),i.security_id))[:4])
+        return list(dict.fromkeys([*urgent,*sorted(anchors_wanted),*sorted(wanted)]))[:18]
+
+    async def warm_options(self,wanted):
+        slots=asyncio.Semaphore(3)
+        async def read(security):
+            async with slots:
+                try:
+                    from .read_scheduler import read_priority
+                    with read_priority(4):
+                        rows=await self.minutes.fetch(security,'NSE_FNO','OPTIDX',self.calendar.opens,self.engine.now(),oi=True)
+                    self.option_bars[security]=rows
+                    return True
+                except Exception:
+                    self.option_bars.pop(security,None)
+                    return False
+        ready=await asyncio.gather(*(read(s) for s in wanted))
+        self.option_bars={s:rows for s,rows in self.option_bars.items() if s in wanted}
+        return sum(ready),len(ready)-sum(ready)
+
+    async def auxiliary(self,now,calendar,expiry,families,context):
+        result={}
+        try:
+            slots=asyncio.Semaphore(3)
+            async def index(name):
+                required=(name in ('BANK','IT') and families&{'SECTOR_CATCHUP','SECTOR_CONFIRM'}) or (name=='VIX' and 'IV_CHEAP_TREND' in families)
+                if not required or not self.indexes.get(name):return
+                async with slots:
+                    try:result[name]=await self.minutes.fetch(self.indexes[name],'IDX_I','INDEX',calendar.opens,self.engine.now())
+                    except Exception:pass
+            async def gift():
+                if 'GIFT_CATCHUP' not in families:return
+                async with slots:
+                    try:result['GIFT']=await self.features.gift(self.engine.now())
+                    except Exception:pass
+            async def published():
+                # Its own three-source bound and receipt-time validation remain.
+                result.update(await self.features.refresh(now,calendar,expiry,families))
+            await asyncio.wait_for(asyncio.gather(*(index(n) for n in ('BANK','IT','VIX')),gift(),published()),30)
+            if context!=self.aux_context:return
+            self.aux_features=result
+            self.aux_received=self.engine.now()
+            self.aux_error=''
+        except Exception as exc:
+            if context==self.aux_context:
+                # Keep independently completed sources. A timed-out published
+                # feed must not erase successful BANK/IT candles.
+                self.aux_features=result;self.aux_received=self.engine.now()
+                self.aux_error=type(exc).__name__
+        finally:
+            self.bar_wake.set()
+
+    def start_auxiliary(self,now,expiries,families):
+        context=(now.astimezone(IST).date(),min(expiries))
+        if self.aux_context!=context:
+            if self.aux_task and not self.aux_task.done():self.aux_task.cancel()
+            self.aux_features={};self.aux_received=None;self.aux_started=None;self.aux_context=context
+        due=self.aux_started is None or (self.engine.now()-self.aux_started).total_seconds()>=30
+        if due and (self.aux_task is None or self.aux_task.done()):
+            self.aux_started=self.engine.now()
+            from .read_scheduler import read_priority
+            with read_priority(10):
+                self.aux_task=asyncio.create_task(self.auxiliary(now,self.calendar,min(expiries),families,context))
+
+    def available_features(self,expiries):
+        # A stalled/failed optional collector cannot preserve an indefinitely
+        # current IV, insight or sector snapshot. Long-lived publications keep
+        # their original receipt boundary and their existing source checks.
+        now=self.engine.now()
+        valid=self.aux_received and 0 <= (now-self.aux_received).total_seconds()<=90
+        result=dict(self.aux_features) if valid else {}
+        for key,limit in (('iv',60),('insights',90)):
+            value=result.get(key)
+            if value and not 0 <= (now-value['received_at']).total_seconds()<=limit:result.pop(key,None)
+        expiry=min(expiries)
+        result['options']={(i.option_type.value,i.strike):self.option_bars[i.security_id]
+                           for i in self.engine.instruments.values() if i.expiry==expiry and i.security_id in self.option_bars}
+        return result
+
+    @staticmethod
+    def series_health(rows,bar_at,opening,error=''):
+        t=opening+timedelta(minutes=1) if opening else bar_at
+        missing=[]
+        while t<=bar_at:
+            if t not in rows:missing.append(t)
+            t+=timedelta(minutes=1)
+        return {'rows':len(rows),'latest_completed':max(rows).isoformat() if rows else None,
+                'current_complete':bar_at in rows,'missing_minutes':len(missing),
+                'first_missing':missing[0].isoformat() if missing else None,'error':error}
+
     async def refresh(self):
         now=self.engine.now().astimezone(IST)
+        bar_at=now.replace(second=0,microsecond=0)
         evaluations={}
         try:
             if self.calendar is None or not self.calendar.fresh(now) or (now-self.calendar.checked_at).total_seconds()>=3600:
-                # Once a scheduled refresh fails, the last calendar is not
-                # silently treated as a successful check.
                 self.calendar=None
                 self.calendar=await self.calendar_source.fetch(now)
-                self.engine.runtime.ledger.observe("market-calendar:"+self.calendar.checked_at.isoformat(),"MARKET_CALENDAR",
-                    {"source":"https://api.upstox.com/v2/market/timings/", **asdict(self.calendar)})
-            expiries={i.expiry for i in self.engine.instruments.values()}
-            spot=future={}
-            features={}
+                self.engine.runtime.ledger.observe('market-calendar:'+self.calendar.checked_at.isoformat(),'MARKET_CALENDAR',
+                    {'source':'https://api.upstox.com/v2/market/timings/',**asdict(self.calendar)})
+            expiries={i.expiry for i in self.engine.instruments.values() if i.expiry>=now.date()}
             from .expanded_strategies import SPECS
             families={SPECS[n][0] for n in self.directional.enabled if n in SPECS}
+            spot,future={},{}
+            errors={}
             if self.calendar.is_open(now):
-                spot=await self.minutes.fetch("13","IDX_I","INDEX",self.calendar.previous_opens,now)
-                if ((GAP in self.directional.enabled and time(9,44)<=now.time()<time(11,32) and now.date() not in expiries)
-                        or any(name not in (GAP,REBOUND) for name in self.directional.enabled)):
-                    if self.future_id:
-                        try:future=await self.minutes.fetch(self.future_id,"NSE_FNO","FUTIDX",self.calendar.opens,now,oi=True)
-                        except Exception:future={}
-                # Publish completed core signals immediately. Optional feature
-                # requests cannot hold their entry behind a whole-universe scan.
-                core={}
-                from .expanded_strategies import evaluate as expanded
-                for strategy in self.directional.enabled:
-                    moment=self.engine.now()
-                    core[strategy]=(evaluate(strategy,moment,self.calendar,spot,future,expiries)
-                        if strategy in (GAP,REBOUND) else expanded(strategy,moment,self.calendar,spot,future,expiries,features={}))
-                self.directional.update(Inputs(self.calendar,core,dict(self.option_bars),self.engine.now()))
-                self.wake.set()
-                preload=set()
-                for sample in self.directional.signals.values():
-                    if not sample.side or not 0 <= (self.engine.now()-sample.evaluated_at).total_seconds()<120:continue
-                    contracts=[i for i in self.engine.instruments.values() if i.expiry>=sample.minimum_expiry and i.option_type.value==sample.side]
-                    if not contracts:continue
-                    expiry=min(i.expiry for i in contracts);contracts=[i for i in contracts if i.expiry==expiry]
-                    atm=min(contracts,key=lambda i:(abs(i.strike-sample.spot),i.strike)).strike
-                    direction=1 if sample.side=='CE' else -1
-                    preload.update(i.security_id for i in sorted((i for i in contracts if direction*(i.strike-atm)>=0),key=lambda i:(direction*(i.strike-atm),i.security_id))[:4])
-                active=self.engine.active
-                if active and json.loads(active["payload"]).get("strategy",CAS)!=CAS:preload.add(active["security_id"])
-                for security in sorted(preload):
-                    try:self.option_bars[security]=await self.minutes.fetch(security,'NSE_FNO','OPTIDX',self.calendar.opens,self.engine.now(),oi=True)
-                    except Exception:self.option_bars.pop(security,None)
-                self.directional.update(Inputs(self.calendar,core,dict(self.option_bars),self.engine.now()))
-                self.wake.set()
-                # Auxiliary endpoints affect only families which consume them.
-                for name in ('BANK','IT','VIX'):
-                    required=(name in ('BANK','IT') and families&{'SECTOR_CATCHUP','SECTOR_CONFIRM'}) or (name=='VIX' and 'IV_CHEAP_TREND' in families)
-                    if required and self.indexes.get(name):
-                        try:
-                            features[name]=await self.minutes.fetch(self.indexes[name],'IDX_I','INDEX',self.calendar.opens,now)
-                        except Exception:pass
-                if 'GIFT_CATCHUP' in families:
-                    try:features['GIFT']=await self.features.gift(now)
-                    except Exception:pass
-                if families:
-                    expiry=min(e for e in expiries if e>=now.date())
-                    features.update(await self.features.refresh(now,self.calendar,expiry,families))
-                    # Freeze exact contract identities. Changing ATM does not
-                    # splice different strikes into one return/OI history.
-                    options=[i for i in self.engine.instruments.values() if i.expiry==expiry]
-                    current=spot.get(now.replace(second=0,microsecond=0))
-                    if current and families&{'CHAIN_UNWIND','SKEW_UNWIND','OPTION_ACCEL','OPTION_ACCEL_OI','PRIOR_OI_WALL'}:
-                        strikes=sorted({i.strike for i in options});atm=min(strikes,key=lambda k:(abs(k-current.close),k));j=strikes.index(atm)
-                        wanted=set(strikes[max(0,j-1):j+2])
-                        anchor=spot.get(now.replace(hour=14,minute=45,second=0,microsecond=0))
-                        if anchor:wanted.add(min(strikes,key=lambda k:(abs(k-anchor.close),k)))
-                        prior=features.get('prior_chain',{});wall_anchor=spot.get(now.replace(hour=9,minute=30,second=0,microsecond=0))
-                        if wall_anchor:
-                            for side in ('CE','PE'):
-                                ks=[(k,oi) for (s,k),oi in prior.get('oi',{}).items() if s==side and abs(k-wall_anchor.close)<=200]
-                                if ks:wanted.add(min(ks,key=lambda x:(-x[1],x[0]))[0])
-                        features['options']={}
-                        for inst in options:
-                            if inst.strike not in wanted:continue
-                            try:
-                                rows=await self.minutes.fetch(inst.security_id,'NSE_FNO','OPTIDX',self.calendar.opens,now,oi=True)
-                                self.option_bars[inst.security_id]=rows
-                                features['options'][inst.option_type.value,inst.strike]=rows
-                            except Exception:pass
-            for strategy in self.directional.enabled:
-                decision_now=self.engine.now()
-                if strategy in (GAP,REBOUND):evaluations[strategy]=evaluate(strategy,decision_now,self.calendar,spot,future,expiries)
-                else:
-                    from .expanded_strategies import evaluate as expanded
-                    evaluations[strategy]=expanded(strategy,decision_now,self.calendar,spot,future,expiries,features=features)
-            # Publish signals before option requests so their original minute
-            # is never changed by a slow request, nor lost at a minute boundary.
-            self.directional.update(Inputs(self.calendar,evaluations,self.option_bars,self.engine.now()))
-            needed=set()
-            for sample in self.directional.signals.values():
-                if sample.evaluated_at.date()!=now.date() or not sample.side:
-                    continue
-                if now>sample.evaluated_at+timedelta(minutes=2):
-                    continue
-                instruments=[i for i in self.engine.instruments.values() if i.expiry>=sample.minimum_expiry and i.option_type.value==sample.side]
-                if instruments:
-                    expiry=min(i.expiry for i in instruments)
-                    instruments=[i for i in instruments if i.expiry==expiry]
-                    atm=min(instruments,key=lambda i:(abs(i.strike-sample.spot),i.strike)).strike
-                    sign=1 if sample.side=="CE" else -1
-                    nearest=sorted((i for i in instruments if sign*(i.strike-atm)>=0),key=lambda i:(sign*(i.strike-atm),i.security_id))[:4]
-                    needed.update(i.security_id for i in nearest)
-            active=self.engine.active
-            if active and json.loads(active["payload"]).get("strategy",CAS)!=CAS:
-                needed.add(active["security_id"])
-            for security in sorted(needed):
-                start=self.calendar.opens or now.replace(hour=0,minute=0,second=0,microsecond=0)
-                if active and active["security_id"]==security:
-                    start=datetime.fromisoformat(json.loads(active["payload"])["signal"]["evaluated_at"])
-                try:self.option_bars[security]=await self.minutes.fetch(security,"NSE_FNO","OPTIDX",start,self.engine.now(),oi=True)
-                except Exception:self.option_bars.pop(security,None)
-            self.directional.update(Inputs(self.calendar,evaluations,dict(self.option_bars),self.engine.now()))
+                from .read_scheduler import read_priority
+                async def read(name,security,segment,instrument,start,oi=False):
+                    if not security:errors[name]='CONTRACT_UNAVAILABLE';return {}
+                    try:
+                        with read_priority(4):return await self.minutes.fetch(security,segment,instrument,start,now,oi=oi)
+                    except Exception as exc:errors[name]=type(exc).__name__;return {}
+                spot,future=await asyncio.gather(read('spot','13','IDX_I','INDEX',self.calendar.previous_opens),
+                    read('future',self.future_id,'NSE_FNO','FUTIDX',self.calendar.opens,True))
+                self.publish(self.evaluations(bar_at,spot,future,expiries,self.available_features(expiries)))
+                wanted=self.wanted_options(spot,bar_at,expiries)
+                ready,failed=await self.warm_options(wanted)
+                self.start_auxiliary(now,expiries,families)
+                # Yield to the optional collector; never await its HTTP batch.
+                await asyncio.sleep(0)
+                self.input_health={'observed_at':self.engine.now().isoformat(),'decision_bar_at':bar_at.isoformat(),
+                    'spot':self.series_health(spot,bar_at,self.calendar.opens,errors.get('spot','')),
+                    'future':self.series_health(future,bar_at,self.calendar.opens,errors.get('future','')),
+                    'options':{'requested':len(wanted),'loaded':ready,'failed':failed,
+                        'ready':sum(all(bar_at-timedelta(minutes=n) in self.option_bars.get(s,{}) for n in range(3)) for s in wanted)},
+                    'auxiliary':{'running':bool(self.aux_task and not self.aux_task.done()),
+                        'received_at':self.aux_received.isoformat() if self.aux_received else None,'error':self.aux_error}}
+            evaluations=self.evaluations(bar_at,spot,future,expiries,self.available_features(expiries))
+            self.publish(evaluations)
             for sample in evaluations.values():
-                identity=f"strategy-evaluation:{sample.strategy}:{sample.evaluated_at.isoformat()}:{sample.state}"
-                self.engine.runtime.ledger.observe(identity,"STRATEGY_EVALUATION",asdict(sample))
+                identity=f'strategy-evaluation:{sample.strategy}:{sample.evaluated_at.isoformat()}:{sample.state}'
+                self.engine.runtime.ledger.observe(identity,'STRATEGY_EVALUATION',asdict(sample))
         except Exception as exc:
-            # Never pass a provider error body or authorization material to UI.
-            error="STRATEGY_INPUT_UNAVAILABLE:"+type(exc).__name__
+            error='STRATEGY_INPUT_UNAVAILABLE:'+type(exc).__name__
             self.directional.update(Inputs(self.calendar,evaluations,{},self.engine.now(),error))
+            self.input_health={'observed_at':self.engine.now().isoformat(),'decision_bar_at':bar_at.isoformat(),'error':type(exc).__name__}
         self.wake.set()
 
+    async def close(self):
+        if self.aux_task and not self.aux_task.done():self.aux_task.cancel()
+        if self.aux_task:await asyncio.gather(self.aux_task,return_exceptions=True)
+
     async def run(self):
-        while not self.stop.is_set():
-            self.bar_wake.clear()
-            await self.refresh()
-            # One bar refresh per minute, shortly after its close. Quotes and
-            # actual fills still use the existing WebSockets; no fake ticks.
-            now=self.engine.now()
-            seconds=62-now.second-now.microsecond/1e6
-            try:await asyncio.wait_for(self.bar_wake.wait(),max(2,min(60,seconds)))
-            except asyncio.TimeoutError:pass
+        try:
+            while not self.stop.is_set():
+                self.bar_wake.clear()
+                await self.refresh()
+                now=self.engine.now()
+                seconds=62-now.second-now.microsecond/1e6
+                delay=max(2,min(60,seconds))
+                # Retry missing current candles while there is still a decision
+                # window. No quote polling and no invented candle history.
+                if any(self.input_health.get(k,{}).get('current_complete') is False for k in ('spot','future')):
+                    delay=min(delay,5)
+                try:await asyncio.wait_for(self.bar_wake.wait(),delay)
+                except asyncio.TimeoutError:pass
+        finally:await self.close()

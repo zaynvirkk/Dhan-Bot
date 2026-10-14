@@ -191,16 +191,18 @@ def condition_evidence(strategy, now, calendar, spot, future):
                  expected='RISING' if direction==1 else 'FALLING' if direction==-1 else None)]
 
 
-def evaluate(strategy, now, calendar, spot, future, expiries):
+def evaluate(strategy, now, calendar, spot, future, expiries, *, bar_at=None):
     now = now.astimezone(IST)
-    at = now.replace(second=0, microsecond=0)
+    at = (bar_at or now).astimezone(IST).replace(second=0, microsecond=0)
     def result(state, reason, **kw):
         return Evaluation(strategy, state, reason, at, **kw,
-                          conditions=condition_evidence(strategy,now,calendar,spot,future),
+                          conditions=condition_evidence(strategy,at,calendar,spot,future),
                           next_check_at=next_check(strategy,now,calendar,expiries))
+    if not 0 <= (now-at).total_seconds() <= 90:
+        return result('UNKNOWN','STRATEGY_INPUTS_STALE')
     if strategy not in (GAP, REBOUND):
         from .expanded_strategies import evaluate as expanded_evaluate
-        return expanded_evaluate(strategy,now,calendar,spot,future,expiries)
+        return expanded_evaluate(strategy,now,calendar,spot,future,expiries,bar_at=at)
     if calendar is None or not calendar.fresh(now):
         return result("UNKNOWN", "CALENDAR_UNAVAILABLE")
     if not calendar.is_open(now):
@@ -209,8 +211,8 @@ def evaluate(strategy, now, calendar, spot, future, expiries):
         return result("UNKNOWN", "CONTRACT_CALENDAR_UNAVAILABLE")
     if strategy == GAP and now.date() in expiries:
         return result("NOT_APPLICABLE", "EXPIRY_SESSION_OUTSIDE_RESEARCH_SCOPE")
-    if (strategy == GAP and not (time(9,45) <= now.time() < time(11,31) and now.minute % 5 == 0)
-            or strategy == REBOUND and (now.hour, now.minute) != (15,10)):
+    if (strategy == GAP and not (time(9,45) <= at.time() < time(11,31) and at.minute % 5 == 0)
+            or strategy == REBOUND and (at.hour, at.minute) != (15,10)):
         return result("WAITING", "OUTSIDE_STRATEGY_WINDOW")
     # Research assumes the regular opening session; special sessions do not
     # inherit its thresholds merely because a market happens to be open.

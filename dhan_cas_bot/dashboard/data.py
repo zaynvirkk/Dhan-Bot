@@ -170,6 +170,7 @@ def runtime_view(raw, now):
             'monitoring_mode': choice(raw.get('monitoring_mode'), {'IDLE', 'ACTIVE'}, 'UNKNOWN'),
             'strategies': [s for s in raw.get('strategies', []) if isinstance(s, str) and s in STRATEGY_NAMES] if isinstance(raw.get('strategies'), list) else [],
             'strategy_evaluations': strategy_projection(raw.get('strategy_evaluations')),
+            'input_health':input_health_projection(raw.get('input_health'),now),
             'strategy_selection':selection_projection(raw.get('strategy_selection')),
             'execution_feedback':execution_feedback_projection(raw.get('execution_feedback')),
             'minute_source':choice(raw.get('minute_source'),{'UPSTOX_COMPLETED_I1_STREAM','REST_BOOTSTRAP_OR_GAP_REPAIR','NOT_OBSERVED'}),
@@ -179,6 +180,26 @@ def runtime_view(raw, now):
             'recorder_pending': integer(raw.get('recorder_pending')),
             'telemetry': telemetry_view(raw.get('telemetry')),
             'observation': observation_projection(raw.get('observation'))}
+
+
+def input_health_projection(raw,now):
+    if not isinstance(raw,dict):return None
+    result={**freshness(raw.get('observed_at'),now,90),'decision_bar_at':timestamp(raw.get('decision_bar_at'))}
+    safe_error=lambda v:v if isinstance(v,str) and re.fullmatch('[A-Za-z][A-Za-z0-9_]{0,48}',v) else 'UNKNOWN' if v else None
+    for name in ('spot','future'):
+        row=raw.get(name) or {}
+        if not isinstance(row,dict):row={}
+        result[name]={'rows':integer(row.get('rows')),'missing_minutes':integer(row.get('missing_minutes')),
+            'latest_completed':timestamp(row.get('latest_completed')),'first_missing':timestamp(row.get('first_missing')),
+            'current_complete':row.get('current_complete') if type(row.get('current_complete')) is bool else None,
+            'error':safe_error(row.get('error'))}
+    row=raw.get('options') or {}
+    result['options']={k:integer(row.get(k)) for k in ('requested','ready','loaded','failed')} if isinstance(row,dict) else {}
+    row=raw.get('auxiliary') or {}
+    result['auxiliary']={'running':row.get('running') if type(row.get('running')) is bool else None,
+        'received_at':timestamp(row.get('received_at')),'error':safe_error(row.get('error'))} if isinstance(row,dict) else {}
+    result['error']=safe_error(raw.get('error'))
+    return result
 
 
 def selection_projection(raw):
@@ -263,7 +284,8 @@ def strategy_projection(raw):
             'evaluated_at':timestamp(row.get('evaluated_at')), 'side':choice(row.get('side'), {'CE','PE'}),
             'spot':money(row.get('spot')), 'exit_at':timestamp(row.get('exit_at')), 'details':details,
             'conditions':condition_projection(row.get('conditions')), 'next_check_at':timestamp(row.get('next_check_at')),
-            'last_execution_reason':choice(str(row.get('last_execution_reason','')).split(':')[0],STRATEGY_REASONS,'UNKNOWN')})
+            'last_execution_reason':choice(str(row.get('last_execution_reason','')).split(':')[0],STRATEGY_REASONS),
+            'execution_blocking_reason':choice(str(row.get('execution_blocking_reason','')).split(':')[0],STRATEGY_REASONS)})
     return result
 
 

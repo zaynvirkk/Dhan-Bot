@@ -86,6 +86,8 @@ function monitoringNotice(d,feeds){
   return {text:`${feeds.disconnected.join(' / ')} disconnected. ${next}`,kind:'error'};
  }
  if(feeds.issues.includes('delayed'))return {text:'Feed processing is delayed. Inspect pending messages in Live connections.'};
+ const history=d.runtime.input_health;
+ if(history?.fresh&&['spot','future'].some(k=>history[k]?.current_complete===false||history[k]?.missing_minutes>0))return {text:'Live quotes are arriving, but required completed candles are missing. See What the bot sees for the affected source; those rules cannot evaluate.'};
  if(feeds.known<3)return {text:'Account and bot updates are current. Live feed health is unavailable from the deployed version; dated diagnostics are shown separately.'};
  if(feeds.idle)return {text:'The bot reports an idle session. Account updates are current; live socket observations are shown below.',kind:'healthy'};
  if(feeds.issues.includes('waiting'))return {text:'Account updates are current. Waiting for fresh usable market data; inspect Live connections.'};
@@ -212,6 +214,10 @@ function renderStrategies(d){
  $('strategy-mode').textContent=usingObserver?'Daily checks use live market data in read-only mode. They cannot submit orders. Funded execution is shown separately in the trading-service rows and account status.':`${configured.length} enabled strategy variants share one bankroll and order manager. Closed executions inform selection; unranked rules have no measured profitability. Expand a family to inspect its checks.`;
  const market=observer?.spot!=null?`NIFTY completed close ${points(observer.spot)} · ${at(observer.spot_at)}${observer.opening!=null?` · Session open ${points(observer.opening)}`:''}${observer.previous_close!=null?` · Previous close ${points(observer.previous_close)}`:''}`:'';
  $('strategy-market').textContent=market;
+ const health=rt?.input_health;
+ $('input-history').textContent=!health||!health.fresh?'Completed-candle readiness is unknown until a fresh input check arrives.':
+  [['spot','NIFTY'],['future','Futures']].map(([key,name])=>{const row=health[key]||{};return `${name}: ${row.latest_completed?`through ${at(row.latest_completed)}`:'no completed candles'}${row.missing_minutes>0?` · ${row.missing_minutes} missing session minute(s), first ${at(row.first_missing)}`:row.current_complete===false?' · latest completed minute missing':''}${row.error?` · ${row.error}`:''}`;}).join(' / ')+
+  ` / Options: ${health.options?.ready??'unknown'} of ${health.options?.requested??'unknown'} watched contracts have the required three completed minutes.`;
  const display=checks.map(row=>({...row,current:rt?.fresh===true,source:'Trading service'}));
  for(const row of observer?.strategy_evaluations||[])if(!configured.includes(row.strategy))display.push({...row,current:observer.fresh===true,source:'Read-only monitor',lastDecision:(observer.last_decisions||[]).find(v=>v.strategy===row.strategy)});
  if(configured.includes('CAS_LAG_V1')||(!configured.length&&rt?.observation?.expiry)){

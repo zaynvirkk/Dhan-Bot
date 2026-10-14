@@ -368,7 +368,11 @@ class DirectionalEngine:
                 row.update(state="UNKNOWN",reason="STRATEGY_INPUTS_STALE")
             elif self.inputs.error:
                 row.update(state="UNKNOWN",reason=self.inputs.error)
-            row["last_execution_reason"]=self.last_reason
+            key=f"directional-signal:{now.astimezone(IST).date()}:{strategy}"
+            consumed=self.engine.runtime.ledger.metadata(key+':consumed',{})
+            assessment=self.engine.runtime.ledger.metadata(key+':assessment',{})
+            row['last_execution_reason']=consumed.get('reason') or assessment.get('reason')
+            row['execution_blocking_reason']=consumed.get('blocking_reason') or assessment.get('reason')
             from .expanded_strategies import SPECS
             spec=SPECS.get(strategy)
             row['family']=spec[0] if spec else 'GAP_FADE' if strategy==GAP else 'NIFTY_SELLOFF_REBOUND'

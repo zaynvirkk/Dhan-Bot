@@ -380,6 +380,22 @@ setImmediate(()=>{
 });
 
 setImmediate(()=>{
+ browser.candleFixture={available:true,collector:{fresh:true},account_read_ok:true,server_time:'2026-10-14T05:20:10Z',
+  runtime:{fresh:true,strategies:[],input_health:{fresh:true,spot:{latest_completed:'2026-10-14T05:20:00Z',current_complete:true,missing_minutes:0},
+   future:{latest_completed:'2026-10-14T05:20:00Z',current_complete:true,missing_minutes:1,first_missing:'2026-10-14T05:19:00Z'},options:{requested:10,ready:8}}}};
+ browser.candleFeeds={known:3,issues:[],idle:false};
+ assert.match(vm.runInContext('monitoringNotice(candleFixture,candleFeeds).text',browser),/required completed candles are missing/);
+ vm.runInContext('renderStrategies(candleFixture)',browser);
+ assert.match(ids['input-history'].textContent,/Futures:.*1 missing session minute.*8 of 10/);
+ browser.candleFixture.runtime.input_health.future.missing_minutes=0;
+ assert.match(vm.runInContext('monitoringNotice(candleFixture,candleFeeds).text',browser),/observations are current/);
+ browser.candleFixture.runtime.input_health.fresh=false;
+ vm.runInContext('renderStrategies(candleFixture)',browser);
+ assert.match(ids['input-history'].textContent,/readiness is unknown/);
+ console.log('Completed candle holes, watched option readiness and stale health verified');
+});
+
+setImmediate(()=>{
  browser.selectionFixture={runtime:{fresh:true,state:'ARMED_WAITING_SIGNAL',minute_source:'UPSTOX_COMPLETED_I1_STREAM',
   strategy_selection:{reason:'SELECTED',mode:'MEASURED_CASH_PER_MINUTE',selected:'OPEN_DRIVE_FAST',evaluated_at:new Date().toISOString(),
    candidates:[{strategy:'OPEN_DRIVE_FAST',side:'CE',quantity:65,limit:'10.00',friction_cash:'6.50',estimated_net_profit:'40.00',
