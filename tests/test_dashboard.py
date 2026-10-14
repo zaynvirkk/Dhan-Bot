@@ -252,6 +252,24 @@ def test_ledger_readonly_redacted_and_missing_not_empty(tmp_path):
     assert ledger_view(bad)['available'] is False
 
 
+def test_open_position_exit_policy_is_visible_without_private_payload(tmp_path):
+    path=tmp_path/'ledger.sqlite3';db=sqlite3.connect(path);db.executescript(SCHEMA)
+    payload={'strategy':'ORDINARY_PUBLISHED_PCR_TRAIL','exit_at':NOW.isoformat(),
+             'signal':{'details':{'exit_target':None,'exit_stop':'.5','exit_trail':True}},'token':'PRIVATE-TOKEN'}
+    db.execute('INSERT INTO lifecycles VALUES (?,?,?,?,?,?)',('private-lifecycle','s','123','9411','OPEN',json.dumps(payload)))
+    db.execute('INSERT INTO intents VALUES (?,?,?,?,?,?,?,?,?,?,?)',('i','c','private-lifecycle','BUY','123',65,'125','FILLED','0','{}',NOW.isoformat()))
+    db.execute('INSERT INTO fills VALUES (?,?,?,?,?,?,?,?,?)',('t','o','i','123',65,'122.65','20',NOW.isoformat(),'{}'))
+    db.commit();db.close()
+    before=path.read_bytes();out=ledger_view(path)
+    trade=out['active_trades'][0]
+    assert trade['entry_price']=='122.65' and trade['quantity']==65
+    assert trade['stop_fraction']=='0.50' and trade['trailing'] is True
+    assert trade['target_known'] is True and trade['target_multiple'] is None
+    assert trade['exit_due']==NOW.isoformat() and trade['exit_trigger'] is None
+    assert not any(s in json.dumps(out) for s in ('PRIVATE-TOKEN','private-lifecycle'))
+    assert path.read_bytes()==before
+
+
 def test_collector_uses_only_get_and_existing_token(monkeypatch,tmp_path):
     calls=[]
     write(tmp_path/'dhan_token.json',{'account':'TEST','token':'BROKER-SECRET'})

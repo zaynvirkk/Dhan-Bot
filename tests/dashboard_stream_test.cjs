@@ -426,4 +426,15 @@ setImmediate(()=>{
  vm.runInContext('renderSelection(selectionFixture)',browser);
  assert.ok(!ids['selection-reason'].textContent.includes('retained below'),'An initialized empty comparison is not a recorded comparison');
  console.log('Cash/time selection, conflict abstention and closed-session explanation verified');
+ browser.exitFixture={runtime:{fresh:true,state:'POSITION_OPEN'},account:{fresh:true,positions:[{quantity:65}]},
+  ledger:{active_trades:[{strategy:'ORDINARY_PUBLISHED_PCR_TRAIL',quantity:65,trailing:true,stop_fraction:'0.50',target_known:true,target_multiple:null,exit_due:'2026-10-14T10:04:00Z',exit_trigger:null}]}};
+ vm.runInContext('renderDecision(exitFixture)',browser);
+ assert.equal(ids['position-exits'].hidden,false);
+ assert.match(ids['position-exits'].textContent,/50% below the highest completed minute close/);
+ assert.match(ids['position-exits'].textContent,/No fixed profit target/);
+ assert.match(ids['position-exits'].textContent,/No exit trigger recorded/);
+ assert.match(ids['position-exits'].textContent,/give back profit and close below entry/);
+ browser.exitFixture.ledger.active_trades=[];
+ vm.runInContext('renderDecision(exitFixture)',browser);
+ assert.equal(ids['position-exits'].hidden,true,'Unknown exit policy cannot retain an old policy');
 });

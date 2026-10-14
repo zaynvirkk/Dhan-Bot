@@ -379,6 +379,12 @@ function renderDecision(d){
  const entry=d.ledger?.last_entry;
  $('last-entry').textContent=entry?`${at(entry.occurred_at)} · ${strategyNames[entry.strategy]||(entry.strategy?entry.strategy.replaceAll('_',' ').toLowerCase():'Strategy not reported')} · NIFTY ${points(entry.strike)} ${entry.option_type||''}. Selected ${entry.quantity??'unknown'} units at a limit of ${cash(entry.limit)}.${entry.reference!=null?` Reference ${points(entry.reference)}; ${entry.confirmations??'unknown'} confirmations.`:''}`:d.ledger?.available?'No entry decision has been recorded.':'The decision ledger is unavailable.';
  $('positions-table').hidden=!a?.positions?.length;$('positions-section').hidden=Array.isArray(a?.positions)&&a.positions.length===0&&a.fresh===true;
+ const exits=(d.ledger?.active_trades||[]).filter(t=>t.quantity>0).map(t=>{
+  const stop=t.stop_fraction!=null?`${Math.round((1-Number(t.stop_fraction))*100)}% below ${t.trailing?'the highest completed minute close':'the entry premium'}`:'Stop policy unavailable';
+  const target=t.target_known?(t.target_multiple==null?'No fixed profit target':`Profit target: ${t.target_multiple}× entry`):'Profit target unavailable';
+  return `${t.strategy.replaceAll('_',' ')}: ${stop}. ${target}. Scheduled exit ${at(t.exit_due)}. ${t.exit_trigger?`Exit triggered: ${t.exit_trigger.replaceAll('_',' ')}; due ${at(t.trigger_due)}.`:'No exit trigger recorded.'}${t.trailing?' A trailing stop can give back profit and close below entry.':''} Recorded policy; the current trailing price is not supplied by this bot version.`;
+ });
+ $('position-exits').hidden=!exits.length;$('position-exits').textContent=exits.join(' ');
  const feeds=rt?.feed_health||{};const values=Object.values(feeds);const connected=values.filter(f=>f.connected===true).length;
  $('system-summary').textContent=!current?'Current health unknown':`${connected} of 3 sockets connected`;
 }

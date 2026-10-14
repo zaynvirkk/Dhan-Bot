@@ -536,6 +536,32 @@ def cash_reconciliation(db):
         'net_after_reported_charges':money(sell-buy-charges) if complete else None}
 
 
+def active_trade_views(db):
+    """Recorded policy and actual fills, never a claim about a current stop quote."""
+    result=[]
+    for row in db.execute("SELECT lifecycle_id,security_id,payload FROM lifecycles WHERE state!='CLOSED' ORDER BY rowid DESC LIMIT 8"):
+        try:
+            if len(row['payload'])>100_000:continue
+            payload=json.loads(row['payload']);policy=payload.get('signal',{}).get('details',{})
+            strategy=choice(payload.get('strategy'),STRATEGY_NAMES)
+            if strategy is None or not isinstance(policy,dict):continue
+            fills=list(db.execute('SELECT i.side,f.quantity,f.price FROM fills f JOIN intents i ON i.intent_id=f.intent_id WHERE i.lifecycle_id=?',(row['lifecycle_id'],)))
+            buys=[f for f in fills if f['side']=='BUY'];units=sum(f['quantity'] for f in buys)
+            quantity=sum(f['quantity']*(1 if f['side']=='BUY' else -1) for f in fills)
+            entry=sum((Decimal(f['price'])*f['quantity'] for f in buys),Decimal(0))/units if units else None
+            latch=db.execute('SELECT value FROM metadata WHERE key=?',('directional-exit:'+row['lifecycle_id'],)).fetchone()
+            trigger=json.loads(latch['value']) if latch else {}
+            result.append({'strategy':strategy,'security_id':label(row['security_id']),
+                'quantity':integer(quantity),'entry_price':money(entry),
+                'trailing':policy.get('exit_trail') is True,'stop_fraction':money(policy.get('exit_stop')),
+                'target_known':'exit_target' in policy,'target_multiple':money(policy.get('exit_target')),
+                'exit_due':timestamp(payload.get('exit_at')),
+                'exit_trigger':choice(trigger.get('reason'),{'TIME_EXIT','PREMIUM_TARGET','TRAILING_STOP','PREMIUM_STOP'}),
+                'trigger_due':timestamp(trigger.get('due'))})
+        except (ValueError,TypeError,KeyError,AttributeError,InvalidOperation):continue
+    return result
+
+
 def ledger_view(path):
     """One SQLite read transaction, no schema initialization or broker methods."""
     out = {'available': False, 'orders': None, 'fills': None, 'incidents': None, 'counts': None}
@@ -581,7 +607,8 @@ def ledger_view(path):
                 except (ValueError, KeyError, TypeError, AttributeError):
                     entry = None
             return {'available': True, 'orders': orders, 'fills': fills, 'incidents': incidents, 'counts': counts, 'last_entry': entry,
-                    'last_signals':last_signal_views(db),'cash_reconciliation':cash_reconciliation(db)}
+                    'last_signals':last_signal_views(db),'cash_reconciliation':cash_reconciliation(db),
+                    'active_trades':active_trade_views(db)}
     except (sqlite3.Error, OSError, ValueError):
         return out
 
