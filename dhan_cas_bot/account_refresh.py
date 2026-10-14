@@ -132,6 +132,11 @@ class AccountRefresh:
                 # Bound retries even if a failing endpoint completes immediately.
                 await asyncio.sleep(.4)
             interval = .4 if self.busy() else 5.0
+            if self.healthy and self.observed is not None:
+                # Age starts before the HTTP batch, not after it. Refresh before
+                # expiry with a half-second margin; never extend freshness.
+                remaining=self.MAX_AGE-(self.clock()-self.observed)-.5
+                interval=min(.4 if self.busy() else 2.0,max(.1,remaining))
             try:
                 await asyncio.wait_for(self.requested.wait(), interval)
             except asyncio.TimeoutError:

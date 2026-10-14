@@ -91,13 +91,16 @@ class Ledger:
             db.execute("UPDATE intents SET state=? WHERE intent_id=?", ("SEND_UNKNOWN" if state in {"STARTED", "UNKNOWN"} else "SENT", intent_id))
 
     def record_order(self, order_id: str, intent_id: str, account: str, state: str, payload: Any) -> None:
+        encoded=json.dumps(json_safe(payload),sort_keys=True,default=str)
         with self.transaction() as db:
             old = db.execute("SELECT * FROM orders WHERE order_id=?", (order_id,)).fetchone()
             if old and (old["intent_id"] != intent_id or old["broker_account"] != account):
                 raise ContractError("order identity conflict")
             if old and old["state"] in {"TRADED", "CANCELLED", "REJECTED", "EXPIRED"} and state not in {"TRADED", "CANCELLED", "REJECTED", "EXPIRED"}:
                 return
-            db.execute("INSERT OR REPLACE INTO orders(order_id,intent_id,broker_account,state,payload) VALUES(?,?,?,?,?)", (order_id, intent_id, account, state, json.dumps(json_safe(payload), sort_keys=True, default=str)))
+            if old and old['state']==state and old['payload']==encoded:
+                return
+            db.execute("INSERT OR REPLACE INTO orders(order_id,intent_id,broker_account,state,payload) VALUES(?,?,?,?,?)", (order_id, intent_id, account, state, encoded))
 
     def record_fill_once(self, fill: Fill, intent_id: str, payload: Any) -> bool:
         with self.transaction() as db:
@@ -123,7 +126,7 @@ class Ledger:
 
     def set_intent_state(self, intent_id: str, state: str) -> None:
         with self.transaction() as db:
-            db.execute("UPDATE intents SET state=? WHERE intent_id=?", (state, intent_id))
+            db.execute("UPDATE intents SET state=? WHERE intent_id=? AND state!=?", (state, intent_id, state))
 
     def record_order_charges(self, order_id, intent_id, fees, *, complete, payload):
         """A matched historical order receipt supplements, never duplicates fills."""

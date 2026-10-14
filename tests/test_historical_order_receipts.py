@@ -107,3 +107,30 @@ def test_dashboard_net_result_requires_complete_order_fee_receipts(tmp_path):
         assert after['executed_orders']==after['orders_with_complete_charges']==2
         assert 'summary-buy' not in str(after)
     asyncio.run(run())
+
+
+def test_unchanged_reconciliation_does_not_rewrite_terminal_orders_and_intents(tmp_path):
+    async def run():
+        ledger,broker,_=setup(tmp_path);oms=OrderManager(ledger,broker)
+        await oms.reconcile();before=ledger.db.total_changes
+        await oms.reconcile()
+        assert ledger.db.total_changes==before
+    asyncio.run(run())
+
+
+def test_idle_refresh_schedules_next_read_before_current_snapshot_expires(tmp_path,monkeypatch):
+    from dhan_cas_bot.account_refresh import AccountRefresh
+    from tests.test_streaming_runtime import runtime_at
+    async def run():
+        clock=[0.0];timeouts=[]
+        class Broker(FakeBroker):
+            async def orders(self):clock[0]+=2;return []
+        runtime=runtime_at(tmp_path/'timing',Broker())
+        worker=AccountRefresh(runtime,asyncio.Event(),busy=lambda:False,clock=lambda:clock[0])
+        async def capture(awaitable,timeout):
+            awaitable.close();timeouts.append(timeout);raise asyncio.CancelledError()
+        monkeypatch.setattr(asyncio,'wait_for',capture)
+        with pytest.raises(asyncio.CancelledError):await worker.run()
+        remaining=worker.MAX_AGE-(clock[0]-worker.observed)
+        assert 0<timeouts[0]<remaining
+    asyncio.run(run())

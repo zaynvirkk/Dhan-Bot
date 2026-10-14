@@ -39,6 +39,15 @@ without repeating HTTP requests while the shared source is healthy. Fresh,
 stale, failed and unavailable observations have different user messages. A
 fresh independent balance cannot conceal stale funded reconciliation.
 
+The open-session check exposed another freshness gap: the reader slept five
+seconds after completing HTTP while position validity expired five seconds
+from the start of HTTP. Healthy refresh now waits at most two seconds and
+shortens that wait against the remaining validity budget, with a half-second
+margin. The five-second validity limit itself is unchanged. Failed-reader
+backoff remains bounded. Unchanged order payloads and intent states no longer
+rewrite durable records; changed economics, identity and state still validate
+and persist normally.
+
 The money view reports gross results, broker-reported charges and net results
 for recorded closed bot trades. Net results remain unavailable until all
 covered executed orders have complete charge receipts. This is historical bot
