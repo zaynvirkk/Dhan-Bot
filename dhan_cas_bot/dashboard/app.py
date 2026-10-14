@@ -49,13 +49,17 @@ def accepts_gzip(value):
     return False
 
 
-def view_snapshot(path, now=None):
+def view_snapshot(path, now=None, *, include_history=True):
     now = now or utcnow()
     data = read_json(path)
     if not data or data.get('schema') != 1:
         return {'schema': 1, 'available': False, 'server_time': now.isoformat(), 'error': 'SNAPSHOT_UNAVAILABLE'}
     # Recompute age at request time; a stopped collector cannot remain green.
     data = dict(data)
+    if data.get('history_external') is True and include_history:
+        history=read_json(Path(path).with_name('history.json'))
+        data['history']=history if history and history.get('schema')==1 and history.get('status')=='AVAILABLE' else {'status':'UNAVAILABLE','days':[],'events':[]}
+    if not include_history:data.pop('history',None)
     data.update(available=True, server_time=now.isoformat(), collector=freshness(data.get('collector_observed_at'), now, 60))
     for section, ttl in (('runtime',RUNTIME_TTL_SECONDS), ('connections',900), ('account',60), ('daily_monitor',90)):
         value = data.get(section)
@@ -183,7 +187,7 @@ class Dashboard:
             return EventStream(self, environ)
         elif path == '/api/status':
             try:
-                data = view_snapshot(self.snapshot)
+                data = view_snapshot(self.snapshot,include_history=environ.get('QUERY_STRING')!='history=omit')
                 if environ.get('QUERY_STRING') == 'history=omit':
                     data.pop('history', None)
                     data['history_unchanged'] = True
@@ -231,7 +235,7 @@ class EventStream:
             self.close()
             raise StopIteration
         try:
-            data = view_snapshot(self.app.snapshot)
+            data = view_snapshot(self.app.snapshot,include_history=self.environ.get('QUERY_STRING')!='history=omit')
             if self.environ.get('QUERY_STRING') == 'history=omit':
                 data.pop('history', None)
                 data['history_unchanged'] = True

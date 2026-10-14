@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import time
 
 from dhan_cas_bot.broker import DhanBroker
 from dhan_cas_bot.config import load_config
@@ -70,20 +71,36 @@ def atomic_json(output, report):
     return report
 
 
-def write_report(output, report):
+def write_report(output, report, *, embed_history=True,history_cache=None,update_history=True):
     """History failures cannot stop current monitoring or modify the trader."""
     history_path = Path(output).with_name('history.json')
     try:
-        previous = read_json(history_path)
+        previous = history_cache if history_cache is not None else read_json(history_path)
         if previous is None and history_path.exists():
             raise ValueError('unreadable history; preserve existing evidence')
-        history = advance_history(previous, report, utcnow())
+        history = advance_history(previous, report, utcnow()) if update_history else previous
+        if history is None:raise ValueError('history unavailable')
         if history != previous:
             atomic_json(history_path, history)
         report = {**report, 'history': history}
     except (OSError, ValueError, TypeError, KeyError, AttributeError):
         report = {**report, 'history': {'status': 'UNAVAILABLE', 'days': [], 'events': []}}
-    return atomic_json(output, report)
+    # A live quote snapshot must not copy the entire retained journal. Full
+    # journal requests load the separate allowlisted file at the HTTP boundary.
+    compact={k:v for k,v in report.items() if k!='history'}
+    compact.update(history_external=True,history_status=report['history'].get('status','UNAVAILABLE'))
+    atomic_json(output,report if embed_history else compact)
+    return report
+
+
+def history_signature(report):
+    runtime,account,ledger=(report.get(k) or {} for k in ('runtime','account','ledger'))
+    return json.dumps({'runtime':{k:runtime.get(k) for k in ('state','reason','authority','account_snapshot_fresh','broker_route_verified')},
+        'account':{k:account.get(k) for k in ('available_cash','open_position_count','order_count')},
+        'counts':ledger.get('counts'),'settled':ledger.get('cash_reconciliation'),
+        'phase':(runtime.get('observation') or {}).get('phase'),
+        'strategies':[(r.get('strategy'),r.get('state'),r.get('reason'),r.get('evaluated_at'))
+                      for r in runtime.get('strategy_evaluations',[]) if isinstance(r,dict)]},sort_keys=True)
 
 
 async def check_account(config):
@@ -119,10 +136,18 @@ async def watch(config, output):
                 checked = await check_account(config)
             await asyncio.sleep(15)
     task = asyncio.create_task(verify())
+    history_cache=None
+    last_history_time=-float('inf')
+    last_signature=None
     try:
         while True:
             previous = read_json(output) or {}
-            write_report(output, projection(config, previous, checked=checked, monitor=read_json(Path(output).with_name('daily-monitor.json'))))
+            report=projection(config,previous,checked=checked,monitor=read_json(Path(output).with_name('daily-monitor.json')))
+            signature=history_signature(report)
+            due=signature!=last_signature or time.monotonic()-last_history_time>=5
+            result=write_report(output,report,embed_history=False,history_cache=history_cache,update_history=due)
+            history_cache=result['history'] if result['history'].get('status')=='AVAILABLE' else None
+            if due:last_history_time=time.monotonic();last_signature=signature
             await asyncio.sleep(1)
     finally:
         task.cancel()
