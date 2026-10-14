@@ -102,7 +102,8 @@ class AccountRefresh:
         runtime.status.current_account_funded = bool(funds and funds.spendable_cash > 0)
         if funds is None:
             runtime.status.reason = 'ACCOUNT_FUNDS_UNAVAILABLE'
-        elif runtime.status.reason.startswith('ACCOUNT_FUNDS_UNAVAILABLE'):
+        elif (runtime.status.reason.startswith('ACCOUNT_FUNDS_UNAVAILABLE')
+              or runtime.status.reason=='RECOVERY_REQUIRED:ACCOUNT_READ_FAILED'):
             runtime.status.reason = ''
         if runtime.status.state == 'RECOVERING' and not snapshot['unresolved']:
             runtime.status.state = 'ARMED_WAITING_SIGNAL'

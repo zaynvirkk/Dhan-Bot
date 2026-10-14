@@ -156,7 +156,7 @@ def runtime_view(raw, now):
             authority = 'ENABLED' if raw['auto_live_armed'] else 'DISABLED'
     flags = {k: raw.get(k) if type(raw.get(k)) is bool else None for k in
              ('software_verified', 'current_account_funded', 'broker_route_verified',
-              'official_cas_signal_seen', 'final_value_source_verified', 'auto_live_armed', 'writes')}
+              'official_cas_signal_seen', 'final_value_source_verified', 'auto_live_armed', 'writes', 'account_snapshot_fresh')}
     prefix = str(raw.get('reason', '')).split(':')[0]
     return {**timing, **flags, 'authority': authority,
             'route_attempts_used': integer(raw.get('route_attempts_used')),
@@ -482,6 +482,38 @@ def last_signal_views(db):
     return result
 
 
+def cash_reconciliation(db):
+    """Reported order charges are separate from individual execution fills."""
+    records=list(db.execute("SELECT f.order_id,f.intent_id,f.quantity,f.price,f.occurred_at,i.side,i.lifecycle_id FROM fills f JOIN intents i ON i.intent_id=f.intent_id WHERE i.lifecycle_id IN (SELECT lifecycle_id FROM lifecycles WHERE state='CLOSED' ORDER BY rowid DESC LIMIT 256) LIMIT 100001"))
+    if not records or len(records)>100000:return None
+    quantities={}
+    for r in records:
+        quantities[r['lifecycle_id']]=quantities.get(r['lifecycle_id'],0)+(r['quantity'] if r['side']=='BUY' else -r['quantity'])
+    records=[r for r in records if quantities[r['lifecycle_id']]==0]
+    if not records:return None
+    buy=sell=Decimal(0)
+    for row in records:
+        if money(row['price']) is None or row['quantity']<=0:return {'status':'UNAVAILABLE'}
+        amount=Decimal(row['price'])*row['quantity']
+        if row['side']=='BUY':buy+=amount
+        elif row['side']=='SELL':sell+=amount
+        else:return {'status':'UNAVAILABLE'}
+    order_ids={r['order_id'] for r in records};confirmed={};charges=Decimal(0)
+    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='order_charges'").fetchone():
+        for row in db.execute('SELECT order_id,fees,complete FROM order_charges'):
+            if row['order_id'] not in order_ids:continue
+            if money(row['fees']) is None or Decimal(row['fees'])<0:return {'status':'UNAVAILABLE'}
+            charges+=Decimal(row['fees'])
+            if row['complete']==1:confirmed[row['order_id']]=True
+    complete=len(confirmed)==len(order_ids)
+    return {'status':'REPORTED_CHARGES_COMPLETE' if complete else 'CHARGES_PENDING',
+        'scope':'RECENT_CLOSED_BOT_TRADES','last_trade_at':max(timestamp(r['occurred_at']) or '' for r in records),
+        'closed_trades':len({r['lifecycle_id'] for r in records}),'executed_orders':len(order_ids),
+        'orders_with_complete_charges':len(confirmed),'gross_pnl':money(sell-buy),
+        'reported_charges':money(charges) if complete else None,
+        'net_after_reported_charges':money(sell-buy-charges) if complete else None}
+
+
 def ledger_view(path):
     """One SQLite read transaction, no schema initialization or broker methods."""
     out = {'available': False, 'orders': None, 'fills': None, 'incidents': None, 'counts': None}
@@ -527,7 +559,7 @@ def ledger_view(path):
                 except (ValueError, KeyError, TypeError, AttributeError):
                     entry = None
             return {'available': True, 'orders': orders, 'fills': fills, 'incidents': incidents, 'counts': counts, 'last_entry': entry,
-                    'last_signals':last_signal_views(db)}
+                    'last_signals':last_signal_views(db),'cash_reconciliation':cash_reconciliation(db)}
     except (sqlite3.Error, OSError, ValueError):
         return out
 

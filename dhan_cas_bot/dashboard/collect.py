@@ -46,7 +46,8 @@ def projection(config, previous, *, checked=None, monitor=None):
     else:
         report['account'] = previous.get('account')
     if not report['account_read_ok']:
-        report['account_error'] = 'BROKER_READ_FAILED'
+        report['account_error'] = ('BROKER_READ_FAILED' if primary is not None or (checked and not checked['ok'])
+            else 'ACCOUNT_OBSERVATION_STALE' if checked else 'ACCOUNT_OBSERVATION_UNAVAILABLE')
     if checked:
         report['independent_check'] = {'observed_at': checked['observed_at'], 'ok': checked['ok']}
     report.update(local_snapshot(config['state_dir'], now))
@@ -93,6 +94,10 @@ async def check_account(config):
         return {'ok': False, 'account': None, 'observed_at': utcnow().isoformat()}
 
 
+def independent_check_due(primary,checked,now):
+    return checked is None or primary is None or not freshness(checked['observed_at'],now,300)['fresh']
+
+
 async def collect(config, output):
     previous = read_json(output) or {}
     primary = shared_account(read_json(Path(config['state_dir'])/'account-observation.json'), utcnow())
@@ -106,10 +111,13 @@ async def watch(config, output):
     async def verify():
         nonlocal checked
         while True:
-            checked = await check_account(config)
-            # Backwards compatible with trader releases without a shared model.
             primary = shared_account(read_json(Path(config['state_dir'])/'account-observation.json'), utcnow())
-            await asyncio.sleep(300 if primary is not None else 15)
+            # Reassess local shared-source health without making extra API calls.
+            # A source lost just after a successful check cannot strand the
+            # fallback for five minutes while its own observation expires.
+            if independent_check_due(primary,checked,utcnow()):
+                checked = await check_account(config)
+            await asyncio.sleep(15)
     task = asyncio.create_task(verify())
     try:
         while True:

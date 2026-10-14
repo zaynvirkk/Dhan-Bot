@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Any, Protocol
 import uuid
@@ -60,6 +60,42 @@ class OrderManager:
             ledger.reconcile_lock = asyncio.Lock()
             ledger.account_revision = 0
         self.lock = ledger.order_lock
+
+    def confirm_historical_order(self, row, broker_order, records):
+        """Historical API rows can be order averages, not exchange fill events.
+
+        Accept them only as corroboration of an already complete local order.
+        Unresolved fills still follow the ordinary identity/quantity checks.
+        """
+        if not records or broker_order.get('orderStatus') not in TERMINAL:
+            return False
+        order_id=str(broker_order['orderId'])
+        known=list(self.ledger.db.execute('SELECT quantity,price FROM fills WHERE order_id=? AND intent_id=?',(order_id,row['intent_id'])))
+        quantity=sum(f['quantity'] for f in known)
+        expected=int(broker_order.get('filledQty',broker_order.get('filledQuantity',row['quantity'] if broker_order['orderStatus']=='TRADED' else quantity)))
+        if quantity<=0 or quantity!=expected:return False
+        turnover=sum((Decimal(f['price'])*f['quantity'] for f in known),Decimal(0))
+        reported_quantity=0;reported_turnover=Decimal(0);fees=Decimal(0)
+        components=('sebiTax','stt','brokerageCharges','serviceTax','exchangeTransactionCharges','stampDuty')
+        complete=True;has_charges=False
+        for trade in records:
+            for key,value in (('dhanClientId',self.broker.account_id),('securityId',row['security_id']),('transactionType',row['side']),('exchangeSegment','NSE_FNO'),('productType','MARGIN')):
+                if key in trade and str(trade[key])!=value:raise ContractError('foreign or contradictory historical order')
+            qty=Decimal(str(trade['tradedQuantity']));price=Decimal(str(trade['tradedPrice']))
+            if not qty.is_finite() or qty<=0 or qty!=qty.to_integral_value() or not price.is_finite() or price<=0:
+                raise ContractError('invalid historical order economics')
+            values=[Decimal(str(trade.get(key,'0'))) for key in ('fees',*components)]
+            if any(not value.is_finite() or value<0 for value in values):raise ContractError('invalid historical order charges')
+            reported_quantity+=int(qty);reported_turnover+=qty*price
+            fees+=max(values[0],sum(values[1:],Decimal(0)))
+            complete &= 'fees' in trade or all(key in trade for key in components)
+            has_charges |= any(key in trade for key in ('fees',*components))
+        if quantity!=reported_quantity or turnover!=reported_turnover:
+            raise ContractError('historical order does not match recorded execution')
+        if has_charges:
+            self.ledger.record_order_charges(order_id,row['intent_id'],fees,complete=complete,
+                payload={'source':'BROKER_TRADE_HISTORY','quantity':quantity,'turnover':str(turnover)})
+        return True
 
     def _rate_attempt(self, intent: Intent, attempt_id: str) -> None:
         timestamp = datetime.now(timezone.utc).timestamp()
@@ -129,10 +165,11 @@ class OrderManager:
             today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
             previous_dates = [datetime.fromisoformat(row["created_at"]).astimezone(ZoneInfo("Asia/Kolkata")).date() for row in intent_rows]
             historical = getattr(self.broker, "historical_trades", None)
+            historical_rows=[]
             if historical and previous_dates and min(previous_dates) < today:
                 # Read yesterday's facts after a restart; today's empty trade
                 # book must never erase fills or establish settlement cash.
-                trades = trades + await historical(min(previous_dates), today)
+                historical_rows = await historical(min(previous_dates), today-timedelta(days=1))
             by_corr = {str(x.get("correlationId")): x for x in orders if x.get("correlationId")}
             by_id = {str(x.get("orderId")): x for x in orders}
             resolved = {}
@@ -165,7 +202,9 @@ class OrderManager:
                             raise ContractError("foreign or contradictory broker order")
                     state = str(broker_order.get("orderStatus", "UNKNOWN"))
                     self.ledger.record_order(order_id, row["intent_id"], self.broker.account_id, state, broker_order)
-                    for trade in trades:
+                    past=[trade for trade in historical_rows if str(trade.get('orderId'))==order_id]
+                    confirmed=self.confirm_historical_order(row,broker_order,past)
+                    for trade in trades+([] if confirmed else past):
                         if str(trade.get("orderId")) != order_id:
                             continue
                         for key, expected in (("dhanClientId", self.broker.account_id), ("securityId", row["security_id"]), ("transactionType", row["side"]), ("exchangeSegment", "NSE_FNO"), ("productType", "MARGIN")):

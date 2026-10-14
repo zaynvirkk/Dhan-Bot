@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS intents (intent_id TEXT PRIMARY KEY, client_order_id 
 CREATE TABLE IF NOT EXISTS attempts (attempt_id TEXT PRIMARY KEY, intent_id TEXT NOT NULL, sent_at TEXT NOT NULL, response_state TEXT NOT NULL, response TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS orders (order_id TEXT PRIMARY KEY, intent_id TEXT NOT NULL, broker_account TEXT NOT NULL, state TEXT NOT NULL, payload TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS fills (trade_id TEXT PRIMARY KEY, order_id TEXT NOT NULL, intent_id TEXT NOT NULL, security_id TEXT NOT NULL, quantity INTEGER NOT NULL, price TEXT NOT NULL, fees TEXT NOT NULL, occurred_at TEXT NOT NULL, payload TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS order_charges (order_id TEXT PRIMARY KEY, intent_id TEXT NOT NULL, fees TEXT NOT NULL, complete INTEGER NOT NULL, observed_at TEXT NOT NULL, payload TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS cash_postings (posting_id TEXT PRIMARY KEY, lifecycle_id TEXT NOT NULL, amount TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS incidents (incident_id TEXT PRIMARY KEY, kind TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL);
@@ -124,6 +125,20 @@ class Ledger:
         with self.transaction() as db:
             db.execute("UPDATE intents SET state=? WHERE intent_id=?", (state, intent_id))
 
+    def record_order_charges(self, order_id, intent_id, fees, *, complete, payload):
+        """A matched historical order receipt supplements, never duplicates fills."""
+        if not fees.is_finite() or fees < 0:
+            raise ContractError('invalid historical order charges')
+        with self.transaction() as db:
+            order=db.execute('SELECT intent_id FROM orders WHERE order_id=?',(order_id,)).fetchone()
+            old=db.execute('SELECT * FROM order_charges WHERE order_id=?',(order_id,)).fetchone()
+            if not order or order['intent_id']!=intent_id or (old and old['intent_id']!=intent_id):
+                raise ContractError('historical charge identity conflict')
+            if old and (fees < Decimal(old['fees']) or (fees == Decimal(old['fees']) and (old['complete'] or not complete))):
+                return
+            db.execute('INSERT OR REPLACE INTO order_charges VALUES(?,?,?,?,?,?)',
+                (order_id,intent_id,str(fees),int(complete),now(),json.dumps(json_safe(payload),sort_keys=True)))
+
     def set_counter(self, name: str, value: Decimal | int) -> None:
         with self.transaction() as db:
             db.execute("INSERT INTO counters(name,value) VALUES(?,?) ON CONFLICT(name) DO UPDATE SET value=excluded.value", (name, str(value)))
@@ -162,11 +177,14 @@ class Ledger:
         quantity = 0
         reserved = Decimal("0")
         unresolved = False
+        has_order_charges = self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='order_charges'").fetchone() is not None
         for intent in self.db.execute("SELECT * FROM intents WHERE lifecycle_id=?", (lifecycle_id,)):
             fills = list(self.db.execute("SELECT * FROM fills WHERE intent_id=?", (intent["intent_id"],)))
             qty = sum(fill["quantity"] for fill in fills)
             turnover = sum((Decimal(fill["price"]) * fill["quantity"] for fill in fills), Decimal("0"))
             reported_fees = sum((Decimal(fill["fees"]) for fill in fills), Decimal("0"))
+            if has_order_charges:
+                reported_fees=max(reported_fees,sum((Decimal(r['fees']) for r in self.db.execute('SELECT fees FROM order_charges WHERE intent_id=?',(intent['intent_id'],))),Decimal(0)))
             cost = max(reported_fees, ceil_paise((fees.buy if intent["side"] == "BUY" else fees.sell)(turnover, 1))) if qty else Decimal("0")
             terminal = intent["state"] in {"FILLED", "CANCELLED", "REJECTED", "EXPIRED", "ABORTED"}
             unresolved |= not terminal

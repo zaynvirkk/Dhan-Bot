@@ -359,6 +359,27 @@ setImmediate(async()=>{
 });
 
 setImmediate(()=>{
+ const base={available:true,collector:{fresh:true},runtime:{fresh:true},account_read_ok:false};
+ const feeds={issues:[],known:3,idle:true};
+ browser.noticeFixture={...base,account_error:'ACCOUNT_OBSERVATION_STALE'};browser.noticeFeeds=feeds;
+ assert.match(vm.runInContext('monitoringNotice(noticeFixture,noticeFeeds).text',browser),/last successful account check is stale/);
+ assert.ok(!vm.runInContext('monitoringNotice(noticeFixture,noticeFeeds).text',browser).includes('failed'));
+ browser.noticeFixture={...base,account_error:'BROKER_READ_FAILED'};
+ assert.match(vm.runInContext('monitoringNotice(noticeFixture,noticeFeeds).text',browser),/read failed.*fresh reconciliation/);
+ browser.noticeFixture={...base,account_read_ok:true,runtime:{fresh:true,account_snapshot_fresh:false}};
+ assert.match(vm.runInContext('monitoringNotice(noticeFixture,noticeFeeds).text',browser),/trader reconciliation is stale or incomplete/);
+ browser.cashFixture={available:true,collector:{fresh:true},runtime:{fresh:true},ledger:{cash_reconciliation:{
+  status:'REPORTED_CHARGES_COMPLETE',gross_pnl:'2791.75',reported_charges:'1082.39',net_after_reported_charges:'1709.36',closed_trades:16}}};
+ vm.runInContext('render(cashFixture)',browser);
+ assert.equal(ids['cash-reconciliation'].hidden,false);
+ assert.match(ids['cash-reconciliation'].textContent,/2,791.75.*1,082.39.*1,709.36/);
+ browser.cashFixture.ledger.cash_reconciliation={status:'CHARGES_PENDING',gross_pnl:'2791.75',orders_with_complete_charges:31,executed_orders:32};
+ vm.runInContext('render(cashFixture)',browser);
+ assert.match(ids['cash-reconciliation'].textContent,/31 of 32.*net profit is not yet confirmed/);
+ console.log('Actual failure versus stale success, trader reconciliation blocker and cost-complete results verified');
+});
+
+setImmediate(()=>{
  browser.selectionFixture={runtime:{fresh:true,state:'ARMED_WAITING_SIGNAL',minute_source:'UPSTOX_COMPLETED_I1_STREAM',
   strategy_selection:{reason:'SELECTED',mode:'MEASURED_CASH_PER_MINUTE',selected:'OPEN_DRIVE_FAST',evaluated_at:new Date().toISOString(),
    candidates:[{strategy:'OPEN_DRIVE_FAST',side:'CE',quantity:65,limit:'10.00',friction_cash:'6.50',estimated_net_profit:'40.00',

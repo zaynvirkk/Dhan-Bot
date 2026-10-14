@@ -72,8 +72,13 @@ function monitoringNotice(d,feeds){
  if(!d.available)return {text:'No dashboard snapshot is available. The collector may not be running.',kind:'error'};
  if(!d.collector?.fresh)return {text:'Dashboard observations are stale. Current trading status is unknown.',kind:'error'};
  if(!d.runtime?.fresh)return {text:'The bot status is stale or missing. Current trading authority cannot be confirmed.',kind:'error'};
- if(!d.account_read_ok)return {text:'The latest Dhan account read failed. Last observed balances and positions are shown where available.',kind:'error'};
+ if(!d.account_read_ok){
+  if(d.account_error==='ACCOUNT_OBSERVATION_STALE')return {text:'The last successful account check is stale. Previous balances and positions are shown until a fresh check completes.',kind:'warn'};
+  if(d.account_error==='ACCOUNT_OBSERVATION_UNAVAILABLE')return {text:'Waiting for a current Dhan account observation. Previous balances and positions are shown where available.',kind:'warn'};
+  return {text:'The latest Dhan account read failed. Previous balances and positions are shown; the trader needs fresh reconciliation before opening another position.',kind:'error'};
+ }
  if(d.account&&!d.account.fresh)return {text:'Account observations are stale. Last observed balances and positions are shown; current account state is unknown.'};
+ if(d.runtime.account_snapshot_fresh===false)return {text:'The broker balance is current, but trader reconciliation is stale or incomplete. New entries require a fresh reconciled account.',kind:'warn'};
  if(feeds.issues.includes('disconnected')){
   const plan=d.connections?.checks?.find(c=>c.name==='dhan_auth')?.facts?.data_plan;
   let next='Open System → Live connections for the latest error and reconnect count.';
@@ -329,6 +334,12 @@ function renderDecision(d){
  $('fill-count').textContent=knownFills?String(fills):'—';
  $('fill-note').textContent=knownFills?fills===0?'No fills recorded in the bot ledger':'Fill records, not completed trades':'Execution ledger unavailable';
  $('realised-note').textContent=a?.realised_pnl==null?'Not reported by Dhan':'As reported by Dhan';$('unrealised-note').textContent=a?.unrealised_pnl==null?'Not reported by Dhan':'As reported by Dhan';
+ const settlement=d.ledger?.cash_reconciliation;
+ const usableSettlement=['REPORTED_CHARGES_COMPLETE','CHARGES_PENDING'].includes(settlement?.status);
+ $('cash-reconciliation').hidden=!usableSettlement;
+ $('cash-reconciliation').textContent=!usableSettlement?'':settlement.status==='REPORTED_CHARGES_COMPLETE'?
+  `Recorded closed bot trades: gross ${cash(settlement.gross_pnl)} − broker-reported charges ${cash(settlement.reported_charges)} = net ${cash(settlement.net_after_reported_charges)}. ${settlement.closed_trades} closed trades; latest fill ${at(settlement.last_trade_at)}. These results are separate from today’s account P&L.`:
+  `Recorded closed bot trades: gross ${cash(settlement.gross_pnl)}. Complete charges are available for ${settlement.orders_with_complete_charges} of ${settlement.executed_orders} executed orders; net profit is not yet confirmed.`;
  $('signal-value').textContent=points(o?.iep);$('reference-value').textContent=points(o?.reference);
  $('index-value').textContent=points(o?.ltp);
  const ltpAge=elapsed(o?.ltp_at,d.server_time),receiptAge=elapsed(o?.ltp_received_at,d.server_time);

@@ -135,6 +135,27 @@ def test_failed_shared_cash_is_not_an_empty_or_fresh_account(tmp_path, monkeypat
     assert result['account']['available_cash'] == '123.45'
 
 
+def test_expired_successful_independent_read_is_stale_not_a_failed_broker_call(tmp_path):
+    now=datetime.now(timezone.utc)
+    result=collector.projection({'state_dir':str(tmp_path)},{'account':{'available_cash':'123.45'}},
+        checked={'ok':True,'account':{'available_cash':'123.45'},'observed_at':(now-timedelta(seconds=100)).isoformat()})
+    assert not result['account_read_ok']
+    assert result['account_error']=='ACCOUNT_OBSERVATION_STALE'
+
+
+def test_failed_check_keeps_the_actual_failure_distinct_from_stale_success(tmp_path):
+    result=collector.projection({'state_dir':str(tmp_path)},{},
+        checked={'ok':False,'account':None,'observed_at':datetime.now(timezone.utc).isoformat()})
+    assert result['account_error']=='BROKER_READ_FAILED'
+
+
+def test_lost_shared_source_requests_fallback_before_five_minute_check_expiry():
+    now=datetime.now(timezone.utc);checked={'ok':True,'observed_at':(now-timedelta(seconds=20)).isoformat()}
+    assert collector.independent_check_due(None,checked,now)
+    assert not collector.independent_check_due({'account_read_ok':True},checked,now)
+    assert not collector.independent_check_due({'account_read_ok':False},checked,now)
+
+
 def test_watch_publishes_local_status_while_independent_check_is_stalled(tmp_path, monkeypatch):
     async def run():
         entered, release = asyncio.Event(), asyncio.Event()
