@@ -111,3 +111,13 @@ to 40 GB, yielding 22.7 GiB free at 13:49 without a funded restart (same PID,
 zero restarts). This prevents the immediate storage constraint; retention and
 provider-disconnect/refresh-duration improvements still require separate work.
 No live position was closed, replaced, or given a different stop during this audit.
+
+A subsequent exact selection regression exposed a timing bias: equal absolute
+exit deadlines were scored against successive microsecond clock samples, so the
+last evaluated candidate could appear to have the shortest holding horizon.
+Today's four candidates all had the same scheduled exit and friction; this
+difference was not meaningful evidence favoring PCR_TRAIL. The candidate loop
+now scores horizons against one decision timestamp, with a failing-before and
+passing-after real-path test. Dispatch still rechecks actual clock, cash, books,
+authority and deadline. This funded-code follow-up is committed for a later
+verified-flat deployment; it is not loaded into the current open-position process.

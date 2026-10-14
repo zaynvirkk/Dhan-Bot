@@ -212,7 +212,9 @@ class DirectionalEngine:
             if candidate is None:
                 self.record_assessment(signal, self.last_reason, self.candidate_checks)
                 continue  # An unfillable engine cannot starve other valid signals.
-            row=execution_score(signal,candidate,self.ranking,engine.now())
+            # Compare equal deadlines against the same decision clock. Sampling
+            # after each candidate makes the last one look artificially faster.
+            row=execution_score(signal,candidate,self.ranking,now)
             feasible.append(row)
             choices[signal.strategy]=(signal,candidate)
             self.record_assessment(signal,"READY",self.candidate_checks)

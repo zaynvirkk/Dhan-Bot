@@ -54,6 +54,26 @@ def test_target_is_never_used_as_an_estimated_profit(tmp_path):
     asyncio.run(run())
 
 
+def test_equal_exit_deadlines_are_scored_at_one_decision_time(tmp_path):
+    async def run():
+        engine,broker,ledger,clock,inputs=setup(tmp_path,'OPEN_DRIVE_FAST')
+        base=inputs.evaluations['OPEN_DRIVE_FAST']
+        other=replace(base,strategy='TREND_PULLBACK_SWING')
+        engine.directional.enabled=(base.strategy,other.strategy)
+        engine.runtime.enabled_strategies=frozenset(engine.directional.enabled)
+        engine.directional.update(replace(inputs,evaluations={base.strategy:base,other.strategy:other}))
+        candidate=engine.directional.candidate
+        def slow_candidate(*args):
+            result=candidate(*args);clock[0]+=timedelta(microseconds=100)
+            return result
+        engine.directional.candidate=slow_candidate
+        assert await engine.cycle()
+        rows=engine.directional.selection['candidates']
+        assert len(rows)==2
+        assert len({row['holding_minutes'] for row in rows})==1
+    asyncio.run(run())
+
+
 def test_incremental_candles_remove_missing_overlap_instead_of_preserving_it():
     from dhan_cas_bot.strategy_inputs import MinuteSource
     from tests.test_session_strategies import at
