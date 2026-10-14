@@ -382,7 +382,8 @@ function renderDecision(d){
  const exits=(d.ledger?.active_trades||[]).filter(t=>t.quantity>0).map(t=>{
   const stop=t.stop_fraction!=null?`${Math.round((1-Number(t.stop_fraction))*100)}% below ${t.trailing?'the highest completed minute close':'the entry premium'}`:'Stop policy unavailable';
   const target=t.target_known?(t.target_multiple==null?'No fixed profit target':`Profit target: ${t.target_multiple}× entry`):'Profit target unavailable';
-  return `${t.strategy.replaceAll('_',' ')}: ${stop}. ${target}. Scheduled exit ${at(t.exit_due)}. ${t.exit_trigger?`Exit triggered: ${t.exit_trigger.replaceAll('_',' ')}; due ${at(t.trigger_due)}.`:'No exit trigger recorded.'}${t.trailing?' A trailing stop can give back profit and close below entry.':''} Recorded policy; the current trailing price is not supplied by this bot version.`;
+  const protect=t.net_protection?` Net-profit protection retains ${Math.round(Number(t.net_protection.retain)*100)}% of observed peak liquidation profit after estimated costs. Recorded profit floor: ${cash(t.net_protection.floor)}. A gap or failed fill can still realise less.`:'';
+  return `${t.strategy.replaceAll('_',' ')}: ${stop}. ${target}. Scheduled exit ${at(t.exit_due)}. ${t.exit_trigger?`Exit triggered: ${t.exit_trigger.replaceAll('_',' ')}; due ${at(t.trigger_due)}.`:'No exit trigger recorded.'}${protect}${t.trailing?' A trailing stop can give back profit and close below entry.':''} Recorded policy; the current trailing price is not supplied by this bot version.`;
  });
  $('position-exits').hidden=!exits.length;$('position-exits').textContent=exits.join(' ');
  const feeds=rt?.feed_health||{};const values=Object.values(feeds);const connected=values.filter(f=>f.connected===true).length;

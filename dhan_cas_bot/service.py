@@ -130,7 +130,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         # Broker recovery precedes calendar, Upstox, egress admission and metadata.
         await runtime.recover()
         engine = SessionEngine(runtime, {}, now_fn=now)
-        engine.directional = DirectionalEngine(engine, enabled)
+        engine.directional = DirectionalEngine(engine, enabled,
+            profit_retain=Decimal(str(config['profit_exit_retain'])) if config.get('profit_exit_policy')=='NET_PROFIT_RATCHET_V1' else None)
         await runtime.refresh_account()
         if broker.allow_writes:
             ledger.put_mandate(mandate)

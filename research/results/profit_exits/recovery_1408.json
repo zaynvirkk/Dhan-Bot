@@ -1,0 +1,33 @@
+{
+  "parameters": {
+    "at": "14:08",
+    "cutoff": "15:30",
+    "move": 89.0,
+    "spot": 22623.35,
+    "as_of": "2026-10-14",
+    "output": "research/results/profit_exits/recovery_1408.json"
+  },
+  "input_sha256": "8c3db9ae51fea4deb87d4460b8da7e1994c959cf2395b392454392267f6fecdf",
+  "source_sha256": "3b461f0a4d136dd72cc10dcf51dfa01be4da2ac8292f6f7ac99df7c3a0737793",
+  "target_return": 0.003933988556071493,
+  "missing_sessions": 0,
+  "all": {
+    "sessions": 124,
+    "reached_underlying_rebound": 11,
+    "fraction": 0.08870967741935484,
+    "rough_wilson95": [
+      0.05025570175545942,
+      0.151881943580644
+    ]
+  },
+  "15m_down_30m_up": {
+    "sessions": 14,
+    "reached_underlying_rebound": 2,
+    "fraction": 0.14285714285714285,
+    "rough_wilson95": [
+      0.040093073737921175,
+      0.39941907763863693
+    ]
+  },
+  "limits": "Underlying high touches only, not executable option profits. No IV/theta/queue model or regime calibration; interval is descriptive, not a predictive confidence bound."
+}

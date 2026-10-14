@@ -20,6 +20,14 @@ def load_config(path: str | Path) -> dict:
         raise ContractError("account_id is required")
     from .strategy_inputs import strategy_names
     strategy_names(raw)
+    policy=raw.get('profit_exit_policy')
+    if policy is not None:
+        if policy!='NET_PROFIT_RATCHET_V1' or 'profit_exit_retain' not in raw:
+            raise ContractError('profit exit policy and explicit retention must match')
+        retain=dec(raw['profit_exit_retain'],'profit_exit_retain')
+        if not 0<retain<1:raise ContractError('profit retention must be between zero and one')
+    elif 'profit_exit_retain' in raw:
+        raise ContractError('profit retention requires an explicit policy version')
     return raw
 
 

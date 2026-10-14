@@ -551,13 +551,21 @@ def active_trade_views(db):
             entry=sum((Decimal(f['price'])*f['quantity'] for f in buys),Decimal(0))/units if units else None
             latch=db.execute('SELECT value FROM metadata WHERE key=?',('directional-exit:'+row['lifecycle_id'],)).fetchone()
             trigger=json.loads(latch['value']) if latch else {}
+            protection=payload.get('profit_exit') or {}
+            guard_row=db.execute('SELECT value FROM metadata WHERE key=?',('profit-exit:'+row['lifecycle_id'],)).fetchone()
+            guard=json.loads(guard_row['value']) if guard_row else {}
+            net_protection=None
+            if protection.get('version')=='NET_PROFIT_RATCHET_V1':
+                net_protection={'version':'NET_PROFIT_RATCHET_V1','retain':money(protection.get('retain')),
+                    'peak':money(guard.get('peak')),'floor':money(guard.get('floor')),
+                    'triggered':guard.get('triggered') is True}
             result.append({'strategy':strategy,'security_id':label(row['security_id']),
                 'quantity':integer(quantity),'entry_price':money(entry),
                 'trailing':policy.get('exit_trail') is True,'stop_fraction':money(policy.get('exit_stop')),
                 'target_known':'exit_target' in policy,'target_multiple':money(policy.get('exit_target')),
                 'exit_due':timestamp(payload.get('exit_at')),
-                'exit_trigger':choice(trigger.get('reason'),{'TIME_EXIT','PREMIUM_TARGET','TRAILING_STOP','PREMIUM_STOP'}),
-                'trigger_due':timestamp(trigger.get('due'))})
+                'exit_trigger':choice(trigger.get('reason'),{'TIME_EXIT','PREMIUM_TARGET','TRAILING_STOP','PREMIUM_STOP','NET_PROFIT_FLOOR'}),
+                'trigger_due':timestamp(trigger.get('due')),'net_protection':net_protection})
         except (ValueError,TypeError,KeyError,AttributeError,InvalidOperation):continue
     return result
 

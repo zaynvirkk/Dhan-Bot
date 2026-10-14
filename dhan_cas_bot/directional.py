@@ -27,7 +27,10 @@ class Inputs:
 
 
 class DirectionalEngine:
-    def __init__(self, engine, enabled):
+    def __init__(self, engine, enabled, *, profit_retain=None):
+        if profit_retain is not None and (not isinstance(profit_retain,D) or not profit_retain.is_finite() or not 0<profit_retain<1):
+            raise ValueError('invalid explicit profit-retention policy')
+        self.profit_retain=profit_retain
         self.engine = engine
         self.enabled = tuple(s for s in STRATEGIES if s != CAS and s in enabled)
         self.inputs = None
@@ -235,6 +238,8 @@ class DirectionalEngine:
         key=self.signal_key(signal)+":consumed"
         lifecycle = "l"+uuid.uuid4().hex
         payload = {"strategy":signal.strategy,"instrument":asdict(inst),"signal":asdict(signal),"exit_at":signal.exit_at,"selection":self.selection}
+        if self.profit_retain is not None:
+            payload['profit_exit']={'version':'NET_PROFIT_RATCHET_V1','retain':str(self.profit_retain)}
         intent = Intent("i"+uuid.uuid4().hex,"BUY",inst,quantity,limit,"e"+uuid.uuid4().hex[:28],engine.now(),lifecycle)
         with ledger.transaction() as db:
             db.execute("INSERT INTO lifecycles VALUES(?,?,?,?,?,?)",(lifecycle,engine.session_id,inst.security_id,str(allocation.bankroll),"OPEN",json.dumps(json_safe(payload))))
@@ -328,6 +333,31 @@ class DirectionalEngine:
         stop=D(policy.get("exit_stop",'.5'))
         trailing=policy.get("exit_trail") is True
         peak=entry
+        protection=payload.get('profit_exit')
+        if exit_state is None and entry and protection:
+            from .profit_exit import observe
+            from .exits import executable_sale_units
+            from math import ceil
+            if protection.get('version')!='NET_PROFIT_RATCHET_V1':
+                raise ValueError('unknown recorded profit-exit policy')
+            book=engine.books.get(inst.security_id)
+            if self.book_current(book) and book.top_bid:
+                slices=executable_sale_units(book,qty)
+                if sum(q for q,_ in slices)==qty:
+                    # Finite depth, adverse two-tick allowance and conservative
+                    # exit fees; never use LTP or multiply the top bid by all units.
+                    proceeds=sum((q*max(inst.tick_size,p-2*inst.tick_size) for q,p in slices),D(0))
+                    fees=FeeSchedule().sell(proceeds,3*ceil(qty/inst.freeze_qty))
+                    net=totals['sale_credit']+proceeds-fees-totals['entry_debit']
+                    cost=max(D(0),totals['entry_debit']-entry*units)+fees
+                    guard_key='profit-exit:'+active['lifecycle_id']
+                    old=ledger.metadata(guard_key)
+                    guard=observe(net,cost,old,retain=D(protection['retain']))
+                    # Persist a ratchet/trigger, not every declining quote.
+                    if old is None or any(guard[k]!=old.get(k) for k in ('peak','floor','triggered')):
+                        ledger.put_metadata(guard_key,guard)
+                    if guard['triggered']:
+                        exit_state={'reason':'NET_PROFIT_FLOOR','due':now.isoformat()}
         # Recovered bars can establish a missed exit, but never invent a fill
         # during the outage. The latch remains until a real reconciled sale.
         if entry and exit_state is None:

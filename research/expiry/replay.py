@@ -97,7 +97,7 @@ def liquidate(order,fill,bars,style,close_at):
         at+=timedelta(minutes=1)
     return {'status':'UNKNOWN_EXIT_CAPACITY','at':at.isoformat(),'remaining':remaining,'parts':parts}
 
-def run(days,name,style,period,delay=1,adverse=True,seed=None,skip=None):
+def run(days,name,style,period,delay=1,adverse=True,seed=None,skip=None,liquidator=None):
     cash=START;peak=START;mdd=D(0);ledger=[];counts=Counter();rng=random.Random(seed)
     unknown=None;best=None;bestpnl=D('-Infinity');marked_dd=D(0)
     for day,x in sorted(days.items()):
@@ -127,8 +127,8 @@ def run(days,name,style,period,delay=1,adverse=True,seed=None,skip=None):
         if f['status']!='MODELED_FILL':counts['misses']+=1;ledger.append(row);continue
         close=stamp(day,'15:40' if day>='2026-08-03' else '15:30')
         cache=x.setdefault('_exits',{})
-        k=(order.contract.key,order.quantity,f['time'],f['price'],style)
-        if k not in cache:cache[k]=liquidate(order,f,x['bars'][order.contract.key],style,close)
+        k=(order.contract.key,order.quantity,f['time'],f['price'],style,liquidator or liquidate)
+        if k not in cache:cache[k]=(liquidator or liquidate)(order,f,x['bars'][order.contract.key],style,close)
         out=cache[k]
         row.update(status=out['status'],entry=str(f['price']),entry_at=f['time'])
         if out['status']!='MODELED_EXIT':
