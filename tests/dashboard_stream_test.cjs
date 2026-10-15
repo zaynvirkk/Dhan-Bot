@@ -517,3 +517,29 @@ setImmediate(()=>{
  assert.match(ids['live-trades-today'].textContent,/unknown/,'Missing close timestamps cannot prove zero trades today');
  console.log('Held-position priority, unknown unrealised P&L and incomplete dates verified');
 });
+
+setImmediate(()=>{
+ browser.recordedFixture={server_time:'2026-10-15T06:32:00Z',runtime:{fresh:true,authority:'ENABLED',strategies:['CAS_LAG_V1','TREND_PULLBACK_FAST'],funded_strategies:['CAS_LAG_V1','TREND_PULLBACK_FAST'],expiry_today:false},ledger:{available:true,decision_history:{status:'AVAILABLE',date:'2026-10-15',strategies:[{strategy:'TREND_PULLBACK_FAST',truncated:false,records:[{strategy:'TREND_PULLBACK_FAST',evaluated_at:'2026-10-15T06:30:00Z',received_at:'2026-10-15T06:30:03Z',state:'NO_SIGNAL',details:{trend_30m:'.003',pullback_10m:'.001'}}]}]}}};
+ browser.waiting={strategy:'TREND_PULLBACK_FAST',state:'WAITING',reason:'OUTSIDE_STRATEGY_WINDOW',details:{}};
+ browser.recordedFixture.runtime.strategy_evaluations=[browser.waiting];
+ vm.runInContext('state.liveChecks={}',browser);
+ let snapshot=vm.runInContext("liveStrategyState('TREND_PULLBACK_FAST',waiting,recordedFixture)",browser);
+ assert.equal(snapshot.check.evaluated_at,'2026-10-15T06:30:00Z','Cold reload retains the durable last decision');
+ assert.match(snapshot.reason,/No opposing pullback/);
+ vm.runInContext('renderLive(recordedFixture)',browser);
+ assert.match(ids['live-check-total'].textContent,/1 completed checks.*0 signals/);
+ assert.match(ids['live-decision-reason'].textContent,/12:00 IST.*No opposing pullback/);
+ browser.recordedFixture.ledger.decision_history.strategies[0].records.push({strategy:'TREND_PULLBACK_FAST',evaluated_at:'2026-10-15T06:30:00Z',received_at:'2026-10-15T06:30:05Z',state:'UNKNOWN',reason:'MISSING_COMPLETED_BAR',details:{}});
+ snapshot=vm.runInContext("liveStrategyState('TREND_PULLBACK_FAST',waiting,recordedFixture)",browser);
+ assert.equal(snapshot.label,'Last check incomplete','A later missing-bar warning cannot be hidden by the earlier successful evaluation');
+ vm.runInContext('renderLive(recordedFixture)',browser);
+ assert.match(ids['live-check-total'].textContent,/1 data warnings/);
+ assert.equal(ids['today-checks'].children.length,1,'Same scheduled boundary is displayed once with its latest receipt');
+ assert.match(ids['today-checks'].children[0].children[1].textContent,/bar was unavailable/);
+ browser.recordedFixture.ledger.decision_history.date='2026-10-14';
+ assert.equal(vm.runInContext('recordedChecks(recordedFixture).length',browser),0,'Yesterday cannot become today’s reason');
+ browser.recordedFixture.ledger.decision_history.date='2026-10-15';
+ browser.recordedFixture.ledger.decision_history.strategies[0].records=[{strategy:'TREND_PULLBACK_FAST',evaluated_at:'2026-10-15T06:40:00Z',received_at:'2026-10-15T06:40:03Z',state:'SIGNAL'}];
+ assert.equal(vm.runInContext('recordedChecks(recordedFixture).length',browser),0,'Future records cannot become current evidence');
+ console.log('Durable decisions, cold reload, receipt order, warnings and date boundary verified');
+});

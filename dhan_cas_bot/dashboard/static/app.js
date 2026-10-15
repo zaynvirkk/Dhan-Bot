@@ -416,6 +416,20 @@ function renderDecision(d){
 function timeOnly(value){const d=new Date(value);return !value||Number.isNaN(d.getTime())?'Time unknown':new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' IST';}
 function strategyLabel(name){return ({TREND_PULLBACK_FAST:'Trend pullback',CAS_LAG_V1:'Expiry auction',ORDINARY_PUBLISHED_PCR_TRAIL:'PCR trend'})[name]||strategyNames[name]||name.replaceAll('_',' ').toLowerCase();}
 function signedPercent(value){if(value===null||value===undefined||value==='')return 'Not reported';const n=Number(value);return Number.isFinite(n)?`${n>0?'+':''}${(n*100).toFixed(2)}%`:'Not reported';}
+function recordedChecks(d,name){
+ const h=d.ledger?.decision_history,now=Date.parse(d.server_time);
+ if(d.ledger?.available!==true||h?.status!=='AVAILABLE'||h.date!==istDay(d.server_time))return [];
+ return (h.strategies||[]).filter(s=>!name||s.strategy===name).flatMap(s=>(s.records||[]).filter(r=>r.strategy===s.strategy&&istDay(r.evaluated_at)===h.date&&Date.parse(r.evaluated_at)<=now&&Date.parse(r.received_at)<=now));
+}
+function recordedCheckReason(check){
+ if(check.state==='UNKNOWN')return check.reason==='MISSING_COMPLETED_BAR'?'A required completed market bar was unavailable; this check could not confirm an entry.':conditionSummary(check);
+ if(check.state==='SIGNAL')return `Setup detected (${check.side||'side unknown'}); this record alone does not confirm an order or fill.`;
+ if(check.strategy==='TREND_PULLBACK_FAST'){
+  const trend=check.details?.trend_30m,pull=check.details?.pullback_10m;
+  if(trend!=null&&pull!=null&&Number.isFinite(Number(trend))&&Number.isFinite(Number(pull)))return Math.abs(Number(trend))<.0025?'The 30-minute trend is below the entry threshold.':Number(trend)*Number(pull)>=0?'No opposing pullback has formed.':'Waiting for the price and futures confirmations.';
+ }
+ return conditionSummary(check);
+}
 function closedTradeData(d){
  const performance=d.ledger?.strategy_performance||[];
  const trades=performance.flatMap(row=>(row.trades||[]).map(trade=>({...trade,strategy:row.strategy})));
@@ -446,7 +460,11 @@ function liveStrategyState(name,row,d){
   const previous=state.liveChecks[key];
   if(!previous||Date.parse(row.evaluated_at)>=Date.parse(previous.evaluated_at))state.liveChecks[key]=row;
  }
- const check=Object.keys(row.details||{}).length?row:state.liveChecks[key];
+ const recorded=recordedChecks(d,name).sort((a,b)=>Date.parse(b.evaluated_at)-Date.parse(a.evaluated_at)||Date.parse(b.received_at)-Date.parse(a.received_at));
+ const last=recorded[0];
+ if(row.state==='WAITING'&&last?.state==='UNKNOWN')return {label:'Last check incomplete',reason:`${timeOnly(last.evaluated_at)}: ${recordedCheckReason(last)}`,kind:'warn'};
+ if(row.state==='WAITING'&&last?.state==='SIGNAL')return {label:'Waiting',reason:`A previous setup was recorded at ${timeOnly(last.evaluated_at)}. See decision history for its execution checks.`};
+ const check=Object.keys(row.details||{}).length?row:recorded.find(r=>r.state==='NO_SIGNAL')||state.liveChecks[key];
  if(name==='TREND_PULLBACK_FAST'&&check){
   const trend=Number(check.details?.trend_30m),pull=Number(check.details?.pullback_10m);
   if(check.details?.trend_30m!=null&&Number.isFinite(trend)&&check.details?.pullback_10m!=null&&Number.isFinite(pull)){
@@ -477,6 +495,23 @@ function renderLive(d){
  }
  const closed=closedTradeData(d),today=closed.trades.filter(t=>istDay(t.exit_at)===istDay(d.server_time)).length;
  $('live-trades-today').textContent=closed.complete?`${today} completed ${today===1?'trade':'trades'} today`:'Today’s completed count unknown';
+ const checks=recordedChecks(d),completed=new Set(checks.filter(r=>['SIGNAL','NO_SIGNAL'].includes(r.state)).map(r=>r.strategy+':'+r.evaluated_at)),signals=new Set(checks.filter(r=>r.state==='SIGNAL').map(r=>r.strategy+':'+r.evaluated_at)),warnings=checks.filter(r=>r.state==='UNKNOWN').length;
+ const recorded=d.ledger?.decision_history,known=d.ledger?.available===true&&recorded?.status==='AVAILABLE'&&recorded.date===istDay(d.server_time),partial=recorded?.strategies?.some(r=>r.truncated);
+ const checkSummary=known?(checks.length?`${partial?'Retained today':'Recorded today'}: ${completed.size} completed checks · ${signals.size} signals${warnings?` · ${warnings} data warnings`:''}`:'No completed strategy checks recorded today.'):'Today’s recorded checks are unavailable.';
+ $('live-check-total').textContent=checkSummary;$('today-check-summary').textContent=checkSummary;
+ if(changed('today-checks',[checks,known])){
+  $('today-checks').replaceChildren();
+  const latest=new Map();
+  for(const row of [...checks].sort((a,b)=>Date.parse(a.received_at)-Date.parse(b.received_at)))latest.set(row.strategy+':'+row.evaluated_at,row);
+  for(const row of [...latest.values()].sort((a,b)=>Date.parse(b.evaluated_at)-Date.parse(a.evaluated_at)).slice(0,128)){
+   const line=el('div',undefined,'recorded-check'),trend=row.details?.trend_30m;
+   line.append(el('strong',`${timeOnly(row.evaluated_at)} · ${strategyLabel(row.strategy)}`),el('p',recordedCheckReason(row),'subtle'));
+   if(trend!=null)line.append(el('span',`30 min ${signedPercent(trend)} · pullback ${signedPercent(row.details.pullback_10m)}`,'stamp'));
+   $('today-checks').append(line);
+  }
+ }
+ const otherSignals=(d.ledger?.last_signals||[]).filter(r=>istDay(r.evaluated_at)===istDay(d.server_time)&&r.blocking_reason==='FUNDED_STRATEGY_DISABLED'&&!configured.includes(r.strategy));
+ $('other-setups').textContent=otherSignals.length?`${otherSignals.length} other strategy configurations recorded setups today but had no funded permission. These are observations, not verified missed profits.`:'';
  const liveOn=rt?.fresh&&rt.authority==='ENABLED'&&Array.isArray(funded)&&funded.length>0;
  $('live-funding').textContent=liveOn?'Real money on':rt?.fresh&&rt.authority==='DISABLED'?'New entries paused':rt?.fresh&&Array.isArray(funded)&&funded.length===0?'No funded strategies':'Permission unknown';
  $('live-funding').className='badge '+(liveOn?'good':'warn');
@@ -500,7 +535,7 @@ function renderLive(d){
  else{
   const relevant=snapshots.find(x=>x.name!=='CAS_LAG_V1'&&!['Not today','Observe only'].includes(x.snapshot.label))||snapshots[0];
   if(relevant){const snap=relevant.snapshot;
-   if(snap.label==='Data needed'){title='Waiting for usable market data';reason=snap.reason;}
+   if(['Data needed','Last check incomplete'].includes(snap.label)){title='Waiting for usable market data';reason=snap.reason;}
    else if(snap.label==='Signal'){title='A setup has been detected';reason=snap.reason;}
    else if(snap.label==='Not today'){title='Waiting for an eligible session';reason=snap.reason;}
    else if(relevant.name==='TREND_PULLBACK_FAST'&&snap.check){

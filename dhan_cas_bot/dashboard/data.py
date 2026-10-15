@@ -577,9 +577,52 @@ def active_trade_views(db):
     return result
 
 
-def ledger_view(path):
+def recorded_decisions(db, strategies, now):
+    """Today's allowlisted decision receipts, using indexed identity ranges.
+
+    A waiting-minute snapshot must not erase a completed check on page reload.
+    These are observations, not evidence that an order would have filled.
+    """
+    from zoneinfo import ZoneInfo
+    ist = ZoneInfo('Asia/Kolkata')
+    day = now.astimezone(ist).date().isoformat()
+    result = []
+    for name in dict.fromkeys(s for s in strategies[:256] if s in STRATEGY_NAMES):
+        prefix = f'strategy-evaluation:{name}:{day}'
+        rows = list(db.execute(
+            "SELECT received_at,payload FROM observations WHERE identity>=? AND identity<? "
+            "AND kind='STRATEGY_EVALUATION' AND identity NOT LIKE '%:WAITING' "
+            "AND identity NOT LIKE '%:NOT_APPLICABLE' AND identity NOT LIKE '%:DISABLED' "
+            "ORDER BY identity DESC LIMIT 257", (prefix, prefix+'\uffff')))
+        records = []
+        for row in rows[:256]:
+            if len(row['payload']) > 100_000:
+                continue
+            try:
+                raw = json.loads(row['payload'])
+                clean = strategy_projection([raw])
+                received = timestamp(row['received_at'])
+                if not clean or clean[0]['strategy'] != name or not received:
+                    continue
+                sample = clean[0]
+                at = timestamp(sample['evaluated_at'])
+                if (sample['state'] not in {'SIGNAL', 'NO_SIGNAL', 'UNKNOWN'} or not at
+                        or datetime.fromisoformat(at).astimezone(ist).date().isoformat() != day
+                        or datetime.fromisoformat(at) > now or datetime.fromisoformat(received) > now):
+                    continue
+                records.append({**sample, 'received_at': received})
+            except (ValueError, TypeError, AttributeError, RecursionError):
+                continue
+        result.append({'strategy': name, 'truncated': len(rows) > 256,
+                       'records': sorted(records, key=lambda r: (r['evaluated_at'], r['received_at']))})
+    return {'status': 'AVAILABLE', 'date': day, 'observed_at': now.isoformat(), 'strategies': result}
+
+
+def ledger_view(path, *, strategies=(), now=None):
     """One SQLite read transaction, no schema initialization or broker methods."""
-    out = {'available': False, 'orders': None, 'fills': None, 'incidents': None, 'counts': None}
+    now = now or utcnow()
+    out = {'available': False, 'orders': None, 'fills': None, 'incidents': None, 'counts': None,
+           'decision_history': {'status': 'UNAVAILABLE'}}
     if not Path(path).is_file():
         return out
     try:
@@ -625,7 +668,8 @@ def ledger_view(path):
             return {'available': True, 'orders': orders, 'fills': fills, 'incidents': incidents, 'counts': counts, 'last_entry': entry,
                     'strategy_performance':strategy_performance(db),
                     'last_signals':last_signal_views(db),'cash_reconciliation':cash_reconciliation(db),
-                    'active_trades':active_trade_views(db)}
+                    'active_trades':active_trade_views(db),
+                    'decision_history':recorded_decisions(db,strategies,now)}
     except (sqlite3.Error, OSError, ValueError):
         return out
 
@@ -633,6 +677,7 @@ def ledger_view(path):
 def local_snapshot(state_dir, now=None):
     now = now or utcnow()
     root = Path(state_dir)
-    return {'runtime': runtime_view(read_json(root/'status.json'), now),
+    runtime = runtime_view(read_json(root/'status.json'), now)
+    return {'runtime': runtime,
             'connections': connections_view(read_json(root/'connections.json'), now),
-            'ledger': ledger_view(root/'ledger.sqlite3')}
+            'ledger': ledger_view(root/'ledger.sqlite3', strategies=runtime['strategies'], now=now)}

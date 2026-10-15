@@ -41,3 +41,19 @@ engine, uses a flex page to remove spare vertical overflow, compresses history
 rows and shows a three-column strategy summary. Accounting, individual fees
 and full position/exit information remain in disclosures. No browser fixture
 was presented as a real held position; held/unknown states use DOM fixtures.
+
+The follow-up operator request adds a review of today's checks. The read-only
+sidecar now projects allowlisted `STRATEGY_EVALUATION` receipts from indexed
+strategy/date key ranges. This does not change the trading ledger schema or
+writer. A cold browser reload retains the latest dated reason between decisions.
+History contains the day's checks and missing-bar warnings; counts explicitly
+describe recorded evidence, not a guarantee of complete session coverage.
+Future decisions/receipts, other dates and private provider fields are rejected.
+The read is bounded; truncation is reported. Earlier successful evaluations do
+not hide a later same-boundary input failure. Other unfunded observed setups are
+counted separately from executed trades and verified missed profits.
+
+The new dashboard Python source is a separate monitoring release. The qualified
+funded service remains pinned to its previously verified immutable source;
+neither its verification marker nor its running process is replaced by this UI
+deployment. See the [noon review](../research/results/session_review_20261015/REPORT.md).
