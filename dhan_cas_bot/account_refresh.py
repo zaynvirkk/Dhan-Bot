@@ -23,6 +23,7 @@ class AccountRefresh:
         self.observed = None
         self.revision = None
         self.healthy = False
+        self.funds = None
         runtime.account_refresh = self
         runtime.ledger.account_refresh = self.request
         self.request()
@@ -38,6 +39,7 @@ class AccountRefresh:
 
     def invalidate(self):
         self.healthy = False
+        self.funds = None
         account_changed(self.runtime.ledger)
         self.wake.set()
 
@@ -100,6 +102,7 @@ class AccountRefresh:
         if self.revision != runtime.ledger.account_revision:
             raise ReconciliationChanged('account changed before publishing observations')
         runtime.status.current_account_funded = bool(funds and funds.spendable_cash > 0)
+        self.funds = funds
         if funds is None:
             runtime.status.reason = 'ACCOUNT_FUNDS_UNAVAILABLE'
         elif (runtime.status.reason.startswith('ACCOUNT_FUNDS_UNAVAILABLE')

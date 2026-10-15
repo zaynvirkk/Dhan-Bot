@@ -1,5 +1,10 @@
 # SableStone Dhan CAS bot
 
+**Additional15October review:** repaired route rejections and late responses
+that stranded the remaining attempt, incorrect product matching in exits, and a stale bankroll
+filter in seconds discovery. Added actual-rule-to-OMS fill/exit coverage.
+[Defects, evidence and deployment boundary](docs/FRESH-CODE-REVIEW-2026-10-15.md).
+
 **Friday16October preflight:** live account/calendar/service checks completed;
 an additional shared-token renewal race is repaired. The funded process still
 requires the operator source switch; tomorrow's route acceptance and executable

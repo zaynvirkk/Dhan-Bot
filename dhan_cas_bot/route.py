@@ -43,6 +43,28 @@ def rejected_probe_contracts(ledger, now):
     return result
 
 
+def rejected_probe_resolved(ledger, account, epoch, now):
+    """A definitive zero-fill rejection can use a remaining authorized attempt.
+
+    Never treat an HTTP exception, a prior socket's order, or a missing fill
+    receipt as permission to retry. This predicate neither grants nor submits.
+    """
+    from .session_strategies import IST
+    probe=ledger.metadata('route_probe',{})
+    if not isinstance(probe,dict) or probe.get('epoch')!=epoch:return False
+    row=ledger.db.execute("SELECT i.*,o.broker_account,o.state AS broker_state FROM intents i JOIN orders o ON o.intent_id=i.intent_id WHERE i.intent_id=?",
+                          (probe.get('intent_id',''),)).fetchone()
+    if (not row or row['lifecycle_id']!='route-probe' or row['side']!='BUY'
+            or row['state']!='REJECTED' or row['broker_state']!='REJECTED' or row['broker_account']!=account):return False
+    try:
+        at=datetime.fromisoformat(row['created_at'])
+        if at.tzinfo is None or at>now or at.astimezone(IST).date()!=now.astimezone(IST).date():return False
+    except (ValueError,TypeError):return False
+    if ledger.db.execute('SELECT 1 FROM fills WHERE intent_id=?',(row['intent_id'],)).fetchone():return False
+    totals=ledger.lifecycle_totals('route-probe')
+    return not totals['unresolved'] and totals['quantity']==0 and totals['reserved']==0
+
+
 def extra_attempts(ledger, session_id, normal_limit, now):
     """An explicit operator grant is one extra attempt on exactly one IST date."""
     from .session_strategies import IST
@@ -100,7 +122,7 @@ def managed_exit_route(ledger, account, epoch, connected_at, echoed):
 
 
 class RouteQualifier:
-    def __init__(self, ledger: Ledger, broker: Broker, *, session_id: str, max_attempts: int, debit_cap: Decimal, mandate_spend_cap: Decimal):
+    def __init__(self, ledger: Ledger, broker: Broker, *, session_id: str, max_attempts: int, debit_cap: Decimal, mandate_spend_cap: Decimal, now_fn=None):
         if max_attempts <= 0 or debit_cap <= 0 or mandate_spend_cap <= 0:
             raise ContractError("qualification budgets must be finite and positive")
         self.ledger = ledger
@@ -109,12 +131,13 @@ class RouteQualifier:
         self.max_attempts = max_attempts
         self.debit_cap = debit_cap
         self.mandate_spend_cap = mandate_spend_cap
+        self.now=now_fn or (lambda:datetime.now(timezone.utc))
 
     async def qualify(self, book: OptionBook, *, epoch: str) -> RouteProof:
         attempts = int(self.ledger.counter(f"probe.attempts:{self.session_id}"))
         totals = self.ledger.lifecycle_totals("route-probe")
         spent = totals["entry_debit"] + totals["reserved"]
-        if attempts >= self.max_attempts+extra_attempts(self.ledger,self.session_id,self.max_attempts,datetime.now(timezone.utc)):
+        if attempts >= self.max_attempts+extra_attempts(self.ledger,self.session_id,self.max_attempts,self.now()):
             raise ContractError("qualification attempt budget exhausted")
         bid = book.top_bid
         if bid is None or bid.quantity < book.instrument.lot_size:
@@ -131,7 +154,7 @@ class RouteQualifier:
         funds = await self.broker.funds()
         if funds.broker_account != self.broker.account_id or cost > funds.spendable_cash:
             raise ContractError("qualification cash unavailable")
-        intent = Intent("probe-" + uuid.uuid4().hex, "BUY", book.instrument, book.instrument.lot_size, limit, "p" + uuid.uuid4().hex[:28], datetime.now(timezone.utc), "route-probe")
+        intent = Intent("probe-" + uuid.uuid4().hex, "BUY", book.instrument, book.instrument.lot_size, limit, "p" + uuid.uuid4().hex[:28], self.now(), "route-probe")
         manager = OrderManager(self.ledger, self.broker)
         self.ledger.set_counter(f"probe.attempts:{self.session_id}", attempts + 1)
         self.ledger.set_counter("probe.spent", spent + cost)
@@ -143,4 +166,4 @@ class RouteQualifier:
             raise ContractError("qualification response account mismatch")
         if response.get("orderStatus") == "REJECTED":
             raise ContractError("rejected probe cannot qualify route")
-        return RouteProof(epoch, order_id, self.broker.account_id, datetime.now(timezone.utc), False)
+        return RouteProof(epoch, order_id, self.broker.account_id, self.now(), False)

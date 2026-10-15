@@ -44,7 +44,19 @@ class SecondsEngine:
             self.last_recorded=now
 
     def signals(self):
-        self.refresh()
+        # Discovery must follow reconciled bankroll changes too. Otherwise an
+        # old small budget can suppress every newly affordable setup before
+        # candidate() ever gets a chance to read current cash. This cached
+        # observation is only a discovery filter; dispatch still reads funds
+        # and rechecks every money/input prerequisite as before.
+        engine=self.parent.engine;account=engine.runtime.account_refresh
+        funds=getattr(account,'funds',None)
+        budget=None
+        if account is not None and account.fresh and funds is not None:
+            allocation=engine._allocation(funds)
+            budget=min(allocation.remaining,allocation.spendable_cash,allocation.bankroll*D('.95'))
+            if allocation.selected_cap_remaining is not None:budget=min(budget,allocation.selected_cap_remaining)
+        self.refresh(budget=budget,force=budget is not None and budget!=self.last_budget)
         return [sample for name,sample in self.evaluations.items() if name in self.parent.enabled and sample.state=='SIGNAL']
 
     def candidate(self, signal, allocation):

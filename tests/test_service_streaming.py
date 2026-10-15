@@ -18,7 +18,7 @@ from .test_production_lifecycles import MatchingBroker
 from .acceptance.cas.support import mandate
 
 
-@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'shared_token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames', 'native_status', 'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account', 'route_reconnect', 'exhausted_route_reconnect', 'observation_only_nonexpiry', 'observation_only_expiry', 'observation_only_expiry_closed', 'funded_directional_nonexpiry'])
+@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'shared_token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames', 'native_status', 'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account', 'route_reconnect', 'exhausted_route_reconnect', 'probe_rejection_retry', 'probe_rejections_exhausted', 'probe_rejection_reconnect', 'observation_only_nonexpiry', 'observation_only_expiry', 'observation_only_expiry_closed', 'funded_directional_nonexpiry'])
 def test_background_reconciliation_through_production_session(tmp_path, monkeypatch, mode):
     async def run():
         ledger = Ledger(tmp_path/'ledger.sqlite3')
@@ -46,6 +46,8 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
                 await self.messages.put(payload)
                 await asyncio.sleep(.02)
         async def accepted(row):
+            if mode.startswith('probe_rejection') and (len(broker.requests)==1 or mode=='probe_rejections_exhausted'):
+                row['orderStatus']='REJECTED'
             event = {'Data': {'ClientId':'TEST', 'OrderNo':row['orderId'],
                 'CorrelationId':row['correlationId'], 'Status':row['orderStatus'], 'TradedQty':row['filledQty']}}
             if mode.startswith('native_'):
@@ -61,6 +63,12 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             # Notification arrives before submit_order() returns its HTTP ACK.
             await channels['orders'].send(json.dumps(event).encode())
             await channels['orders'].send(json.dumps(event).encode())
+            if mode=='probe_rejection_reconnect' and len(broker.requests)==1:
+                # The old HTTP reply arrives after a new order socket connects.
+                # Its rejection must not permanently poison that new epoch.
+                old=channels['orders']
+                await old.disconnect()
+                await until(lambda:channels['orders'] is not old)
         broker.accepted = accepted
         async def handler(request):
             path = request.url.path
@@ -96,7 +104,7 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             raise AssertionError(path)
         real_client = httpx.AsyncClient
         monkeypatch.setattr(httpx, 'AsyncClient', lambda **kwargs: real_client(transport=httpx.MockTransport(handler), **kwargs))
-        if mode in {'message_burst', 'transport_reconnect', 'invalid_frames', 'route_reconnect', 'exhausted_route_reconnect'}:
+        if mode in {'message_burst', 'transport_reconnect', 'invalid_frames', 'route_reconnect', 'exhausted_route_reconnect','probe_rejection_reconnect'}:
             # Replay official binary frames through the real transport queue,
             # parser and production execution loop. Only network I/O is a fixture.
             import websockets.asyncio.client
@@ -140,7 +148,7 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
         monkeypatch.setenv('UPSTOX_ANALYTICS_TOKEN', 'synthetic-token')
         monkeypatch.delenv('DHAN_BROKER_READ_ONLY', raising=False)
         m = mandate(live=True)
-        if mode=='route_reconnect':
+        if mode in {'route_reconnect','probe_rejection_retry','probe_rejections_exhausted','probe_rejection_reconnect'}:
             from dataclasses import replace
             m=replace(m,probe_max_attempts_per_session=2)
         fields=('account_id','allocated_capital','cumulative_entry_debit_cap','debit_cap_scope','reinvest_realized_profit','probe_max_attempts_per_session','probe_entry_debit_cap_per_session','probe_spending_cap_per_mandate','live_order_authority')
@@ -204,6 +212,18 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
                 # Funded CAS may be ineligible, while live observation scans
                 # still need visible freshness checks throughout the session.
                 assert status_file()['monitoring_mode']==('IDLE' if mode.endswith('expiry_closed') else 'ACTIVE')
+                return
+            if mode.startswith('probe_rejection'):
+                await until(lambda:len(broker.requests)==2 and not ledger.pending_intents())
+                assert ledger.counter('probe.attempts:2026-09-15')==2
+                assert broker.requests[0]['securityId']!=broker.requests[1]['securityId']
+                assert not any(broker.quantities.values())
+                if mode!='probe_rejections_exhausted':
+                    await until(lambda:status_file().get('broker_route_verified'))
+                else:
+                    await asyncio.sleep(.5)
+                    assert not status_file().get('broker_route_verified')
+                assert len(broker.requests)==2
                 return
             if mode in {'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account'}:
                 await until(lambda:len(broker.requests)==1 and not ledger.pending_intents())

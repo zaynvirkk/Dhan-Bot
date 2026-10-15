@@ -51,7 +51,7 @@ IST = ZoneInfo("Asia/Kolkata")
 def write_status(state_dir: Path, runtime, **extra):
     source=Path(__file__).resolve().parents[1].name
     value = {**runtime.status.as_dict(), **extra, "observed_at": datetime.now(timezone.utc).isoformat(), "writes": runtime.broker.allow_writes,
-             "runtime_revision":3,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
+             "runtime_revision":4,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
     path = state_dir / "status.json.tmp"
     with path.open("w") as stream:
         json.dump(value, stream, sort_keys=True)
@@ -468,7 +468,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         tasks = [asyncio.create_task(runner.run()) for runner in runners]
         last_status = 0.0
         metadata_retry_at = monotime.monotonic()+30
-        route_failed_epochs = set()
+        route_failed_epochs = {}
         while not stop.is_set():
             # Clear at the start; feed/order arrivals during any await survive.
             wake.clear()
@@ -506,7 +506,14 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         if evidence and evidence[0] == orders.protocol.epoch.id and evidence[1] in {"TRANSIT", "PENDING", "PART_TRADED", "TRADED", "CANCELLED", "EXPIRED"} and saved["state"] != "REJECTED" and not totals["unresolved"]:
                             if totals["quantity"] == 0:
                                 runtime.status.broker_route_verified = True
-                may_probe = (account_refresh.fresh and account_admitted and broker.allow_writes and runtime.status.auto_live_armed and runtime.status.software_verified and uncertainty <= 100 and not runtime.status.broker_route_verified and engine.active is None and not ledger.pending_intents() and orders.protocol.epoch.connected and orders.protocol.epoch.id not in route_failed_epochs and route_window(funded, current, calendar, expiry_today))
+                from .route import rejected_probe_resolved
+                epoch=orders.protocol.epoch.id
+                retry_at=route_failed_epochs.get(epoch)
+                route_attempt_available=(ledger.counter(f'probe.attempts:{today.isoformat()}') <
+                    mandate.probe_max_attempts_per_session+extra_attempts(ledger,today.isoformat(),mandate.probe_max_attempts_per_session,now()))
+                route_epoch_eligible=(retry_at is None or (route_attempt_available and monotonic>=retry_at and
+                    rejected_probe_resolved(ledger,broker.account_id,epoch,now())))
+                may_probe = (account_refresh.fresh and account_admitted and broker.allow_writes and runtime.status.auto_live_armed and runtime.status.software_verified and uncertainty <= 100 and not runtime.status.broker_route_verified and engine.active is None and not ledger.pending_intents() and orders.protocol.epoch.connected and route_epoch_eligible and route_attempt_available and route_window(funded, current, calendar, expiry_today))
                 if (account_refresh.fresh and orders.protocol.epoch.connected
                         and not runtime.status.broker_route_verified):
                     from .route import managed_exit_route
@@ -520,11 +527,14 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                     choices=probe_candidates((book for book in engine.books.values() if has_funded_directional or book.instrument.expiry==today),
                         now(),market.protocol.epoch.id,rejected=rejected_probe_contracts(ledger,now()),remaining_debit=remaining)
                     if choices:
-                        qualifier = RouteQualifier(ledger, broker, session_id=today.isoformat(), max_attempts=mandate.probe_max_attempts_per_session, debit_cap=mandate.probe_entry_debit_cap_per_session, mandate_spend_cap=mandate.probe_spending_cap_per_mandate)
+                        qualifier = RouteQualifier(ledger, broker, session_id=today.isoformat(), max_attempts=mandate.probe_max_attempts_per_session, debit_cap=mandate.probe_entry_debit_cap_per_session, mandate_spend_cap=mandate.probe_spending_cap_per_mandate,now_fn=now)
                         try:
-                            await qualifier.qualify(choices[0], epoch=orders.protocol.epoch.id)
+                            await qualifier.qualify(choices[0], epoch=epoch)
                         except Exception as exc:
-                            route_failed_epochs.add(orders.protocol.epoch.id)
+                            # The socket can reconnect while the HTTP request
+                            # is pending. Its late failure belongs to the old
+                            # attempt, never the newly connected order epoch.
+                            route_failed_epochs[epoch]=monotime.monotonic()+2
                             runtime.status.reason = f"ROUTE_PROBE:{type(exc).__name__}"
                 # No admission on unknown day/rules/clock/disk, but management
                 # runs regardless of these entry prerequisites.
