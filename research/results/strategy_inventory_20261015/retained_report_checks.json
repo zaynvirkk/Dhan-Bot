@@ -1,0 +1,42 @@
+{
+  "intraday": {
+    "command": "python -m research.intraday_challengers.report",
+    "retained_report_guard": "FAILED_SOURCE_BINDING",
+    "last_line": "AssertionError"
+  },
+  "multifeature": {
+    "command": "python -m research.multifeature.report",
+    "retained_report_guard": "FAILED_SOURCE_BINDING",
+    "last_line": "AssertionError: stale source/input receipt"
+  },
+  "readiness": {
+    "command": "python -m research.readiness.report",
+    "retained_report_guard": "FAILED_SOURCE_BINDING",
+    "last_line": "AssertionError"
+  },
+  "frontier": {
+    "command": "python -m research.execution_frontier.report",
+    "retained_report_guard": "PASSED",
+    "last_line": "{\"source_sha256\": \"51d5fea305d847e7f4829502013c3caa583032d9d64544c9b8985d389d7b56c0\", \"scenario_attempts\": 504, \"verified_trade_rows\": 479, \"unknown_paths\": 69, \"positive_all_base_windows\": [], \"capital_checks\": 56, \"cash_margin_status\": \"READS_SUCCEEDED\", \"funded_authority\": false}"
+  },
+  "rebound": {
+    "command": "python -m research.rebound_validation.report",
+    "retained_report_guard": "PASSED",
+    "last_line": "Verified 123 trades; NO_LIVE_QUALIFIER"
+  },
+  "broader": {
+    "command": "python -m research.broader.report",
+    "retained_report_guard": "PASSED",
+    "last_line": "{\"source_sha256\": \"404fab8fa53a716eeefe82da66e279ab2915b5f81364c77943eba2ba5cab81a3\", \"input_sha256\": \"b78e1eb22f887f57220b662f6d67c2c86d153cf797522ee42a8f3850be3377bd\", \"scenarios\": 260, \"validated_trades\": 1789, \"unchanged_path_parity\": 210, \"recent_beats\": [\"NIFTY_SELLOFF_REBOUND_1510\", \"NIFTY_SELLOFF_REBOUND_0930\"], \"both_profitable\": [\"OI_SQUEEZE_CASH5\", \"NIFTY_SELLOFF_REBOUND_1510\"], \"robust\": [], \"audit_sessions\": 3349, \"audit_issues\": {\"CASH_VOLUME_MISMATCH\": 1110, \"CASH_RANGE_MISMATCH\": 1, \"OFF_TICK\": 85, \"VOLUME_MISMATCH\": 407}, \"primary_unknown\": 10, \"strict_unknown\": 52}"
+  },
+  "finalsearch": {
+    "command": "python -m research.finalsearch.report",
+    "retained_report_guard": "PASSED",
+    "last_line": "{\"scenarios\": 112, \"positive_both\": [], \"validated_resolved_trades\": 590, \"source_sha256\": \"39483f66a107d732efa7c120845e2d4a0c98744db30619970dbfdbf1dbd6fb36\", \"input_sha256\": \"4716097ce7f3544ea7fdbd6580ec44004f7f154ddb586c15070f172c2e060edf\"}"
+  },
+  "event90": {
+    "command": "python -m research.event90.report",
+    "retained_report_guard": "PASSED",
+    "last_line": "COMPLETE [('EVENT_CONTINUATION', None), ('INTRADAY_EVENT', '3453.01')]"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "engines": [
+    {
+      "engine": "EVENT_CONTINUATION",
+      "signals": 205,
+      "reference_compiled_parity": true,
+      "parity_checked_paths": 9,
+      "random_paths": 999,
+      "primary": {
+        "engine": "EVENT_CONTINUATION",
+        "seed": null,
+        "strict": false,
+        "stopped": true,
+        "gaps": 110,
+        "terminal_conditional_cash": null,
+        "last_resolved_cash": "3913.33",
+        "trades": 5,
+        "wins": 1,
+        "targets": 0,
+        "drawdown": "0.6225601822515043754442717993",
+        "full_family_final_bankroll": null,
+        "status_counts": {
+          "OUTSIDE_METADATA_VARIANT": 34,
+          "NO_ORDER_UNDER_MODEL": 38,
+          "MODELED_LIMIT_MISS": 5,
+          "UNKNOWN_BAN_FILE": 4,
+          "MODELED_ROUND_TRIP": 5,
+          "POSITION_ALREADY_OPEN": 1,
+          "MODELED_CAPACITY_MISS": 2,
+          "UNKNOWN_EXIT_CAPACITY": 1
+        }
+      },
+      "strict": {
+        "engine": "EVENT_CONTINUATION",
+        "seed": null,
+        "strict": true,
+        "stopped": true,
+        "gaps": 1,
+        "terminal_conditional_cash": null,
+        "last_resolved_cash": "9411.18",
+        "trades": 0,
+        "wins": 0,
+        "targets": 0,
+        "drawdown": "0"
+      }
+    },
+    {
+      "engine": "INTRADAY_EVENT",
+      "signals": 44,
+      "reference_compiled_parity": true,
+      "parity_checked_paths": 9,
+      "random_paths": 999,
+      "primary": {
+        "engine": "INTRADAY_EVENT",
+        "seed": null,
+        "strict": false,
+        "stopped": false,
+        "gaps": 51,
+        "terminal_conditional_cash": "3453.01",
+        "last_resolved_cash": "3453.01",
+        "trades": 4,
+        "wins": 1,
+        "targets": 0,
+        "drawdown": "0.6663568261379151082042357970",
+        "full_family_final_bankroll": null,
+        "status_counts": {
+          "UNKNOWN_BAN_FILE": 3,
+          "NO_ORDER_UNDER_MODEL": 18,
+          "OUTSIDE_METADATA_VARIANT": 12,
+          "MODELED_ROUND_TRIP": 4,
+          "POSITION_ALREADY_OPEN": 1,
+          "MODELED_LIMIT_MISS": 4,
+          "MODELED_CAPACITY_MISS": 2
+        }
+      },
+      "strict": {
+        "engine": "INTRADAY_EVENT",
+        "seed": null,
+        "strict": true,
+        "stopped": true,
+        "gaps": 1,
+        "terminal_conditional_cash": null,
+        "last_resolved_cash": "9411.18",
+        "trades": 0,
+        "wins": 0,
+        "targets": 0,
+        "drawdown": "0"
+      }
+    }
+  ],
+  "unchanged_economic_paths": true,
+  "refreshed_receipts": 11,
+  "calendar_days": 90,
+  "source_sha256": "d75cfb638631e3c8979ea0b3a8bc7cd8e7b15794440bbd38900cc517f8b7af8b",
+  "input_sha256": "3f06b3e9c5b2f36cad962a105a3137584d825491c9213b1bde2e85edf0a32e59",
+  "winner": null,
+  "deployment_ready": false
+}

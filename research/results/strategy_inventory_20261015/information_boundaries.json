@@ -1,0 +1,1642 @@
+{
+  "negative_case_count": 272,
+  "cases": [
+    {
+      "strategy": "GAP_FADE_DOUBLE",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "COMPLETED_INPUT_MISSING_OR_INVALID"
+    },
+    {
+      "strategy": "GAP_FADE_DOUBLE",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "COMPLETED_INPUT_MISSING_OR_INVALID"
+    },
+    {
+      "strategy": "NIFTY_SELLOFF_REBOUND_1510",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "COMPLETED_INPUT_MISSING_OR_INVALID"
+    },
+    {
+      "strategy": "NIFTY_SELLOFF_REBOUND_1510",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "COMPLETED_INPUT_MISSING_OR_INVALID"
+    },
+    {
+      "strategy": "OPEN_DRIVE_FAST",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPEN_DRIVE_FAST",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPEN_DRIVE_SWING",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPEN_DRIVE_SWING",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPEN_DRIVE_DOUBLE",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPEN_DRIVE_DOUBLE",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "GAP_FADE_FAST",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "GAP_FADE_FAST",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "GAP_FADE_SWING",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "GAP_FADE_SWING",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "FIRST_LAST_FAST",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "FIRST_LAST_FAST",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "FIRST_LAST_SWING",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "FIRST_LAST_SWING",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "FIRST_LAST_DOUBLE",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "FIRST_LAST_DOUBLE",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND_PULLBACK_FAST",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND_PULLBACK_FAST",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND_PULLBACK_SWING",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND_PULLBACK_SWING",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND_PULLBACK_DOUBLE",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND_PULLBACK_DOUBLE",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "VOLUME_REVERSAL_FAST",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "VOLUME_REVERSAL_FAST",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "VOLUME_REVERSAL_SWING",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "VOLUME_REVERSAL_SWING",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "VOLUME_REVERSAL_DOUBLE",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "VOLUME_REVERSAL_DOUBLE",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SECTOR_CATCHUP_FAST",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SECTOR_CATCHUP_FAST",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SECTOR_CATCHUP_SWING",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SECTOR_CATCHUP_SWING",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SECTOR_CATCHUP_DOUBLE",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SECTOR_CATCHUP_DOUBLE",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "RANGE_FAILURE_FAST",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "RANGE_FAILURE_FAST",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "RANGE_FAILURE_SWING",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "RANGE_FAILURE_SWING",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "RANGE_FAILURE_DOUBLE",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "RANGE_FAILURE_DOUBLE",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "AFTERNOON_COMPRESSION_FAST",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "AFTERNOON_COMPRESSION_FAST",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "AFTERNOON_COMPRESSION_SWING",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "AFTERNOON_COMPRESSION_SWING",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "AFTERNOON_COMPRESSION_DOUBLE",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "AFTERNOON_COMPRESSION_DOUBLE",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "CHAIN_UNWIND_FAST",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "CHAIN_UNWIND_FAST",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "CHAIN_UNWIND_SWING",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "CHAIN_UNWIND_SWING",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "CHAIN_UNWIND_DOUBLE",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "CHAIN_UNWIND_DOUBLE",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SKEW_UNWIND_FAST",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SKEW_UNWIND_FAST",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SKEW_UNWIND_SWING",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SKEW_UNWIND_SWING",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SKEW_UNWIND_DOUBLE",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SKEW_UNWIND_DOUBLE",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FUTURE_TREND_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FUTURE_TREND_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FUTURE_TREND_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FUTURE_TREND_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_TREND_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_TREND_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_TREND_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_TREND_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FUTURE_OI_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FUTURE_OI_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FUTURE_OI_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FUTURE_OI_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_OI_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_OI_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_OI_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_OI_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_BASIS_LEAD_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_BASIS_LEAD_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_BASIS_LEAD_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_BASIS_LEAD_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_BASIS_LEAD_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_BASIS_LEAD_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_BASIS_LEAD_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_BASIS_LEAD_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_IV_CHEAP_TREND_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_IV_CHEAP_TREND_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_IV_CHEAP_TREND_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_IV_CHEAP_TREND_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_IV_CHEAP_TREND_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_IV_CHEAP_TREND_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_IV_CHEAP_TREND_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_IV_CHEAP_TREND_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_SKEW_UNWIND_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_SKEW_UNWIND_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_SKEW_UNWIND_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_SKEW_UNWIND_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_SKEW_UNWIND_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_SKEW_UNWIND_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_SKEW_UNWIND_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_SKEW_UNWIND_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_SECTOR_CONFIRM_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_SECTOR_CONFIRM_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_SECTOR_CONFIRM_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_SECTOR_CONFIRM_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_SECTOR_CONFIRM_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_SECTOR_CONFIRM_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_SECTOR_CONFIRM_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_SECTOR_CONFIRM_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_GIFT_CATCHUP_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_GIFT_CATCHUP_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_GIFT_CATCHUP_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_GIFT_CATCHUP_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_GIFT_CATCHUP_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_GIFT_CATCHUP_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_GIFT_CATCHUP_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_GIFT_CATCHUP_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_CHAIN_UNWIND_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_CHAIN_UNWIND_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_CHAIN_UNWIND_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_CHAIN_UNWIND_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_CHAIN_UNWIND_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_CHAIN_UNWIND_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_CHAIN_UNWIND_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_CHAIN_UNWIND_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PCR_CONFIRM_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PCR_CONFIRM_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PCR_CONFIRM_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PCR_CONFIRM_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PCR_CONFIRM_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PCR_CONFIRM_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PCR_CONFIRM_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PCR_CONFIRM_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PAIN_ESCAPE_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PAIN_ESCAPE_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PAIN_ESCAPE_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PAIN_ESCAPE_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PAIN_ESCAPE_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PAIN_ESCAPE_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PAIN_ESCAPE_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PAIN_ESCAPE_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_INSTITUTIONAL_ALIGN_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_INSTITUTIONAL_ALIGN_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_INSTITUTIONAL_ALIGN_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_INSTITUTIONAL_ALIGN_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_INSTITUTIONAL_ALIGN_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_INSTITUTIONAL_ALIGN_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_INSTITUTIONAL_ALIGN_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_INSTITUTIONAL_ALIGN_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PUBLISHED_PCR_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PUBLISHED_PCR_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PUBLISHED_PCR_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PUBLISHED_PCR_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PUBLISHED_PCR_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PUBLISHED_PCR_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PUBLISHED_PCR_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PUBLISHED_PCR_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PUBLISHED_PAIN_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PUBLISHED_PAIN_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PUBLISHED_PAIN_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PUBLISHED_PAIN_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PUBLISHED_PAIN_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PUBLISHED_PAIN_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PUBLISHED_PAIN_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PUBLISHED_PAIN_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FAILED_ORB_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FAILED_ORB_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FAILED_ORB_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_FAILED_ORB_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FAILED_ORB_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FAILED_ORB_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FAILED_ORB_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_FAILED_ORB_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_VWAP_RECLAIM_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_VWAP_RECLAIM_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_VWAP_RECLAIM_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_VWAP_RECLAIM_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_VWAP_RECLAIM_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_VWAP_RECLAIM_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_VWAP_RECLAIM_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_VWAP_RECLAIM_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_COMPRESSION_BREAK_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_COMPRESSION_BREAK_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_COMPRESSION_BREAK_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_COMPRESSION_BREAK_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_COMPRESSION_BREAK_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_COMPRESSION_BREAK_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_COMPRESSION_BREAK_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_COMPRESSION_BREAK_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PRIOR_OI_WALL_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PRIOR_OI_WALL_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PRIOR_OI_WALL_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_PRIOR_OI_WALL_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PRIOR_OI_WALL_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PRIOR_OI_WALL_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PRIOR_OI_WALL_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORDINARY_PRIOR_OI_WALL_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_ORB30_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_ORB30_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_ORB30_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_ORB30_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_LATE_BREAK_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_LATE_BREAK_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_LATE_BREAK_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_LATE_BREAK_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_LATE_FADE_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_LATE_FADE_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_LATE_FADE_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_LATE_FADE_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_TREND1445_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_TREND1445_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_TREND1445_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_TREND1445_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_OPTION_ACCEL_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_OPTION_ACCEL_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_OPTION_ACCEL_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_OPTION_ACCEL_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_OPTION_ACCEL_OI_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_OPTION_ACCEL_OI_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_OPTION_ACCEL_OI_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "EXPIRY_OPTION_ACCEL_OI_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORB30_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORB30_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORB30_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "ORB30_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "LATE_BREAK_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "LATE_BREAK_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "LATE_BREAK_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "LATE_BREAK_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "LATE_FADE_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "LATE_FADE_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "LATE_FADE_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "LATE_FADE_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND1445_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND1445_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND1445_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND1445_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPTION_ACCEL_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPTION_ACCEL_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPTION_ACCEL_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPTION_ACCEL_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPTION_ACCEL_OI_TARGET",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPTION_ACCEL_OI_TARGET",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPTION_ACCEL_OI_TRAIL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "OPTION_ACCEL_OI_TRAIL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "NIFTY_SELLOFF_REBOUND_0930",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "NIFTY_SELLOFF_REBOUND_0930",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "NIFTY_DAY_CONTINUATION_0930",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "NIFTY_DAY_CONTINUATION_0930",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "NIFTY_DAY_CONTINUATION_1510",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "NIFTY_DAY_CONTINUATION_1510",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "NIFTY_TREND_ALIGNMENT_0930",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "NIFTY_TREND_ALIGNMENT_0930",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "NIFTY_TREND_ALIGNMENT_1510",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "NIFTY_TREND_ALIGNMENT_1510",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SELLOFF_CALL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SELLOFF_CALL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SELLOFF_PUT",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "SELLOFF_PUT",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "RALLY_CALL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "RALLY_CALL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "RALLY_PUT",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "RALLY_PUT",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TWO_SIDED_REVERSAL",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TWO_SIDED_REVERSAL",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TWO_SIDED_CONTINUATION",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TWO_SIDED_CONTINUATION",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND_PULLBACK",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND_PULLBACK",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND_CONTINUATION",
+      "fixture": "missing_inputs",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    },
+    {
+      "strategy": "TREND_CONTINUATION",
+      "fixture": "future_bar_only",
+      "state": "UNKNOWN",
+      "reason": "MISSING_COMPLETED_BAR"
+    }
+  ],
+  "scope": "Synthetic information-boundary checks, not profitable market observations",
+  "unnecessary_trend_dependency": {
+    "without_trend": "UNKNOWN",
+    "with_unused_zero_trend": "SIGNAL"
+  }
+}
