@@ -1,0 +1,29 @@
+[Unit]
+Description=Five experimental quote strategies with simulated fills only
+After=network-online.target dhan-dashboard-collect.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sablestone
+Group=dhan-dashboard
+WorkingDirectory=/opt/sablestone-dhan-dashboard/current
+ExecStart=/opt/sablestone-dhan-dashboard/current/.venv/bin/python -m dhan_cas_bot.seconds_observer
+Environment=DHAN_BROKER_READ_ONLY=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Restart=on-failure
+RestartSec=10
+Nice=15
+CPUQuota=25%
+MemoryMax=384M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/sablestone-dhan-dashboard
+InaccessiblePaths=/etc/sablestone-dhan/secrets.env
+CapabilityBoundingSet=
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

@@ -12,6 +12,7 @@ from urllib.parse import quote
 from dhan_cas_bot.telemetry import METRICS, REASONS as TIMING_REASONS
 from dhan_cas_bot.session_strategies import STRATEGIES
 from dhan_cas_bot.expanded_strategies import SPECS,RULES
+from dhan_cas_bot.seconds_strategies import RULES as SECONDS_RULES
 
 UTC = timezone.utc
 # The collector can spend 20s reading Dhan, then waits 15s before its next run.
@@ -38,6 +39,9 @@ STRATEGY_REASONS.update({'EXPANDED_RULE_CONFIRMED','EXPANDED_RULE_NOT_MET','REQU
     'MISSING_OPTION_OI','INVALID_OPEN_REFERENCE','SOURCE_NOT_YET_AVAILABLE','MISSING_CURRENT_IV',
     'MISSING_PCR_INSIGHT','MISSING_MAX_PAIN_INSIGHT','MISSING_PRIOR_WALL','ZERO_PRIOR_WALL_OI','MISSING_PRIOR_OPTION_OI',
     'MISSING_IV','MISSING_INSIGHTS','MISSING_PRIOR_CHAIN','MISSING_INSTITUTIONS','MISSING_PRIOR_TREND'})
+STRATEGY_REASONS.update({'SECONDS_SETUP_DETECTED','SECONDS_WARMUP','SECONDS_RULE_NOT_MET',
+    'SECONDS_EDGE_BELOW_COSTS','SECONDS_SIGNAL_CHANGED','FUTURES_FEED_UNAVAILABLE',
+    'EVENT_FEED_UNAVAILABLE','NO_FRESH_EVENT'})
 ORDER_STATES = {'PENDING_SEND', 'SEND_UNKNOWN', 'SENT', 'TRANSIT', 'PENDING', 'CLOSED',
                 'TRIGGERED', 'REJECTED', 'CANCELLED', 'PART_TRADED', 'TRADED', 'FILLED',
                 'EXPIRED', 'ABORTED'}
@@ -51,6 +55,10 @@ CHECK_FIELDS = {
     'dhan_order_socket': ('websocket_connected', 'route_verified', 'close_received_code', 'close_sent_code', 'keepalive_timeout'),
 }
 REASONS = {
+    'SECONDS_PREMIUM_STOP':'The seconds strategy hit its quote-based premium stop.',
+    'SECONDS_TARGET_REPRICED':'The option reached the recorded repricing reference.',
+    'SECONDS_INPUT_LOST':'Fresh futures input was lost; the seconds strategy is reducing its position.',
+    'SECONDS_DIRECTION_FAILED':'Futures moved against the seconds strategy; the bot is reducing its position.',
     'NO_EXECUTABLE_LAG_OR_REMAINING_ALLOWANCE': 'No contract passes the price, depth, fees and remaining capital checks.',
     'UNMANAGED_ACCOUNT_POSITION': 'An account position is not managed by this bot. New entries are blocked.',
     'CAS_LAG_V1': 'An auction-lag entry was submitted. Waiting for broker execution updates.',
@@ -269,18 +277,19 @@ def strategy_projection(raw):
                     'compressed_high','compressed_low','compression_high','compression_low','box_high','box_low',
                     'efficiency','first_half_hour_return','premium_return','premium_return_3m','oi_change','own_oi',
                     'opposite_oi','opposite_return','strike','anchor_spot','prior_oi_wall','iv','realized_vol_30m',
-                    'vix_15m','pcr_change_5m','pcr_change','known_max_pain','fii_net_change','dii_net','prior_trend_20d'):
+                    'vix_15m','pcr_change_5m','pcr_change','known_max_pain','fii_net_change','dii_net','prior_trend_20d',
+                    'warmup_seconds','future_move_2s','response_beta','target_price'):
             value=(row.get('details') or {}).get(key) if isinstance(row.get('details'), dict) else None
             if money(value) is not None:
-                details[key]=str(Decimal(str(value)))
+                details[key]=money(value) if key=='target_price' else str(Decimal(str(value)))
         if isinstance(row.get('details'),dict) and type(row['details'].get('persistent')) is bool:
             details['persistent']=row['details']['persistent']
         spec=SPECS.get(row['strategy'])
         result.append({'strategy':row['strategy'],
             'family':spec[0] if spec else 'GAP_FADE' if row['strategy']=='GAP_FADE_DOUBLE' else row['strategy'],
             'scope':spec[2] if spec else 'ORDINARY' if row['strategy']=='GAP_FADE_DOUBLE' else 'ANY',
-            'exit_policy':spec[1] if spec else 'DOUBLE',
-            'entry_rule':RULES.get(spec[0]) if spec else None,
+            'exit_policy':spec[1] if spec else 'SECONDS_V1' if row['strategy'] in SECONDS_RULES else 'DOUBLE',
+            'entry_rule':RULES.get(spec[0]) if spec else SECONDS_RULES.get(row['strategy']),
             'filled_closed':integer(row.get('filled_closed')),
             'ranking_available':row.get('ranking_available') if type(row.get('ranking_available')) is bool else False,
             'mean_estimated_net_return':str(Decimal(str(row['mean_estimated_net_return']))) if money(row.get('mean_estimated_net_return')) is not None else None,
@@ -681,3 +690,35 @@ def local_snapshot(state_dir, now=None):
     return {'runtime': runtime,
             'connections': connections_view(read_json(root/'connections.json'), now),
             'ledger': ledger_view(root/'ledger.sqlite3', strategies=runtime['strategies'], now=now)}
+
+
+def seconds_view(raw, now):
+    """Separate paper economics can never become broker balance or authority."""
+    from dhan_cas_bot.seconds_strategies import NAMES
+    if not isinstance(raw,dict) or raw.get('mode')!='SIMULATION' or raw.get('writes_to_broker') is not False:return None
+    rows=[]
+    for r in raw.get('results',[])[:5] if isinstance(raw.get('results'),list) else []:
+        if not isinstance(r,dict) or r.get('strategy') not in NAMES:continue
+        rows.append({'strategy':r['strategy'],**{k:money(r.get(k)) for k in ('cash','net')},
+            **{k:integer(r.get(k)) for k in ('signals','entries','closed','missed')},
+            'open_position':r.get('open_position') is True,
+            'last_result':choice(r.get('last_result'),{'NO_MODEL_TRADE','MODEL_MISS','MODEL_CLOSED',
+                'SIMULATED_POSITION','SIMULATED_ENTRY_PENDING','SIMULATED_EXIT_PENDING','EXIT_LIMIT_MISS',
+                'ARRIVAL_QUOTE_UNAVAILABLE','LIMIT_OR_SIGNAL_MISS','MODEL_UNAFFORDABLE',
+                'OPEN_MODEL_POSITION_QUOTE_UNAVAILABLE','MODEL_EXECUTION_CHECK_FAILED'})})
+    timing=freshness(raw.get('observed_at'),now,10)
+    evaluations=[r for r in strategy_projection(raw.get('evaluations')) if r['strategy'] in NAMES]
+    if not timing['fresh']:
+        evaluations=[{**r,'state':'UNKNOWN','reason':'STRATEGY_INPUTS_STALE','side':None} for r in evaluations]
+    event=raw.get('event_feed') if isinstance(raw.get('event_feed'),dict) else {}
+    return {**timing,'mode':'SIMULATION','writes_to_broker':False,'results':rows,'evaluations':evaluations,
+        'feed_connected':raw.get('feed_connected') if type(raw.get('feed_connected')) is bool else None,
+        'future_current':raw.get('future_current') if type(raw.get('future_current')) is bool else None,
+        'options_observed':integer(raw.get('options_observed')),'delay_seconds':money(raw.get('delay_seconds')),
+        'initial_bankroll':money(raw.get('initial_bankroll')),
+        'status':choice(raw.get('status'),{'UNAVAILABLE'},'AVAILABLE'),
+        'reason':choice(raw.get('reason'),{'SESSION_TOKEN_UNAVAILABLE','STARTING_CASH_UNAVAILABLE',
+            'PAPER_HISTORY_UNAVAILABLE','CONTRACT_METADATA_UNAVAILABLE','MARKET_ANCHOR_UNAVAILABLE','OBSERVER_FAILED'}),
+        'event_feed_state':choice(event.get('state'),{'CONNECTED','UNAVAILABLE'},'UNAVAILABLE'),
+        'quote_sample_interval_ms':integer(raw.get('quote_sample_interval_ms')),
+        'quote_archive_within_cap':raw.get('quote_archive_within_cap') if type(raw.get('quote_archive_within_cap')) is bool else None}

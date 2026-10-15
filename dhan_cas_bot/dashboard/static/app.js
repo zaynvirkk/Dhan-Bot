@@ -414,7 +414,33 @@ function renderDecision(d){
 }
 
 function timeOnly(value){const d=new Date(value);return !value||Number.isNaN(d.getTime())?'Time unknown':new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' IST';}
-function strategyLabel(name){return ({TREND_PULLBACK_FAST:'Trend pullback',CAS_LAG_V1:'Expiry auction',ORDINARY_PUBLISHED_PCR_TRAIL:'PCR trend'})[name]||strategyNames[name]||name.replaceAll('_',' ').toLowerCase();}
+function strategyLabel(name){return ({TREND_PULLBACK_FAST:'Trend pullback',CAS_LAG_V1:'Expiry auction',ORDINARY_PUBLISHED_PCR_TRAIL:'PCR trend',SECONDS_FUTURES_CATCHUP:'Futures catch-up',SECONDS_FAILED_BREAKOUT:'Failed breakout',SECONDS_FLOW_CONTINUATION:'Flow continuation',SECONDS_STRIKE_CATCHUP:'Strike catch-up',SECONDS_EVENT_IMPULSE:'Event impulse'})[name]||strategyNames[name]||name.replaceAll('_',' ').toLowerCase();}
+function renderSeconds(d){
+ const lab=d.seconds_experiments,live=lab?.fresh===true&&lab.status==='AVAILABLE';
+ $('seconds-summary').textContent=live?`${lab.evaluations?.length??0} experiments · simulated`:lab?'Updates unavailable':'Not started';
+ const failure={SESSION_TOKEN_UNAVAILABLE:'The cached market-data session is unavailable.',STARTING_CASH_UNAVAILABLE:'A fresh broker-cash snapshot is needed to start the model.',PAPER_HISTORY_UNAVAILABLE:'The saved simulation history needs repair; balances have not been reset.',CONTRACT_METADATA_UNAVAILABLE:'The official contract catalogue could not be loaded.',MARKET_ANCHOR_UNAVAILABLE:'A current index price or futures contract is unavailable.',OBSERVER_FAILED:'The experiment worker needs inspection.'};
+ $('seconds-context').textContent=live?`Each experiment starts independently with ${cash(lab.initial_bankroll)} in simulated money. ${lab.delay_seconds??'Unknown'}s order delay; fees and observed depth are included. Displayed-depth scenarios do not establish real fills.`:failure[lab?.reason]||'No current experiment observations are available. Your real-money strategies are shown separately above.';
+ if(!changed('seconds-strategies',lab))return;
+ const expanded=new Set([...$('seconds-strategies').children].filter(n=>n.open).map(n=>n.dataset.strategy));
+ $('seconds-strategies').replaceChildren();
+ const reasons={FUTURES_FEED_UNAVAILABLE:'Waiting for a fresh futures quote.',SECONDS_WARMUP:'Building a minute of live quote history.',SECONDS_RULE_NOT_MET:'The observed prices and flow do not meet this entry rule.',SECONDS_EDGE_BELOW_COSTS:'The price gap does not clear the cost and liquidity checks.',EVENT_FEED_UNAVAILABLE:'The official event feed is unavailable.',NO_FRESH_EVENT:'No fresh qualifying official event has been received.',CALENDAR_UNAVAILABLE:'Waiting for a current exchange calendar.',EXCHANGE_CLOSED:'Outside a verified open exchange session.',STRATEGY_INPUTS_STALE:'The last experiment update is historical.'};
+ for(const row of lab?.evaluations||[]){
+  const item=el('details',undefined,'live-strategy'),summary=el('summary'),head=el('span',undefined,'live-strategy-head');
+  item.dataset.strategy=row.strategy;item.open=expanded.has(row.strategy);
+  const status=!live?'Unknown':row.state==='SIGNAL'?'Setup detected':row.state==='UNKNOWN'?'Data needed':row.state==='WAITING'?(row.reason==='SECONDS_WARMUP'?'Warming up':'Waiting'):row.state==='NOT_APPLICABLE'?'Closed':'No setup';
+  head.append(el('strong',strategyLabel(row.strategy)),badge(status,status==='Data needed'?'warn':''));
+  summary.append(head,el('span',live?(reasons[row.reason]||row.reason.replaceAll('_',' ').toLowerCase()):'Waiting for a current update.','live-strategy-reason'));
+  const result=lab.results?.find(r=>r.strategy===row.strategy);
+  if(result)summary.append(el('span',`${result.signals??'Unknown'} signals · ${result.closed??'Unknown'} simulated closes · net ${cash(result.net)}${result.open_position?' · model position open':''}`,'live-strategy-metrics'));
+  item.append(summary);const detail=el('div',undefined,'live-strategy-detail');
+  if(row.entry_rule)detail.append(el('p',row.entry_rule));
+  detail.append(el('p','One whole lot per entry. Exits respond to repricing, adverse futures movement, missing fresh inputs or a 5% premium stop, with net-profit protection and a 60-second maximum exposure safeguard.'));
+  if(row.details?.future_move_2s!=null)detail.append(el('p',`Futures move over 2s: ${row.details.future_move_2s} points.`));
+  if(row.state==='SIGNAL'&&row.details?.target_price!=null)detail.append(el('p',`Conditional repricing reference: ${cash(row.details.target_price)}. This is a model value, not a profit forecast.`));
+  if(result)detail.append(el('p',`${result.entries??'Unknown'} simulated entries · ${result.missed??'Unknown'} missed orders · model cash ${cash(result.cash)}.`));
+  detail.append(el('p',`Observed ${at(row.evaluated_at)}.`));item.append(detail);$('seconds-strategies').append(item);
+ }
+}
 function signedPercent(value){if(value===null||value===undefined||value==='')return 'Not reported';const n=Number(value);return Number.isFinite(n)?`${n>0?'+':''}${(n*100).toFixed(2)}%`:'Not reported';}
 function recordedChecks(d,name){
  const h=d.ledger?.decision_history,now=Date.parse(d.server_time);
@@ -475,6 +501,7 @@ function liveStrategyState(name,row,d){
  return {label:row.state==='WAITING'?'Waiting':'No entry',reason:name==='TREND_PULLBACK_FAST'&&row.reason==='OUTSIDE_STRATEGY_WINDOW'?'Between scheduled five-minute decisions.':conditionSummary(row)};
 }
 function renderLive(d){
+ renderSeconds(d);
  const rt=d.runtime,a=d.account,configured=rt?.strategies||[],funded=rt?.funded_strategies;
  if(state.liveDay!==istDay(d.server_time)){state.liveChecks={};state.liveDay=istDay(d.server_time);}
  $('live-stamp').textContent=rt?.observed_at?`${rt.fresh?'Updated':'Last update'} ${timeOnly(rt.observed_at)}`:'Waiting for the bot';

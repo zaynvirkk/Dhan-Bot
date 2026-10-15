@@ -11,6 +11,31 @@ from .orders import Broker, OrderManager
 from .risk import FeeSchedule, worst_case_entry_cash, reserve_cash
 
 
+def extra_attempts(ledger, session_id, normal_limit, now):
+    """An explicit operator grant is one extra attempt on exactly one IST date."""
+    from .session_strategies import IST
+    if session_id!=now.astimezone(IST).date().isoformat():return 0
+    value=ledger.metadata('probe.extra_attempt:'+session_id,{})
+    if (not isinstance(value,dict) or type(value.get('extra')) is not int or value['extra']!=1
+            or type(value.get('normal_limit')) is not int or value.get('normal_limit')!=normal_limit
+            or value.get('operator_requested') is not True):return 0
+    try:
+        recorded=datetime.fromisoformat(value['recorded_at'])
+        if recorded.tzinfo is None or recorded>now or recorded.astimezone(IST).date().isoformat()!=session_id:return 0
+    except (KeyError,ValueError,TypeError):return 0
+    return 1
+
+
+def grant_extra_attempt(ledger, session_id, normal_limit, now):
+    from .session_strategies import IST
+    if session_id!=now.astimezone(IST).date().isoformat() or type(normal_limit) is not int or normal_limit<=0:
+        raise ValueError('extra attempt must name the current IST date and existing normal limit')
+    key='probe.extra_attempt:'+session_id
+    if extra_attempts(ledger,session_id,normal_limit,now):return
+    if ledger.metadata(key) is not None:raise ValueError('existing different extra-attempt record')
+    ledger.put_metadata(key,{'extra':1,'normal_limit':normal_limit,'operator_requested':True,'recorded_at':now.isoformat()})
+
+
 @dataclass(frozen=True)
 class RouteProof:
     epoch: str
@@ -57,7 +82,7 @@ class RouteQualifier:
         attempts = int(self.ledger.counter(f"probe.attempts:{self.session_id}"))
         totals = self.ledger.lifecycle_totals("route-probe")
         spent = totals["entry_debit"] + totals["reserved"]
-        if attempts >= self.max_attempts:
+        if attempts >= self.max_attempts+extra_attempts(self.ledger,self.session_id,self.max_attempts,datetime.now(timezone.utc)):
             raise ContractError("qualification attempt budget exhausted")
         bid = book.top_bid
         if bid is None or bid.quantity < book.instrument.lot_size:

@@ -136,3 +136,9 @@ Completed trades, holding time, per-strategy outcomes and route attempts live in
 History; diagnostics and detailed accounting remain in System. The journal
 palette, native disclosure controls and read-only model are retained. No trading
 policy, authority or funded process is changed.
+
+15 October seconds experiments: retain the compact journal identity. A native
+disclosure beneath the funded roster contains five explicitly simulated engines
+with reasons and independent model outcomes. It never changes broker cash,
+funding badges or real trade counts; unavailable and stale experiments remain
+unknown. Each row expands to its rule, observations and bounded exit policy.

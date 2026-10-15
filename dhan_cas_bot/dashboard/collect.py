@@ -11,7 +11,7 @@ import time
 
 from dhan_cas_bot.broker import DhanBroker
 from dhan_cas_bot.config import load_config
-from .data import account_view, daily_monitor_view, freshness, local_snapshot, read_json, shared_account, utcnow
+from .data import account_view, daily_monitor_view, freshness, local_snapshot, read_json, shared_account, utcnow, seconds_view
 from .history import advance_history
 
 
@@ -143,6 +143,7 @@ async def watch(config, output):
         while True:
             previous = read_json(output) or {}
             report=projection(config,previous,checked=checked,monitor=read_json(Path(output).with_name('daily-monitor.json')))
+            report['seconds_experiments']=seconds_view(read_json(Path(output).with_name('seconds-strategies.json')),utcnow())
             signature=history_signature(report)
             due=signature!=last_signature or time.monotonic()-last_history_time>=5
             result=write_report(output,report,embed_history=False,history_cache=history_cache,update_history=due)

@@ -1,5 +1,9 @@
 # SableStone Dhan CAS bot
 
+**15 October seconds experiments:** five quote-driven engines now have shared-OMS
+entry/exit implementations and a separate live-data simulator. Financial activation
+remains an operator-run step. [Rules, limits and activation](docs/SECONDS-STRATEGIES-2026-10-15.md).
+
 **15 October compact dashboard:** Live, History and System are separate views.
 The default view shows money, the current decision and compact strategy checks;
 actual completed trades, holding times and net results have their own history.

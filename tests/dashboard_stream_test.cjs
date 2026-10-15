@@ -543,3 +543,20 @@ setImmediate(()=>{
  assert.equal(vm.runInContext('recordedChecks(recordedFixture).length',browser),0,'Future records cannot become current evidence');
  console.log('Durable decisions, cold reload, receipt order, warnings and date boundary verified');
 });
+
+setImmediate(()=>{
+ browser.secondsFixture={server_time:'2026-10-15T08:00:00Z',runtime:{fresh:true,authority:'ENABLED',funded_strategies:['CAS_LAG_V1']},account:{fresh:true,available_cash:'7805.94'},
+  seconds_experiments:{fresh:true,status:'AVAILABLE',mode:'SIMULATION',initial_bankroll:'7805.94',delay_seconds:'1.00',
+   evaluations:[{strategy:'SECONDS_FUTURES_CATCHUP',state:'NO_SIGNAL',reason:'SECONDS_EDGE_BELOW_COSTS',details:{},evaluated_at:'2026-10-15T08:00:00Z'}],
+   results:[{strategy:'SECONDS_FUTURES_CATCHUP',signals:2,closed:1,entries:1,missed:1,net:'42.00',cash:'7847.94'}]}};
+ vm.runInContext('renderLive(secondsFixture)',browser);
+ assert.equal(ids['live-cash'].textContent,'₹7,805.94','Paper profits cannot increase broker cash');
+ assert.match(ids['seconds-summary'].textContent,/simulated/);
+ assert.match(ids['seconds-context'].textContent,/independently.*simulated money/);
+ assert.match(ids['seconds-strategies'].children[0].children[0].children[1].textContent,/does not clear the cost/);
+ browser.secondsFixture.seconds_experiments.fresh=false;
+ vm.runInContext('renderLive(secondsFixture)',browser);
+ assert.match(ids['seconds-summary'].textContent,/unavailable/);
+ assert.equal(ids['seconds-strategies'].children[0].children[0].children[0].children[1].textContent,'Unknown');
+ console.log('Five-strategy simulation is separate from funded permission and real cash');
+});

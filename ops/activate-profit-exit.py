@@ -35,7 +35,11 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--apply',action='store_true');parser.add_argument('--retain',default='0.50')
     parser.add_argument('--funded-only',nargs='*',default=None,help='Explicit subset permitted to submit new entries; scans remain configured.')
     parser.add_argument('--scan-only',nargs='+',default=None,help='Replace scanned roster; requires an explicit --funded-only subset, including an empty subset.')
+    parser.add_argument('--extra-route-attempt-on',default=None,help='Explicit operator grant of one extra route attempt on the named current IST date. Cash caps and normal limits stay unchanged.')
     args=parser.parse_args();retain=Decimal(args.retain)
+    if args.extra_route_attempt_on:
+        from dhan_cas_bot.session_strategies import IST
+        if args.extra_route_attempt_on!=datetime.now(IST).date().isoformat():raise ValueError('extra attempt date must be today in IST')
     if args.scan_only is not None and args.funded_only is None:parser.error('--scan-only requires --funded-only')
     if os.geteuid()!=0 or ROOT.parent!=Path('/opt/sablestone-dhan-dashboard/releases') or not re.fullmatch('[0-9a-f]{40}',ROOT.name):
         raise ValueError('run from the installed immutable release on the VM')
@@ -60,7 +64,7 @@ def main():
         records=[(path,original,stat.st_mode&0o777,(stat.st_uid,stat.st_gid)),
                  (override,override.read_bytes() if override.exists() else None,0o644,(0,0)),
                  (marker,marker.read_bytes() if marker.exists() else None,0o600,owner)]
-        changed=False;stopped=False;lock=None;ledger=None;migrated=None
+        changed=False;stopped=False;lock=None;ledger=None;migrated=None;extra_added=None
         stop_bound=Path('/run/systemd/system/dhan-cas.service.d/99-profit-upgrade-stop.conf')
         if stop_bound.exists():raise ValueError('another upgrade is in progress')
         stop_bound.parent.mkdir(parents=True,exist_ok=True);stop_bound.write_text('[Service]\nTimeoutStopSec=12\n')
@@ -70,6 +74,12 @@ def main():
             lock=os.open(state/'writer.lock',os.O_CREAT|os.O_RDWR,0o600);fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
             if path.read_bytes()!=original:raise ValueError('concurrent configuration change')
             ledger=Ledger(state/'ledger.sqlite3');active=asyncio.run(account(config,ledger))
+            if args.extra_route_attempt_on:
+                from dhan_cas_bot.route import grant_extra_attempt
+                key='probe.extra_attempt:'+args.extra_route_attempt_on
+                old=ledger.metadata(key)
+                grant_extra_attempt(ledger,args.extra_route_attempt_on,load_mandate(state/'mandate.json').probe_max_attempts_per_session,datetime.now(timezone.utc))
+                if old is None:extra_added=key
             # New policy starts from future fresh quotes. Do not replay the old
             # peak into an immediate sale against the operator's latest intent.
             if active:
@@ -91,10 +101,12 @@ def main():
             stop_bound.unlink();upgrade.systemctl('daemon-reload');upgrade.systemctl('start','dhan-cas.service')
             upgrade.systemctl('is-active','--quiet','dhan-cas.service')
         except Exception:
-            if ledger is None and migrated:
+            if ledger is None and (migrated or extra_added):
                 upgrade.systemctl('stop','dhan-cas.service');ledger=Ledger(state/'ledger.sqlite3')
             if ledger and migrated:
                 with ledger.transaction() as db:db.execute('UPDATE lifecycles SET payload=? WHERE lifecycle_id=?',(migrated[1],migrated[0]))
+            if ledger and extra_added:
+                with ledger.transaction() as db:db.execute('DELETE FROM metadata WHERE key=?',(extra_added,))
             if ledger:ledger.close();ledger=None
             if lock is not None:os.close(lock);lock=None
             upgrade.restore_files(records,changed=changed)
@@ -109,7 +121,9 @@ def main():
             'scanned_strategies':args.scan_only if args.scan_only is not None else config['strategies'],
             'retention':str(retain),'existing_position_migrated_forward_only':migrated is not None,
             'funded_strategies':args.funded_only if args.funded_only is not None else config.get('funded_strategies',config['strategies']),
-            'mandate_and_probe_caps_unchanged':True,'broker_orders_submitted_by_upgrade':0}),flush=True)
+            'mandate_and_probe_caps_unchanged':args.extra_route_attempt_on is None,
+            'normal_probe_limit_and_cash_caps_unchanged':True,'extra_route_attempt_date':args.extra_route_attempt_on,
+            'broker_orders_submitted_by_upgrade':0}),flush=True)
 
 
 if __name__=='__main__':

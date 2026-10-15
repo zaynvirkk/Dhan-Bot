@@ -13,6 +13,7 @@ from .domain import Intent, json_safe
 from .engine import restore_instrument
 from .risk import FeeSchedule, reserve_cash, worst_case_entry_cash
 from .session_strategies import CAS, GAP, REBOUND, STRATEGIES, IST, Calendar, Evaluation
+from .seconds_strategies import NAMES as SECONDS_NAMES, RULES as SECONDS_RULES
 
 D = Decimal
 
@@ -33,6 +34,8 @@ class DirectionalEngine:
         self.profit_retain=profit_retain
         self.engine = engine
         self.enabled = tuple(s for s in STRATEGIES if s != CAS and s in enabled)
+        from .seconds_engine import SecondsEngine
+        self.seconds = SecondsEngine(self)
         self.inputs = None
         self.signals = {}
         self.last_reason = "INPUTS_NOT_RECEIVED"
@@ -48,6 +51,8 @@ class DirectionalEngine:
         # Persist first signal rather than repeatedly retrying a missed trade.
         # Recovery never reconstitutes an order from a stale signal.
         for strategy in self.enabled:
+            if strategy in SECONDS_NAMES:
+                continue  # Minute/cached samples cannot manufacture tick signals.
             sample = inputs.evaluations.get(strategy)
             if not sample or sample.state != "SIGNAL":
                 continue
@@ -64,10 +69,14 @@ class DirectionalEngine:
 
     @staticmethod
     def signal_key(sample):
+        if sample.strategy in SECONDS_NAMES:
+            return f"directional-signal:{sample.evaluated_at.astimezone(IST).date()}:{sample.strategy}:{sample.details['episode']}"
         return f"directional-signal:{sample.evaluated_at.astimezone(IST).date()}:{sample.strategy}"
 
     @staticmethod
     def family_key(sample):
+        if sample.strategy in SECONDS_NAMES:
+            return f"directional-family:{sample.evaluated_at.astimezone(IST).date()}:{sample.strategy}:{sample.details['episode']}:consumed"
         from .expanded_strategies import SPECS
         family=SPECS.get(sample.strategy,(sample.strategy,))[0]
         return f"directional-family:{sample.evaluated_at.astimezone(IST).date()}:{family}:consumed"
@@ -88,6 +97,8 @@ class DirectionalEngine:
                     and (book.top_ask.price-book.top_bid.price)/((book.top_ask.price+book.top_bid.price)/2) <= D(".08"))
 
     def candidate(self, signal, allocation):
+        if signal.strategy in SECONDS_NAMES:
+            return self.seconds.candidate(signal,allocation)
         data, engine = self.inputs, self.engine
         self.candidate_checks = []
         budget = min(allocation.remaining, allocation.spendable_cash, allocation.bankroll*D(".95"))
@@ -173,7 +184,7 @@ class DirectionalEngine:
     async def enter_locked(self, snapshot):
         engine, runtime = self.engine, self.engine.runtime
         ledger, now = runtime.ledger, engine.now()
-        if self.selection_blocked or engine.active or snapshot["unresolved"] or ledger.pending_intents() or not self.input_ready():
+        if self.selection_blocked or engine.active or snapshot["unresolved"] or ledger.pending_intents() or not (self.input_ready() or self.seconds.ready()):
             return False
         if any(int(r.get("netQty",r.get("netQuantity",0))) for r in snapshot["positions"]):
             self.last_reason="UNMANAGED_ACCOUNT_POSITION"
@@ -183,9 +194,12 @@ class DirectionalEngine:
         allocation=None
         feasible=[]
         choices={}
-        for signal in rank_signals(self.signals.values(),ledger,now,ranking=self.ranking):
+        micro=self.seconds.signals() if any(n in SECONDS_NAMES for n in self.enabled) else []
+        for signal in rank_signals([*self.signals.values(),*micro],ledger,now,ranking=self.ranking):
             if signal.strategy not in self.enabled:
                 continue
+            is_seconds=signal.strategy in SECONDS_NAMES
+            if not (self.seconds.ready() if is_seconds else self.input_ready()):continue
             if signal.strategy not in runtime.enabled_strategies:
                 self.last_reason='FUNDED_STRATEGY_DISABLED'
                 self.record_assessment(signal,self.last_reason)
@@ -193,10 +207,10 @@ class DirectionalEngine:
             key = self.signal_key(signal)+":consumed"
             if ledger.metadata(key) or ledger.metadata(self.family_key(signal)) or signal.evaluated_at.astimezone(IST).date() != now.astimezone(IST).date():
                 continue
-            due = signal.evaluated_at+timedelta(minutes=1)
+            due = signal.evaluated_at if is_seconds else signal.evaluated_at+timedelta(minutes=1)
             if now < due:
                 continue
-            if now >= due+timedelta(seconds=30):
+            if now >= due+timedelta(seconds=5 if is_seconds else 30):
                 assessment = ledger.metadata(self.signal_key(signal)+":assessment", {})
                 ledger.put_metadata(key,{"reason":"ENTRY_DEADLINE_MISSED",
                     "blocking_reason":assessment.get("reason", "UNKNOWN"),
@@ -212,7 +226,7 @@ class DirectionalEngine:
                 return False
             if allocation is None:
                 funds = await runtime.broker.funds()
-                if funds.broker_account != runtime.mandate.account_id or not self.input_ready() or not runtime.permit_entry(strategy=signal.strategy):
+                if funds.broker_account != runtime.mandate.account_id or not (self.seconds.ready() if is_seconds else self.input_ready()) or not runtime.permit_entry(strategy=signal.strategy):
                     return False
                 allocation = engine._allocation(funds)
             candidate = self.candidate(signal,allocation)
@@ -238,7 +252,8 @@ class DirectionalEngine:
             return False
         signal,candidate=choices[chosen['strategy']]
         inst, quantity, limit, book = candidate
-        due=signal.evaluated_at+timedelta(minutes=1)
+        is_seconds=signal.strategy in SECONDS_NAMES
+        due=signal.evaluated_at if is_seconds else signal.evaluated_at+timedelta(minutes=1)
         key=self.signal_key(signal)+":consumed"
         lifecycle = "l"+uuid.uuid4().hex
         payload = {"strategy":signal.strategy,"instrument":asdict(inst),"signal":asdict(signal),"exit_at":signal.exit_at,"selection":self.selection}
@@ -251,10 +266,10 @@ class DirectionalEngine:
             db.execute("INSERT INTO metadata VALUES(?,?)",(self.family_key(signal),json.dumps({'lifecycle':lifecycle,'strategy':signal.strategy})))
         ledger.observe("decision:"+intent.intent_id,"ENTRY_DECISION",{"strategy":signal.strategy,"signal":asdict(signal),"book":asdict(book),"allocation":asdict(allocation),"quantity":quantity,"limit":limit,"selection":self.selection})
         def current():
-            return (runtime.permit_entry(strategy=signal.strategy) and self.input_ready()
+            return (runtime.permit_entry(strategy=signal.strategy) and (self.seconds.valid(signal) if is_seconds else self.input_ready())
                     and self.book_ready(engine.books.get(inst.security_id))
                     and engine.books.get(inst.security_id) is book
-                    and due <= engine.now() < due+timedelta(seconds=30))
+                    and due <= engine.now() < due+timedelta(seconds=5 if is_seconds else 30))
         await runtime.orders.submit(intent,reserved_cash=reserve_cash(worst_case_entry_cash(quantity,limit)),pre_dispatch=current)
         runtime.status.state="ENTRY_PENDING"
         runtime.status.reason=self.last_reason=signal.strategy+":ENTRY_SUBMITTED"
@@ -331,6 +346,11 @@ class DirectionalEngine:
         fills=list(ledger.db.execute("SELECT f.quantity,f.price FROM fills f JOIN intents i ON i.intent_id=f.intent_id WHERE i.lifecycle_id=? AND i.side='BUY'",(active["lifecycle_id"],)))
         units=sum(f["quantity"] for f in fills)
         entry=sum((D(f["price"])*f["quantity"] for f in fills),D(0))/units if units else None
+        if owner in SECONDS_NAMES and exit_state is None and entry:
+            book=engine.books.get(inst.security_id)
+            if self.book_current(book):
+                reason=self.seconds.exit_reason(payload,book,entry,now)
+                if reason:exit_state={'reason':reason,'due':now.isoformat()}
         entry_time=datetime.fromisoformat(payload["signal"]["evaluated_at"])+timedelta(minutes=1)
         policy=payload["signal"].get("details",{})
         target=D(policy.get("exit_target") or '2') if policy.get("exit_target",'2') is not None else None
@@ -364,7 +384,7 @@ class DirectionalEngine:
                         exit_state={'reason':'NET_PROFIT_FLOOR','due':now.isoformat()}
         # Recovered bars can establish a missed exit, but never invent a fill
         # during the outage. The latch remains until a real reconciled sale.
-        if entry and exit_state is None:
+        if entry and exit_state is None and owner not in SECONDS_NAMES:
             for t,bar in sorted(rows.items()):
                 if not entry_time < t <= now:
                     continue
@@ -395,15 +415,17 @@ class DirectionalEngine:
         now=self.engine.now()
         result=[]
         for strategy in self.enabled or (GAP, REBOUND):
-            sample=self.inputs.evaluations.get(strategy) if self.inputs else None
+            is_seconds=strategy in SECONDS_NAMES
+            if is_seconds:self.seconds.refresh()
+            sample=self.seconds.evaluations.get(strategy) if is_seconds else self.inputs.evaluations.get(strategy) if self.inputs else None
             row=json_safe(asdict(sample)) if sample else {"strategy":strategy,"state":"UNKNOWN","reason":"INPUTS_NOT_RECEIVED"}
             row["enabled"]=strategy in self.enabled
             row['funded_enabled']=strategy in self.engine.runtime.enabled_strategies
             if strategy not in self.enabled:
                 row.update(state="DISABLED",reason="NOT_CONFIGURED")
-            elif not self.inputs or not 0 <= (now-self.inputs.received_at).total_seconds()<=90:
+            elif not is_seconds and (not self.inputs or not 0 <= (now-self.inputs.received_at).total_seconds()<=90):
                 row.update(state="UNKNOWN",reason="STRATEGY_INPUTS_STALE")
-            elif self.inputs.error:
+            elif not is_seconds and self.inputs.error:
                 row.update(state="UNKNOWN",reason=self.inputs.error)
             key=f"directional-signal:{now.astimezone(IST).date()}:{strategy}"
             consumed=self.engine.runtime.ledger.metadata(key+':consumed',{})
@@ -413,7 +435,9 @@ class DirectionalEngine:
             from .expanded_strategies import SPECS
             spec=SPECS.get(strategy)
             row['family']=spec[0] if spec else 'GAP_FADE' if strategy==GAP else 'NIFTY_SELLOFF_REBOUND'
+            if is_seconds:row['family']=strategy;row['entry_rule']=SECONDS_RULES[strategy]
             row['exit_policy']=spec[1] if spec else 'DOUBLE'
+            if is_seconds:row['exit_policy']='SECONDS_V1'
             row['scope']=spec[2] if spec else 'ORDINARY' if strategy==GAP else 'ANY'
             score=self.ranking.get(strategy,{})
             row['filled_closed']=score.get('filled_closed',0)

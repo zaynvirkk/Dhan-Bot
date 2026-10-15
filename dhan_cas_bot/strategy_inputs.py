@@ -13,6 +13,7 @@ from .directional import Inputs
 from .domain import ContractError
 from .instruments import is_nifty_option, load_dhan_master, parse_date
 from .session_strategies import CAS, GAP, REBOUND, STRATEGIES, IST, Calendar, Evaluation, evaluate, parse_bars, parse_session
+from .seconds_strategies import NAMES as SECONDS_NAMES
 
 
 def strategy_names(config):
@@ -192,7 +193,7 @@ class StrategyInputWorker:
         return {strategy:evaluate(strategy,moment,self.calendar,spot,future,expiries,bar_at=bar_at)
                 if strategy in (GAP,REBOUND) else self.expanded(strategy,moment,self.calendar,spot,future,expiries,
                     features=features,bar_at=bar_at)
-                for strategy in self.directional.enabled}
+                for strategy in self.directional.enabled if strategy not in SECONDS_NAMES}
 
     @staticmethod
     def expanded(*args,**kwargs):

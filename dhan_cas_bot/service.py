@@ -34,7 +34,7 @@ from .instruments import load_dhan_master
 from .ledger import Ledger
 from .release import current_verification
 from .profile import require_derivatives_profile
-from .route import RouteQualifier
+from .route import RouteQualifier, extra_attempts
 from .rules import RuleSource, DHAN_MASTER_URL, NSE_FREEZE_URL
 from .runtime import AutoLive
 from .transport import WebSocketRunner, message_received_ns, message_received_monotonic_ns
@@ -43,6 +43,7 @@ from .observation_view import observation_view
 from .directional import DirectionalEngine
 from .strategy_inputs import strategy_names, selected_contracts, route_window, StrategyInputWorker
 from .session_strategies import CAS, GAP, REBOUND
+from .seconds_strategies import NAMES as SECONDS_NAMES
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -104,6 +105,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     today = now().astimezone(IST).date()
     enabled = strategy_names(config)
     has_directional = any(name != CAS for name in enabled)
+    has_seconds = any(name in SECONDS_NAMES for name in enabled)
     started_before_session = not has_directional and now().astimezone(IST).time() < time(15,5)
     state_dir = Path(config["state_dir"])
     mandate = load_mandate(state_dir / "mandate.json")
@@ -129,12 +131,16 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     account_task = clock_task = None
     strategy_task = None
     input_worker = None
+    seconds_event_task = None
     try:
         # Broker recovery precedes calendar, Upstox, egress admission and metadata.
         await runtime.recover()
         engine = SessionEngine(runtime, {}, now_fn=now)
         engine.directional = DirectionalEngine(engine, enabled,
             profit_retain=Decimal(str(config['profit_exit_retain'])) if config.get('profit_exit_policy')=='NET_PROFIT_RATCHET_V1' else None)
+        if SECONDS_NAMES[4] in enabled:
+            from .seconds_events import watch_events
+            seconds_event_task=asyncio.create_task(watch_events(engine.directional.seconds,stop))
         await runtime.refresh_account()
         if broker.allow_writes:
             ledger.put_mandate(mandate)
@@ -325,11 +331,25 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                 engine.books.clear()
                 engine.streaks.clear()
                 last_packets.clear()
+                if has_seconds:engine.directional.seconds.reset()
                 usable_at.pop("market", None)
                 runtime.telemetry.reason("MARKET_FRAME_REJECTED")
                 wake.set()
                 return
             for packet in batch:
+                if has_seconds and future_id and packet[0]==8 and str(int.from_bytes(packet[4:8],'little'))==future_id:
+                    from types import SimpleNamespace
+                    from .domain import Segment
+                    # Market-data identity only. A future is never admitted to
+                    # the option instrument catalogue or any order candidate.
+                    ref=SimpleNamespace(security_id=future_id,tick_size=Decimal('.05'),segment=Segment.NSE_FNO)
+                    try:
+                        tick=decode_full_binary(packet,ref)
+                        if tick.statistics and tick.provider_ts_ms is not None and 0<=received_ns-tick.provider_ts_ms*1_000_000<=2_000_000_000:
+                            engine.directional.seconds.tape.future_tick(tick.statistics.last_price,received_ns,epoch)
+                    except ContractError:
+                        engine.directional.seconds.reset()
+                    continue
                 inst = instrument_by_id.get(str(int.from_bytes(packet[4:8], "little")))
                 if packet[0] != 8 or inst is None:
                     continue
@@ -392,9 +412,11 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             usable_at.pop("market", None)
             market.protocol.on_connect()
             engine.market_reconnect(market.protocol.epoch.id)
+            if has_seconds:engine.directional.seconds.reset()
         def market_disconnect():
             market.protocol.on_disconnect()
             engine.market_reconnect(None)
+            if has_seconds:engine.directional.seconds.reset()
             wake.set()
         def order_connect():
             nonlocal order_connected_at
@@ -417,7 +439,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             engine.signal_reconnect(None)
         if instrument_by_id:
             market_url = config.get("dhan_market_ws_url") or "wss://api-feed.dhan.co?" + urlencode({"version": "2", "token": token, "clientId": broker.account_id, "authType": "2"})
-            runners.append(WebSocketRunner(market_url, {}, record_dhan, subscribe=market.subscription_messages(instrument_by_id), on_connect=market_connect, on_disconnect=market_disconnect))
+            subscribed=[*instrument_by_id,*([future_id] if has_seconds and future_id else [])]
+            runners.append(WebSocketRunner(market_url, {}, record_dhan, subscribe=market.subscription_messages(subscribed), on_connect=market_connect, on_disconnect=market_disconnect))
             feed_runners["market"] = runners[-1]
         else:
             engine.market_reconnect(None)
@@ -435,7 +458,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             # Clear at the start; feed/order arrivals during any await survive.
             wake.clear()
             current = now().astimezone(IST)
-            for task in [*tasks, account_task, clock_task, *([strategy_task] if strategy_task else [])]:
+            for task in [*tasks, account_task, clock_task, *([strategy_task] if strategy_task else []),*([seconds_event_task] if seconds_event_task else [])]:
                 if task.done():
                     task.result()
                     raise ContractError("a required transport stopped")
@@ -552,7 +575,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                              input_health=input_worker.input_health if input_worker else None,
                              calendar_checked_at=calendar.checked_at.isoformat() if calendar else None,
                              route_attempts_used=int(ledger.counter(f"probe.attempts:{today.isoformat()}")),
-                             route_attempt_limit=mandate.probe_max_attempts_per_session,
+                             route_attempt_limit=mandate.probe_max_attempts_per_session+extra_attempts(ledger,today.isoformat(),mandate.probe_max_attempts_per_session,now()),
                              expiry_today=expiry_today if metadata_admitted else None,
                              observation=observation_view(engine, instruments))
                 last_status = monotonic
@@ -562,10 +585,10 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             except asyncio.TimeoutError:
                 runtime.telemetry.sample("loop_lag_ms", max(0, monotime.monotonic()-wait_started-.25)*1000)
     finally:
-        for task in (account_task, clock_task, strategy_task):
+        for task in (account_task, clock_task, strategy_task,seconds_event_task):
             if task:
                 task.cancel()
-        await asyncio.gather(*(task for task in (account_task, clock_task, strategy_task) if task), return_exceptions=True)
+        await asyncio.gather(*(task for task in (account_task, clock_task, strategy_task,seconds_event_task) if task), return_exceptions=True)
         ledger.account_refresh = None
         if final_task:
             final_task.cancel()
