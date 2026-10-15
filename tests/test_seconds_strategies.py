@@ -139,3 +139,71 @@ def test_failed_breakout_requires_return_inside_the_preexisting_range():
         at=NOW+timedelta(seconds=sec);tape.future_tick(f,int(at.timestamp()*1e9),'m1')
     b=replace(b,received_ns=int(at.timestamp()*1e9),bids=(Level(D('94.95'),650),),asks=(Level(D('95.05'),650),))
     assert tape.evaluate(at,{'1':b},(),cal)[NAMES[1]].state=='SIGNAL'
+
+
+def test_brief_stale_option_cannot_erase_prior_fit_or_be_traded():
+    from datetime import timedelta
+    tape, rows, cal = seeded_tape()
+    old_count = len(tape.options['1'])
+    gap = NOW + timedelta(seconds=2)
+    tape.future_tick(D('23020'), int(gap.timestamp()*1e9), 'm1')
+    others = {k: replace(b, received_ns=int(gap.timestamp()*1e9))
+              for k, b in rows.items() if k != '1'}
+    tape.evaluate(gap, {**others, '1': rows['1']}, (), cal)
+    assert len(tape.options.get('1', ())) == old_count
+    sample = opportunity(NAMES[0], gap, rows['1'], D(150), D(23020), 'stale')
+    assert entry_candidate(sample, rows, D(7805), gap) is None
+    at = gap + timedelta(seconds=1)
+    tape.future_tick(D('23040'), int(at.timestamp()*1e9), 'm1')
+    fresh = {k: replace(b, received_ns=int(at.timestamp()*1e9)) for k, b in rows.items()}
+    assert tape.evaluate(at, fresh, (), cal)[NAMES[0]].state == 'SIGNAL'
+    # A real epoch loss must still discard the old fit completely.
+    tape.reset()
+    assert not tape.options and not tape.future
+
+
+def test_missing_option_books_are_unknown_not_a_completed_no_signal():
+    tape, rows, cal = seeded_tape()
+    out = tape.evaluate(NOW, {}, (), cal)
+    assert all(out[n].state == 'UNKNOWN' for n in NAMES[:4])
+    assert all(out[n].reason == 'OPTIONS_FEED_UNAVAILABLE' for n in NAMES[:4])
+
+
+def test_execution_rejections_expose_exact_cash_depth_spread_and_net_reason():
+    from dhan_cas_bot.seconds_strategies import entry_assessment
+    sample = opportunity(NAMES[0], NOW, book(), D(105), D(23000), 'episode')
+    assert entry_assessment(sample, {'1': book()}, D(100), NOW).reason == 'SECONDS_UNAFFORDABLE'
+    assert entry_assessment(sample, {'1': book(quantity=65)}, D(7805), NOW).reason == 'SECONDS_DEPTH_TOO_THIN'
+    assert entry_assessment(sample, {'1': book(bid='97')}, D(7805), NOW).reason == 'SECONDS_SPREAD_TOO_WIDE'
+    cheap = replace(sample, details={**sample.details, 'target_price': '100.1'})
+    rejected = entry_assessment(cheap, {'1': book()}, D(7805), NOW)
+    assert rejected.reason == 'SECONDS_NET_EDGE_TOO_SMALL'
+    assert D(rejected.details['net_at_target']) < D(rejected.details['minimum_net_edge'])
+    assert entry_assessment(sample, {'1': book()}, D(7805), NOW).candidate is not None
+
+
+def test_invalid_future_blocks_entry_without_destroying_valid_prior_observations():
+    from datetime import timedelta
+    tape, rows, cal = seeded_tape()
+    size = len(tape.future)
+    tape.invalidate_future()
+    assert not tape.future_current(NOW)
+    assert len(tape.future) == size
+    assert all(tape.evaluate(NOW, rows, (), cal)[n].state != 'SIGNAL' for n in NAMES)
+    at = NOW + timedelta(seconds=1)
+    tape.future_tick(D('23030'), int(at.timestamp()*1e9), 'm1')
+    fresh = {k: replace(b, received_ns=int(at.timestamp()*1e9)) for k, b in rows.items()}
+    assert tape.future_current(at)
+    assert tape.evaluate(at, fresh, (), cal)[NAMES[0]].state == 'SIGNAL'
+
+
+def test_retained_option_history_expires_and_cannot_grow_without_bound():
+    from datetime import timedelta
+    tape, rows, cal = seeded_tape()
+    for n in range(120):
+        b = replace(rows['1'], instrument=replace(rows['1'].instrument, security_id=str(n+10)))
+        tape.ingest({b.instrument.security_id:b}, NOW)
+    assert len(tape.options) <= 96
+    assert len(tape.selected) <= 24
+    tape.ingest({}, NOW + timedelta(seconds=91))
+    assert not tape.options and not tape.selected

@@ -8,6 +8,12 @@ import struct
 from .domain import ContractError, Instrument, Level, MarketStatistics, OptionBook
 
 
+class DhanFeedDisconnect(ContractError):
+    def __init__(self,code=None):
+        self.provider_disconnect_code=code
+        super().__init__('Dhan feed disconnect packet')
+
+
 class InvalidDhanFrame(ContractError):
     """A message with unusable packet boundaries, distinct from disconnect."""
 
@@ -112,7 +118,7 @@ def packets(payload: bytes):
             raise InvalidDhanFrame("invalid Dhan packet length")
         packet = payload[offset:offset+length]
         if packet[0] == 50:
-            raise ContractError("Dhan feed disconnect packet")
+            raise DhanFeedDisconnect(int.from_bytes(packet[8:10],"little") if len(packet)>=10 else None)
         yield packet
         offset += length
 

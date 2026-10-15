@@ -41,7 +41,10 @@ STRATEGY_REASONS.update({'EXPANDED_RULE_CONFIRMED','EXPANDED_RULE_NOT_MET','REQU
     'MISSING_IV','MISSING_INSIGHTS','MISSING_PRIOR_CHAIN','MISSING_INSTITUTIONS','MISSING_PRIOR_TREND'})
 STRATEGY_REASONS.update({'SECONDS_SETUP_DETECTED','SECONDS_WARMUP','SECONDS_RULE_NOT_MET',
     'SECONDS_EDGE_BELOW_COSTS','SECONDS_SIGNAL_CHANGED','FUTURES_FEED_UNAVAILABLE',
-    'EVENT_FEED_UNAVAILABLE','NO_FRESH_EVENT'})
+    'EVENT_FEED_UNAVAILABLE','NO_FRESH_EVENT','OPTIONS_FEED_UNAVAILABLE',
+    'SECONDS_SIGNAL_EXPIRED','SECONDS_OPTION_IDENTITY_MISMATCH','SECONDS_SPREAD_TOO_WIDE',
+    'SECONDS_DEPTH_TOO_THIN','SECONDS_ENTRY_OUTSIDE_BAND','SECONDS_TARGET_UNAVAILABLE',
+    'SECONDS_UNAFFORDABLE','SECONDS_NET_EDGE_TOO_SMALL'})
 ORDER_STATES = {'PENDING_SEND', 'SEND_UNKNOWN', 'SENT', 'TRANSIT', 'PENDING', 'CLOSED',
                 'TRIGGERED', 'REJECTED', 'CANCELLED', 'PART_TRADED', 'TRADED', 'FILLED',
                 'EXPIRED', 'ABORTED'}
@@ -191,6 +194,8 @@ def runtime_view(raw, now):
             'expiry_today': raw.get('expiry_today') if type(raw.get('expiry_today')) is bool else None,
             'calendar_checked_at': timestamp(raw.get('calendar_checked_at')),
             'feed_health': feed_health_view(raw.get('feed_health')),
+            'runtime_revision':integer(raw.get('runtime_revision')),
+            'source_commit':raw.get('source_commit') if re.fullmatch('[0-9a-f]{40}',str(raw.get('source_commit',''))) else None,
             'recorder_pending': integer(raw.get('recorder_pending')),
             'telemetry': telemetry_view(raw.get('telemetry')),
             'observation': observation_projection(raw.get('observation'))}
@@ -279,7 +284,9 @@ def strategy_projection(raw):
                     'opposite_oi','opposite_return','strike','anchor_spot','prior_oi_wall','iv','realized_vol_30m',
                     'vix_15m','pcr_change_5m','pcr_change','known_max_pain','fii_net_change','dii_net','prior_trend_20d',
                     'warmup_seconds','future_move_2s','response_beta','target_price','impulse_threshold',
-                    'eligible_contracts','fitted_contracts','breakout_direction','flow_candidates','curvature_candidates'):
+                    'eligible_contracts','fitted_contracts','breakout_direction','flow_candidates','curvature_candidates',
+                    'spread_ratio','bid_quantity','ask_quantity','required_depth','entry_cash','exit_fee_reserve',
+                    'cash_budget','net_at_target','minimum_net_edge'):
             value=(row.get('details') or {}).get(key) if isinstance(row.get('details'), dict) else None
             if money(value) is not None:
                 details[key]=money(value) if key=='target_price' else str(Decimal(str(value)))
@@ -348,6 +355,19 @@ def observation_projection(raw):
     }
 
 
+def transport_event_view(raw):
+    if not isinstance(raw,list):return []
+    result=[]
+    for row in raw[-16:]:
+        if not isinstance(row,dict) or row.get('kind') not in {'CONNECTED','DISCONNECTED','ERROR'}:continue
+        result.append({'kind':row['kind'],'at':timestamp(row.get('at')),
+            'error_type':choice(row.get('error_type'),{'ContractError','OSError','EOFError','TimeoutError',
+                'ConnectionClosedError','ConnectionClosedOK','InvalidHandshake','HTTPStatusError','DhanFeedDisconnect'}),
+            **{k:integer(row.get(k)) for k in ('attempt','close_received_code','close_sent_code','provider_disconnect_code')},
+            'keepalive_timeout':row.get('keepalive_timeout') if type(row.get('keepalive_timeout')) is bool else None})
+    return result
+
+
 def feed_health_view(raw):
     raw = raw if isinstance(raw, dict) else {}
     result = {}
@@ -359,7 +379,8 @@ def feed_health_view(raw):
                         **{key: timestamp(item.get(key)) for key in ('last_received_at', 'last_processed_at', 'last_usable_at')},
                         **{key: integer(item.get(key)) for key in ('reconnects', 'pending_messages', 'queue_high_water', 'processed_messages')},
                         **{key: money(item.get(key)) for key in ('oldest_pending_ms', 'queue_delay_ms', 'processing_ms')},
-                        'last_error': choice(item.get('last_error'), {'ContractError', 'OSError', 'EOFError', 'TimeoutError', 'ConnectionClosedError', 'InvalidHandshake', 'HTTPStatusError'})}
+                        'last_error': choice(item.get('last_error'), {'ContractError', 'OSError', 'EOFError', 'TimeoutError', 'ConnectionClosedError', 'InvalidHandshake', 'HTTPStatusError'}),
+                        'transport_events':transport_event_view(item.get('transport_events'))}
     return result
 
 
@@ -409,7 +430,8 @@ def shared_account(raw, now):
         'symbol': label(row.get('symbol')), 'security_id': label(row.get('security_id')),
         'quantity': integer(row.get('quantity')), 'filled_quantity': integer(row.get('filled_quantity')),
         'price': money(row.get('price')), 'side': choice(row.get('side'), {'BUY', 'SELL'}),
-        'state': choice(row.get('state'), ORDER_STATES, 'UNKNOWN')
+        'state': choice(row.get('state'), ORDER_STATES, 'UNKNOWN'),
+        'purpose':choice(row.get('purpose'),{'ROUTE_CHECK','STRATEGY_ORDER'},'UNKNOWN')
     } for row in orders[:100] if isinstance(row, dict)]
     return {'account': clean, 'account_read_ok': True}
 
@@ -443,15 +465,21 @@ def position_view(row):
             'product': choice(row.get('productType'), {'MARGIN', 'INTRADAY', 'CNC'})}
 
 
-def broker_order_view(row):
+def order_purposes(db):
+    """Private ID lookup for projection only. Never serialize this mapping."""
+    return {r[0]:('ROUTE_CHECK' if r[1]=='route-probe' else 'STRATEGY_ORDER') for r in
+        db.execute("SELECT o.order_id,i.lifecycle_id FROM orders o JOIN intents i ON i.intent_id=o.intent_id ORDER BY i.created_at DESC LIMIT 100")}
+
+
+def broker_order_view(row, purpose=None):
     return {'symbol': label(row.get('tradingSymbol')), 'security_id': label(str(row.get('securityId', ''))),
             'side': choice(row.get('transactionType'), {'BUY', 'SELL'}),
             'state': choice(row.get('orderStatus'), ORDER_STATES, 'UNKNOWN'),
             'quantity': integer(row.get('quantity')), 'filled_quantity': integer(row.get('filledQty', row.get('filledQuantity'))),
-            'price': money(row.get('price'))}
+            'price': money(row.get('price')), 'purpose':choice(purpose,{'ROUTE_CHECK','STRATEGY_ORDER'},'UNKNOWN')}
 
 
-def account_view(funds, positions, orders, now):
+def account_view(funds, positions, orders, now, *, purposes=None):
     cash = money(funds.spendable_cash)
     if cash is None:
         raise ValueError('available cash is not a finite amount')
@@ -469,7 +497,7 @@ def account_view(funds, positions, orders, now):
     return {'observed_at': now.isoformat(), 'available_cash': cash,
             'realised_pnl': total('realised'), 'unrealised_pnl': total('unrealised'),
             'open_position_count': len(open_positions), 'positions': open_positions[:100],
-            'order_count': len(orders), 'orders': [broker_order_view(o) for o in orders[-100:]][::-1],
+            'order_count': len(orders), 'orders': [broker_order_view(o,(purposes or {}).get(str(o.get('orderId','')))) for o in orders[-100:]][::-1],
             'positions_truncated': len(open_positions) > 100, 'orders_truncated': len(orders) > 100}
 
 
@@ -587,7 +615,7 @@ def active_trade_views(db):
     return result
 
 
-def recorded_decisions(db, strategies, now):
+def recorded_decisions(db, strategies, now, session_bounds=None):
     """Today's allowlisted decision receipts, using indexed identity ranges.
 
     A waiting-minute snapshot must not erase a completed check on page reload.
@@ -599,11 +627,22 @@ def recorded_decisions(db, strategies, now):
     result = []
     for name in dict.fromkeys(s for s in strategies[:256] if s in STRATEGY_NAMES):
         prefix = f'strategy-evaluation:{name}:{day}'
-        rows = list(db.execute(
-            "SELECT received_at,payload FROM observations WHERE identity>=? AND identity<? "
+        query=("SELECT received_at,payload,identity FROM observations WHERE identity>=? AND identity<? "
             "AND kind='STRATEGY_EVALUATION' AND identity NOT LIKE '%:WAITING' "
-            "AND identity NOT LIKE '%:NOT_APPLICABLE' AND identity NOT LIKE '%:DISABLED' "
-            "ORDER BY identity DESC LIMIT 257", (prefix, prefix+'\uffff')))
+            "AND identity NOT LIKE '%:NOT_APPLICABLE' AND identity NOT LIKE '%:DISABLED' ")
+        if name in SECONDS_RULES and session_bounds:
+            # Seconds identities use the evaluation's timezone. Query UTC and
+            # IST separately so after-close warnings cannot consume the limit.
+            rows=[]
+            for zone in (UTC,ist):
+                start,end=(v.astimezone(zone) for v in session_bounds)
+                offset=start.isoformat()[-6:]
+                rows.extend(db.execute(query+"AND identity LIKE ? ORDER BY identity DESC LIMIT 257",
+                    (f'strategy-evaluation:{name}:'+start.isoformat(),
+                     f'strategy-evaluation:{name}:'+end.isoformat(),'%'+offset+':%')))
+            rows=sorted(rows,key=lambda r:r['identity'],reverse=True)[:257]
+        else:
+            rows=list(db.execute(query+"ORDER BY identity DESC LIMIT 257",(prefix,prefix+'\uffff')))
         records = []
         for row in rows[:256]:
             if len(row['payload']) > 100_000:
@@ -626,6 +665,19 @@ def recorded_decisions(db, strategies, now):
         result.append({'strategy': name, 'truncated': len(rows) > 256,
                        'records': sorted(records, key=lambda r: (r['evaluated_at'], r['received_at']))})
     return {'status': 'AVAILABLE', 'date': day, 'observed_at': now.isoformat(), 'strategies': result}
+
+
+def recorded_session_bounds(db,now):
+    from zoneinfo import ZoneInfo
+    day=now.astimezone(ZoneInfo('Asia/Kolkata')).date().isoformat()
+    prefix='market-calendar:'+day
+    row=db.execute("SELECT payload FROM observations WHERE identity>=? AND identity<? AND kind='MARKET_CALENDAR' ORDER BY identity DESC LIMIT 1",(prefix,prefix+'\uffff')).fetchone()
+    try:
+        raw=json.loads(row['payload']) if row and len(row['payload'])<=100000 else {}
+        opened,closed=(datetime.fromisoformat(raw[k]) for k in ('opens','closes'))
+        if opened.tzinfo and closed.tzinfo and opened<closed and opened.astimezone(ZoneInfo('Asia/Kolkata')).date().isoformat()==day:return opened,closed
+    except (ValueError,TypeError,KeyError):pass
+    return None
 
 
 def route_check_view(db, now):
@@ -666,11 +718,12 @@ def ledger_view(path, *, strategies=(), now=None):
             db.set_progress_handler(interrupt, 1000)
             counts = {table: db.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] for table in ('intents', 'fills', 'incidents')}
             orders = []
-            for row in db.execute('SELECT i.security_id,i.side,i.quantity,i.price,i.state,i.created_at,o.state AS broker_state FROM intents i LEFT JOIN orders o ON o.intent_id=i.intent_id ORDER BY i.created_at DESC LIMIT 100'):
+            for row in db.execute('SELECT i.security_id,i.side,i.quantity,i.price,i.state,i.created_at,i.lifecycle_id,o.order_id,o.state AS broker_state FROM intents i LEFT JOIN orders o ON o.intent_id=i.intent_id ORDER BY i.created_at DESC LIMIT 100'):
                 orders.append({'security_id': label(row['security_id']), 'side': row['side'] if row['side'] in {'BUY','SELL'} else None,
                                'quantity': integer(row['quantity']), 'price': money(row['price']),
                                'state': row['broker_state'] if row['broker_state'] in ORDER_STATES else (row['state'] if row['state'] in ORDER_STATES else 'UNKNOWN'),
-                               'occurred_at': timestamp(row['created_at'])})
+                               'occurred_at': timestamp(row['created_at']),
+                               'purpose':'ROUTE_CHECK' if row['lifecycle_id']=='route-probe' else 'STRATEGY_ORDER'})
             fills = [{'security_id': label(r['security_id']), 'quantity': integer(r['quantity']), 'price': money(r['price']),
                       'fees': money(r['fees']), 'occurred_at': timestamp(r['occurred_at'])}
                      for r in db.execute('SELECT security_id,quantity,price,fees,occurred_at FROM fills ORDER BY occurred_at DESC LIMIT 100')]
@@ -698,7 +751,7 @@ def ledger_view(path, *, strategies=(), now=None):
                     'last_signals':last_signal_views(db),'cash_reconciliation':cash_reconciliation(db),
                     'active_trades':active_trade_views(db),
                     'route_check':route_check_view(db,now),
-                    'decision_history':recorded_decisions(db,strategies,now)}
+                    'decision_history':recorded_decisions(db,strategies,now,recorded_session_bounds(db,now))}
     except (sqlite3.Error, OSError, ValueError):
         return out
 

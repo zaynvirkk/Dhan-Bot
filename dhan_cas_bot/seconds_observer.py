@@ -11,7 +11,7 @@ import httpx
 from .config import load_config
 from .dashboard.collect import atomic_json
 from .dashboard.data import read_json,shared_account,timestamp
-from .dhan_feed import packets,decode_full_binary,book_from_packet
+from .dhan_feed import packets,decode_full_binary,book_from_packet,InvalidDhanFrame
 from .domain import Segment,json_safe
 from .feeds import DhanMarketClient
 from .rules import RuleSource,DHAN_MASTER_URL,NSE_FREEZE_URL
@@ -93,7 +93,7 @@ async def run(config, output, stop):
         received=message_received_ns(time.time_ns());epoch=market.protocol.epoch.id
         if not market.protocol.epoch.connected:return
         try:batch=list(packets(payload))
-        except Exception:tape.reset();books.clear();return
+        except InvalidDhanFrame:tape.reset();books.clear();return
         for packet in batch:
             security=str(int.from_bytes(packet[4:8],'little'))
             if packet[0]!=8:continue
@@ -109,7 +109,8 @@ async def run(config, output, stop):
                     tick=decode_full_binary(packet,instruments[security]);seen[security]=packet
                     books[security]=book_from_packet(tick,instruments[security],epoch,received)
             except Exception:
-                if security==future_id:tape.reset()
+                if security==future_id:
+                    tape.invalidate_future();seen.pop(security,None)
                 books.pop(security,None)
     def connect():market.protocol.on_connect();tape.reset();books.clear();seen.clear()
     def disconnect():market.protocol.on_disconnect();tape.reset();books.clear();seen.clear()
@@ -133,7 +134,7 @@ async def run(config, output, stop):
             if samples[NAMES[4]].reason=='EVENT_FEED_UNAVAILABLE' and events.event_health['state']=='CONNECTED':
                 from dataclasses import replace
                 samples[NAMES[4]]=replace(samples[NAMES[4]],state='WAITING',reason='NO_FRESH_EVENT')
-            future=tape.future[-1][1] if tape.future and 0<=ns(now)-tape.future[-1][0]<=1_500_000_000 else None
+            future=tape.future[-1][1] if tape.future_current(now) else None
             lab.step(now,samples,books,future)
             if time.monotonic()-last_write>=1:
                 report={**lab.view(),'schema':1,'observed_at':now.isoformat(),'feed_connected':market.protocol.epoch.connected,

@@ -15,6 +15,35 @@ from .test_streaming_runtime import runtime_at
 from .conftest import FakeBroker
 
 
+def test_reconnect_failure_remains_inspectable_without_private_exception_text():
+    from websockets.exceptions import ConnectionClosedError
+    from websockets.frames import Close
+    runner=WebSocketRunner('wss://fixture/?token=PRIVATE',{},lambda _:None)
+    error=ConnectionClosedError(Close(1011,'PRIVATE keepalive ping timeout'),Close(1011,'PRIVATE'),True)
+    runner.record_event('ERROR',error)
+    runner.record_event('CONNECTED')
+    runner.last_error=''
+    view=runner.snapshot()
+    assert view['transport_events'][-2]['error_type']=='ConnectionClosedError'
+    assert view['transport_events'][-2]['close_received_code']==1011
+    assert view['transport_events'][-2]['keepalive_timeout'] is True
+    assert 'PRIVATE' not in json.dumps(view)
+    for _ in range(100):runner.record_event('CONNECTED')
+    assert len(runner.snapshot()['transport_events'])<=16
+
+
+def test_dhan_explicit_disconnect_code_is_preserved_as_sanitized_evidence():
+    import struct
+    from dhan_cas_bot.dhan_feed import packets
+    from dhan_cas_bot.dashboard.data import feed_health_view
+    raw=struct.pack('<BHBIH',50,10,2,0,805)
+    with pytest.raises(ContractError) as caught:list(packets(raw))
+    runner=WebSocketRunner('fixture',{},lambda _:None)
+    runner.record_event('ERROR',caught.value)
+    clean=feed_health_view({'market':runner.snapshot()})
+    assert clean['market']['transport_events'][0]['provider_disconnect_code']==805
+
+
 def test_execution_overtakes_queued_monitoring_with_shared_spacing():
     async def run():
         gate = ReadScheduler(.025)

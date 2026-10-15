@@ -6,7 +6,7 @@ import time
 METRICS = frozenset({'decision_ms', 'signal_to_decision_ms', 'market_to_decision_ms',
                      'decision_to_submit_ms', 'http_ack_ms', 'first_fill_recorded_ms',
                      'reconcile_ms', 'loop_lag_ms', 'book_age_ms'})
-REASONS = frozenset({'ACCOUNT_REFRESH_REQUIRED', 'ENTRY_NOT_PERMITTED', 'UNMANAGED_POSITION',
+REASONS = frozenset({'FUTURE_BOOK_REJECTED', 'ACCOUNT_REFRESH_REQUIRED', 'ENTRY_NOT_PERMITTED', 'UNMANAGED_POSITION',
                      'OUTSIDE_ENTRY_WINDOW', 'FEED_NOT_READY', 'INPUTS_CHANGED',
                      'NO_EXECUTABLE_CANDIDATE', 'ENTRY_SUBMITTED', 'RECONCILE_FAILED',
                      'RECONCILE_SUPERSEDED', 'ORDER_EVENT', 'DUPLICATE_ORDER_EVENT',

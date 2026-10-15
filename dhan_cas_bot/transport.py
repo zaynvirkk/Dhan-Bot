@@ -29,7 +29,7 @@ def message_received_monotonic_ns(fallback):
 class WebSocketRunner:
     """Bounded ordered decoding, observed health and stable-connection backoff."""
 
-    def __init__(self, url: str | Callable[[], Awaitable[str]], headers: dict[str, str], on_message: Callable[[bytes], Awaitable[None]], *, subscribe: Iterable[dict] = (), connect_messages: Iterable[dict] = (), binary: bool = False, on_connect: Callable[[], None] | None = None, on_disconnect: Callable[[], None] | None = None):
+    def __init__(self, url: str | Callable[[], Awaitable[str]], headers: dict[str, str], on_message: Callable[[bytes], Awaitable[None]], *, subscribe: Iterable[dict] = (), connect_messages: Iterable[dict] = (), binary: bool = False, on_connect: Callable[[], None] | None = None, on_disconnect: Callable[[], None] | None = None, on_event=None):
         if not url:
             raise ContractError("websocket endpoint must be configured")
         self.url, self.headers, self.on_message = url, headers, on_message
@@ -45,11 +45,32 @@ class WebSocketRunner:
         self.queue_delay_ms = self.processing_ms = None
         self.pending_times = deque()
         self.disconnect_notified = False
+        self.transport_events = deque(maxlen=16)
+        self.on_event = on_event
+        self.event_recording_failed = False
+
+    def record_event(self, kind, error=None):
+        event={'kind':kind,'at':datetime.fromtimestamp(self.wall_clock()/1e9,timezone.utc).isoformat(),
+               'attempt':self.attempts,'stop_requested':self.stop.is_set()}
+        if error is not None:
+            event['error_type']=type(error).__name__
+            code=getattr(error,'provider_disconnect_code',None)
+            if type(code) is int:event['provider_disconnect_code']=code
+            # Exception strings/URLs/close reasons can contain credentials.
+            event['keepalive_timeout']='keepalive ping timeout' in str(error).lower()
+            for name in ('rcvd','sent'):
+                code=getattr(getattr(error,name,None),'code',None)
+                if type(code) is int:event['close_received_code' if name=='rcvd' else 'close_sent_code']=code
+        self.transport_events.append(event)
+        if self.on_event:
+            try:self.on_event(dict(event))
+            except Exception:self.event_recording_failed=True
 
     def disconnected(self):
         self.socket = None
         if not self.disconnect_notified:
             self.disconnect_notified = True
+            self.record_event('DISCONNECTED')
             if self.on_disconnect:
                 self.on_disconnect()
 
@@ -61,7 +82,8 @@ class WebSocketRunner:
                 'pending_messages': len(self.pending_times), 'queue_high_water': self.high_water,
                 'oldest_pending_ms': round(max(0, self.clock()-self.pending_times[0])*1000, 3) if self.pending_times else 0,
                 'queue_delay_ms': self.queue_delay_ms, 'processing_ms': self.processing_ms,
-                'processed_messages': self.processed, 'last_error': self.last_error}
+                'processed_messages': self.processed, 'last_error': self.last_error,
+                'transport_events':list(self.transport_events),'event_recording_failed':self.event_recording_failed}
 
     async def consume(self, socket):
         # The library buffer and this queue are both bounded. Backpressure never
@@ -130,6 +152,7 @@ class WebSocketRunner:
                     raise ContractError("websocket endpoint factory returned an empty URL")
                 async with connect(endpoint, additional_headers=self.headers, ping_interval=10, ping_timeout=5, close_timeout=2, open_timeout=10, max_size=8 * 1024 * 1024, max_queue=16) as socket:
                     self.socket, connected_at = socket, self.clock()
+                    self.record_event('CONNECTED')
                     self.last_error = ""
                     self.last_received_at = self.last_processed_at = None
                     if self.on_connect:
@@ -142,6 +165,7 @@ class WebSocketRunner:
                 raise
             except (OSError, EOFError, ConnectionClosed, InvalidHandshake, ContractError, httpx.HTTPError) as exc:
                 self.last_error = type(exc).__name__
+                self.record_event('ERROR',exc)
                 if self.stop.is_set():
                     return
             finally:

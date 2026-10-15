@@ -4,7 +4,7 @@ All timestamps are receipt boundaries. No minute candle supplies a subminute
 fill, no quote queue is assumed, and missing event publication data stays unknown.
 """
 from collections import deque
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal as D, ROUND_CEILING
 from hashlib import sha256
@@ -63,52 +63,89 @@ def opportunity(name, at, book, target, underlying, episode):
           'anchor_future': str(underlying), 'direction': 1 if book.instrument.option_type.value=='CE' else -1})
 
 
-def entry_candidate(sample, books, budget, at):
-    """One whole lot, finite depth, capped ask and conservative fee reserve."""
-    if sample.strategy not in NAMES or sample.state != 'SIGNAL': return None
-    if not 0 <= (at-sample.evaluated_at).total_seconds() < 5: return None
+@dataclass(frozen=True)
+class EntryAssessment:
+    candidate: tuple | None
+    reason: str
+    details: dict
+
+
+def entry_assessment(sample, books, budget, at):
+    """Explain every rejection without mistaking data loss for absent demand."""
+    def reject(reason, **details):
+        return EntryAssessment(None, reason, details)
+    if sample.strategy not in NAMES or sample.state != 'SIGNAL':
+        return reject('SECONDS_SIGNAL_CHANGED')
+    if not 0 <= (at-sample.evaluated_at).total_seconds() < 5:
+        return reject('SECONDS_SIGNAL_EXPIRED')
     b=books.get(sample.details.get('security_id'))
-    if (not current(b,at) or b.instrument.option_type.value != sample.side
+    if not current(b,at):return reject('OPTIONS_FEED_UNAVAILABLE')
+    if (b.instrument.option_type.value != sample.side
             or b.instrument.security_id!=sample.details.get('security_id')
-            or b.instrument.expiry!=sample.minimum_expiry): return None
+            or b.instrument.expiry!=sample.minimum_expiry):
+        return reject('SECONDS_OPTION_IDENTITY_MISMATCH')
     i=b.instrument;bid,ask=b.top_bid,b.top_ask;q=i.lot_size
-    if (ask.price-bid.price)/midpoint(b)>D('.01') or min(bid.quantity,ask.quantity)<q*2: return None
+    spread=(ask.price-bid.price)/midpoint(b)
+    if spread>D('.01'):return reject('SECONDS_SPREAD_TOO_WIDE',spread_ratio=str(spread))
+    if min(bid.quantity,ask.quantity)<q*2:
+        return reject('SECONDS_DEPTH_TOO_THIN',bid_quantity=bid.quantity,ask_quantity=ask.quantity,required_depth=q*2)
     limit=ask.price+2*i.tick_size
-    if (i.lower_limit and limit<i.lower_limit) or (i.upper_limit and limit>i.upper_limit):return None
+    if (i.lower_limit and limit<i.lower_limit) or (i.upper_limit and limit>i.upper_limit):
+        return reject('SECONDS_ENTRY_OUTSIDE_BAND')
     try: target=D(sample.details['target_price'])
-    except (KeyError,ValueError,TypeError):return None
-    if not target.is_finite() or target<=0:return None
+    except (KeyError,ValueError,TypeError):return reject('SECONDS_TARGET_UNAVAILABLE')
+    if not target.is_finite() or target<=0:return reject('SECONDS_TARGET_UNAVAILABLE')
     fees=FeeSchedule();debit=worst_case_entry_cash(q,limit)
     exit_fees=fees.sell(q*target,3)
     net=q*target-exit_fees-debit
-    # A modelled target is not an expected return. Demand a substantial
-    # conditional margin beyond costs; never learn this threshold from winners.
     minimum=max(D(50),fees.buy(q*limit,1)+exit_fees)
-    if debit+exit_fees>budget or net<minimum:return None
-    return i,q,limit,b
+    facts={'entry_cash':str(debit),'exit_fee_reserve':str(exit_fees),'cash_budget':str(budget),
+           'net_at_target':str(net),'minimum_net_edge':str(minimum)}
+    if not budget.is_finite() or budget<=0 or debit+exit_fees>budget:
+        return reject('SECONDS_UNAFFORDABLE',**facts)
+    if net<minimum:return reject('SECONDS_NET_EDGE_TOO_SMALL',**facts)
+    return EntryAssessment((i,q,limit,b),'READY',facts)
+
+
+def entry_candidate(sample, books, budget, at):
+    return entry_assessment(sample,books,budget,at).candidate
 
 
 class SecondsTape:
     def __init__(self):
-        self.future=deque(maxlen=1200);self.options={};self.epoch=None
+        self.future=deque(maxlen=1200);self.options={};self.selected=set();self.epoch=None;self.future_usable=False
         self.last_samples={};self.last_eval_ns=0
         self.beta_cache={};self.curve_cache={};self.future_index=None
 
     def reset(self):
-        self.future.clear();self.options.clear();self.last_samples.clear();self.epoch=None
+        self.future.clear();self.options.clear();self.selected.clear();self.last_samples.clear();self.epoch=None;self.future_usable=False
         self.beta_cache.clear();self.curve_cache.clear();self.future_index=None
+
+    def invalidate_future(self):
+        # A bad individual book revokes current-input permission, not valid
+        # observations from earlier in this same uninterrupted socket epoch.
+        self.future_usable=False
+
+    def future_current(self, at):
+        return bool(self.future_usable and self.future and 0<=ns(at)-self.future[-1][0]<=1_500_000_000)
 
     def future_tick(self, price, received_ns, epoch):
         if not isinstance(price,D) or not price.is_finite() or price<=0:return
         if self.epoch and epoch!=self.epoch:return
         self.epoch=epoch
         if self.future and received_ns<=self.future[-1][0]:return
+        self.future_usable=True
         # At most ten observations/second, bounded by receipt time.
         if self.future and received_ns-self.future[-1][0]<100_000_000:return
         self.future.append((received_ns,price))
         self.future_index=None
 
     def ingest(self, books, at):
+        self.selected.clear()
+        # Retain prior fit data across brief quote gaps/nearest-strike changes.
+        # Retained history never makes an old quote eligible for an entry.
+        cutoff=ns(at)-90_000_000_000
+        self.options={k:v for k,v in self.options.items() if v and v[-1][0]>=cutoff}
         if not self.future:return
         anchor=self.future[-1][1]
         eligible=[b for b in books.values() if current(b,at) and b.epoch==self.epoch]
@@ -116,8 +153,12 @@ class SecondsTape:
         expiry=min(b.instrument.expiry for b in eligible)
         eligible=sorted((b for b in eligible if b.instrument.expiry==expiry),
                         key=lambda b:(abs(b.instrument.strike-anchor),b.instrument.security_id))[:24]
-        keep={b.instrument.security_id for b in eligible}
+        self.selected={b.instrument.security_id for b in eligible}
+        recent=sorted((k for k in self.options if k not in self.selected),
+                      key=lambda k:self.options[k][-1][0],reverse=True)[:96-len(self.selected)]
+        keep=self.selected|set(recent)
         self.options={k:v for k,v in self.options.items() if k in keep}
+        self.beta_cache={k:v for k,v in self.beta_cache.items() if k in keep}
         for b in eligible:
             rows=self.options.setdefault(b.instrument.security_id,deque(maxlen=600))
             if rows and b.received_ns-rows[-1][0]<200_000_000:continue
@@ -152,13 +193,17 @@ class SecondsTape:
         stamp=ns(at)
         result={n:Evaluation(n,'UNKNOWN','FUTURES_FEED_UNAVAILABLE',at) for n in NAMES}
         result[NAMES[4]]=Evaluation(NAMES[4],'UNKNOWN','EVENT_FEED_UNAVAILABLE',at)
-        if not self.future or not 0<=stamp-self.future[-1][0]<=1_500_000_000:return result
+        # Calendar state does not depend on receiving after-hours quotes.
+        if calendar is not None and calendar.fresh(at) and (not calendar.is_open(at) or at+timedelta(seconds=65)>=calendar.closes):
+            return {n:Evaluation(n,'NOT_APPLICABLE','EXCHANGE_CLOSED',at) for n in NAMES}
+        if not self.future_current(at):return result
         if calendar is None or not calendar.fresh(at):
             for n in NAMES[:4]:result[n]=Evaluation(n,'UNKNOWN','CALENDAR_UNAVAILABLE',at)
             return result
-        if not calendar.is_open(at) or at+timedelta(seconds=65)>=calendar.closes:
-            return {n:Evaluation(n,'NOT_APPLICABLE','EXCHANGE_CLOSED',at) for n in NAMES}
         self.ingest(books,at)
+        if not self.selected:
+            for n in NAMES[:4]:result[n]=Evaluation(n,'UNKNOWN','OPTIONS_FEED_UNAVAILABLE',at)
+            return result
         warm=D(stamp-self.future[0][0])/D(1e9)
         if warm<60:
             for n in NAMES[:4]:result[n]=Evaluation(n,'WAITING','SECONDS_WARMUP',at,details={'warmup_seconds':str(warm)})
@@ -178,7 +223,7 @@ class SecondsTape:
                     and published<=received<=at and 2<=(at-received).total_seconds()<=60)
             except (KeyError,ValueError,TypeError,AttributeError):pass
         if event_ready:result[NAMES[4]]=Evaluation(NAMES[4],'NO_SIGNAL','SECONDS_RULE_NOT_MET',at)
-        eligible=[books[k] for k in self.options if k in books and current(books[k],at) and books[k].epoch==self.epoch]
+        eligible=[books[k] for k in self.selected if k in books and current(books[k],at) and books[k].epoch==self.epoch]
         eligible.sort(key=lambda b:(abs(b.instrument.strike-future),b.instrument.security_id))
         fitted_count=0;flow_count=0;curve_count=0
         previous=[p for t,p in self.future if stamp-65_000_000_000<=t<stamp-5_000_000_000]
@@ -195,8 +240,11 @@ class SecondsTape:
             sample=opportunity(name,at,b,target,future,episode)
             if extra:sample=replace(sample,details={**sample.details,**extra})
             sample=replace(sample,exit_at=min(sample.exit_at,calendar.closes-timedelta(seconds=30)))
-            if entry_candidate(sample,books,budget if budget is not None else D('1000000000'),at) is None:
-                result[name]=replace(result[name],reason='SECONDS_EDGE_BELOW_COSTS')
+            assessment=entry_assessment(sample,books,budget if budget is not None else D('1000000000'),at)
+            if assessment.candidate is None:
+                state='UNKNOWN' if assessment.reason=='OPTIONS_FEED_UNAVAILABLE' else 'NO_SIGNAL'
+                result[name]=replace(result[name],state=state,reason=assessment.reason,
+                                     details={**assessment.details,'raw_setup_detected':True})
                 return
             result[name]=sample
         for b in eligible:

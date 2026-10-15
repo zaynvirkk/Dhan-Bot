@@ -24,6 +24,17 @@ NOW = datetime(2026, 9, 29, 5, 0, tzinfo=timezone.utc)
 SECRET = 'synthetic-dashboard-password-not-a-broker-credential'
 
 
+def test_order_purpose_requires_private_ledger_match_and_never_exports_ids():
+    order={'orderId':'PRIVATE_ORDER','securityId':'100','transactionType':'BUY',
+           'orderStatus':'CANCELLED','quantity':65,'filledQty':0,'price':'.05'}
+    funds=SimpleNamespace(spendable_cash=Decimal('7805.94'))
+    unknown=account_view(funds,[],[order],NOW)
+    assert unknown['orders'][0]['purpose']=='UNKNOWN'
+    matched=account_view(funds,[],[order],NOW,purposes={'PRIVATE_ORDER':'ROUTE_CHECK'})
+    assert matched['orders'][0]['purpose']=='ROUTE_CHECK'
+    assert 'PRIVATE_ORDER' not in json.dumps(matched)
+
+
 def write(path, value):
     path.write_text(json.dumps(value))
     return path

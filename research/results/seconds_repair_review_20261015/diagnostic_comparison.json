@@ -1,0 +1,535 @@
+{
+  "writes_to_broker": false,
+  "kind": "SAMPLED_DIAGNOSTIC_COMPARISON_NOT_BACKTEST",
+  "source_before": "9f829d4",
+  "metadata_observed_at": "2026-10-15T12:27:23.886156+00:00",
+  "records": 108324,
+  "evaluated_seconds": 5422,
+  "pullback_independent": {
+    "checks": 58,
+    "necessary_conditions_met": 0,
+    "exact_matches_recorded": 58,
+    "rows": [
+      {
+        "at": "2026-10-15T10:00:00+05:30",
+        "trend": "0.004371322891094940561876526",
+        "pullback": "0.002755933155455694424940317",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T10:05:00+05:30",
+        "trend": "0.004442530528665527105588097",
+        "pullback": "0.000880100532876790304006866",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T10:10:00+05:30",
+        "trend": "0.005155703565717097516826881",
+        "pullback": "0.001249452954048140043763676",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T10:15:00+05:30",
+        "trend": "0.006789891436471982081192946",
+        "pullback": "0.001885521296328701921394323",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T10:20:00+05:30",
+        "trend": "0.004509110377755933155455694",
+        "pullback": "0.000498283326522004235408275",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T10:25:00+05:30",
+        "trend": "0.002885503737143307514131963",
+        "pullback": "0.000117896207671986551099273",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T10:30:00+05:30",
+        "trend": "0.002551422319474835886214442",
+        "pullback": "0.000801661864704815868973065",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T10:35:00+05:30",
+        "trend": "0.002279249641269730164840934",
+        "pullback": "0.000275058722854323661162582",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T10:40:00+05:30",
+        "trend": "0.001532002683736513022022812",
+        "pullback": "0.000231357193680892951463007",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T10:45:00+05:30",
+        "trend": "0.001154946182564460843176211",
+        "pullback": "0.000761659501102114750878418",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T10:50:00+05:30",
+        "trend": "0.002411538688376339834730963",
+        "pullback": "0.001376911528524544375392780",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T10:55:00+05:30",
+        "trend": "0.001246496275792212781935191",
+        "pullback": "0.000209351468404283854422223",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:00:00+05:30",
+        "trend": "0.001169881658612817188529921",
+        "pullback": "-0.0004380010590473368010233099",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:05:00+05:30",
+        "trend": "0.001418563540734597673555793",
+        "pullback": "0.000446959043289618558611593",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:10:00+05:30",
+        "trend": "0.000571712869213043781858809",
+        "pullback": "-0.0003662508556753622177361337",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:15:00+05:30",
+        "trend": "0.000242062635342453206675695",
+        "pullback": "-0.0004140696508739048947391361",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:20:00+05:30",
+        "trend": "-0.0021071991248695258039280632",
+        "pullback": "-0.0013041562893918444433782446",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:25:00+05:30",
+        "trend": "-0.0007347570614078119719614961",
+        "pullback": "-0.0007674362831665467547474219",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:30:00+05:30",
+        "trend": "0.000865485652994754764531221",
+        "pullback": "0.002539656196499074106425352",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:35:00+05:30",
+        "trend": "0.000069738046462973455956065",
+        "pullback": "0.001252405535021535265907078",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:40:00+05:30",
+        "trend": "0.001533146942211482681764057",
+        "pullback": "0.000300588761901027882874935",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:45:00+05:30",
+        "trend": "0.001347373928968539472823599",
+        "pullback": "0.000862948144661488977798698",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:50:00+05:30",
+        "trend": "0.003286485447748156947695748",
+        "pullback": "0.000444215078488884824175752",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T11:55:00+05:30",
+        "trend": "0.002485174049459109177470664",
+        "pullback": "0.000367960843740746546829005",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:00:00+05:30",
+        "trend": "0.000821173646642663129303266",
+        "pullback": "0.000076179531212930495972279",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:05:00+05:30",
+        "trend": "0.000344307593072008228515642",
+        "pullback": "-0.0008858282711983928855148578",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:10:00+05:30",
+        "trend": "-0.0002743681367137229796379647",
+        "pullback": "-0.0007943831669118735254942587",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:15:00+05:30",
+        "trend": "0.000058786643674557140617652",
+        "pullback": "0.000577279163489815924191265",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:20:00+05:30",
+        "trend": "-0.0001501825043912058349167793",
+        "pullback": "0.000568489973013062200644289",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:25:00+05:30",
+        "trend": "-0.0002872956555238030980048187",
+        "pullback": "0.000021771551114159128267093",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:30:00+05:30",
+        "trend": "-0.0007160330463397435339386606",
+        "pullback": "-0.0004897991170554583213604660",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:35:00+05:30",
+        "trend": "0.000969393312275351268924954",
+        "pullback": "0.000370108311108692102541773",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:40:00+05:30",
+        "trend": "0.001803485431627645602043950",
+        "pullback": "0.001724937765029500356095107",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:45:00+05:30",
+        "trend": "0.001378139185526272819307012",
+        "pullback": "0.000985864916919661802631149",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:50:00+05:30",
+        "trend": "0.001606541103941903294062329",
+        "pullback": "0.000371788432813916628074593",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T12:55:00+05:30",
+        "trend": "0.001957219833451260001088554",
+        "pullback": "0.000600067833755120144016280",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:00:00+05:30",
+        "trend": "0.002552559419967896991595284",
+        "pullback": "0.000454239203668687922453326",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:05:00+05:30",
+        "trend": "0.001725807680170622095996692",
+        "pullback": "0.000139062717285495758587123",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:10:00+05:30",
+        "trend": "0.000767493080604167074329422",
+        "pullback": "-0.0000586549762230105644129397",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:15:00+05:30",
+        "trend": "0.000580500404393540139320097",
+        "pullback": "-0.0001585963570634037819799778",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:20:00+05:30",
+        "trend": "-0.0004259850905218317358892439",
+        "pullback": "-0.0008212178356347709714702841",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:25:00+05:30",
+        "trend": "-0.0001499269920734251147267418",
+        "pullback": "-0.0001303738470062905381180535",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:30:00+05:30",
+        "trend": "0.000514860346846426065402471",
+        "pullback": "0.001395913148980026700644033",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:35:00+05:30",
+        "trend": "0.000784291573971078976640712",
+        "pullback": "0.001073551303365170431702361",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:40:00+05:30",
+        "trend": "0.001138407793313809494842404",
+        "pullback": "0.000564535040255690947463501",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:45:00+05:30",
+        "trend": "0.001388481470616994230957270",
+        "pullback": "0.000445024302668626220831913",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:50:00+05:30",
+        "trend": "0.001863391851520066795096475",
+        "pullback": "-0.0000976528592757195930696851",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T13:55:00+05:30",
+        "trend": "0.001590768328063369951429410",
+        "pullback": "0.000071606191982710359463084",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T14:00:00+05:30",
+        "trend": "0.000901084775792737473835972",
+        "pullback": "0.000434055094613159248303387",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T14:05:00+05:30",
+        "trend": "-0.0000130251015415207674389828",
+        "pullback": "-0.0005294139344351218411454435",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T14:10:00+05:30",
+        "trend": "-0.0004318426443526266449081629",
+        "pullback": "-0.0007679441873783817203251398",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T14:15:00+05:30",
+        "trend": "-0.0005641699974395361654667205",
+        "pullback": "-0.0001063730481088391661221380",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T14:20:00+05:30",
+        "trend": "0.000073789366084237072211576",
+        "pullback": "0.000408148201217063200012158",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T14:25:00+05:30",
+        "trend": "-0.0012714613343400877004558601",
+        "pullback": "-0.0006361350777474304919299861",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T14:30:00+05:30",
+        "trend": "-0.0019892791520507797670569298",
+        "pullback": "-0.0016297566215644361497813609",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T14:35:00+05:30",
+        "trend": "-0.0015847413289684202299828718",
+        "pullback": "-0.0008429266936200442753763298",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T14:40:00+05:30",
+        "trend": "-0.0019408749568513537277173878",
+        "pullback": "-0.0007194807566068331108956775",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      },
+      {
+        "at": "2026-10-15T14:45:00+05:30",
+        "trend": "-0.0018801808099975249351923820",
+        "pullback": "-0.0004022499907591218339120660",
+        "necessary_conditions_met": false,
+        "matches_recorded": true
+      }
+    ]
+  },
+  "comparison": {
+    "before": {
+      "SECONDS_FUTURES_CATCHUP": {
+        "reasons": {
+          "FUTURES_FEED_UNAVAILABLE": 717,
+          "SECONDS_WARMUP": 59,
+          "SECONDS_RULE_NOT_MET": 4557,
+          "SECONDS_EDGE_BELOW_COSTS": 28,
+          "EXCHANGE_CLOSED": 61
+        },
+        "signal_episodes": 0,
+        "first_episodes": []
+      },
+      "SECONDS_FAILED_BREAKOUT": {
+        "reasons": {
+          "FUTURES_FEED_UNAVAILABLE": 717,
+          "SECONDS_WARMUP": 59,
+          "SECONDS_RULE_NOT_MET": 4582,
+          "SECONDS_EDGE_BELOW_COSTS": 3,
+          "EXCHANGE_CLOSED": 61
+        },
+        "signal_episodes": 0,
+        "first_episodes": []
+      },
+      "SECONDS_FLOW_CONTINUATION": {
+        "reasons": {
+          "FUTURES_FEED_UNAVAILABLE": 717,
+          "SECONDS_WARMUP": 59,
+          "SECONDS_RULE_NOT_MET": 4524,
+          "SECONDS_EDGE_BELOW_COSTS": 61,
+          "EXCHANGE_CLOSED": 61
+        },
+        "signal_episodes": 0,
+        "first_episodes": []
+      },
+      "SECONDS_STRIKE_CATCHUP": {
+        "reasons": {
+          "FUTURES_FEED_UNAVAILABLE": 717,
+          "SECONDS_WARMUP": 59,
+          "SECONDS_RULE_NOT_MET": 4567,
+          "SECONDS_EDGE_BELOW_COSTS": 18,
+          "EXCHANGE_CLOSED": 61
+        },
+        "signal_episodes": 0,
+        "first_episodes": []
+      }
+    },
+    "after": {
+      "SECONDS_FUTURES_CATCHUP": {
+        "reasons": {
+          "FUTURES_FEED_UNAVAILABLE": 713,
+          "SECONDS_WARMUP": 59,
+          "SECONDS_RULE_NOT_MET": 4549,
+          "SECONDS_DEPTH_TOO_THIN": 8,
+          "SECONDS_UNAFFORDABLE": 12,
+          "SECONDS_NET_EDGE_TOO_SMALL": 15,
+          "OPTIONS_FEED_UNAVAILABLE": 1,
+          "EXCHANGE_CLOSED": 65
+        },
+        "signal_episodes": 0,
+        "first_episodes": []
+      },
+      "SECONDS_FAILED_BREAKOUT": {
+        "reasons": {
+          "FUTURES_FEED_UNAVAILABLE": 713,
+          "SECONDS_WARMUP": 59,
+          "SECONDS_RULE_NOT_MET": 4581,
+          "SECONDS_UNAFFORDABLE": 2,
+          "SECONDS_NET_EDGE_TOO_SMALL": 1,
+          "OPTIONS_FEED_UNAVAILABLE": 1,
+          "EXCHANGE_CLOSED": 65
+        },
+        "signal_episodes": 0,
+        "first_episodes": []
+      },
+      "SECONDS_FLOW_CONTINUATION": {
+        "reasons": {
+          "FUTURES_FEED_UNAVAILABLE": 713,
+          "SECONDS_WARMUP": 59,
+          "SECONDS_RULE_NOT_MET": 4495,
+          "SECONDS_DEPTH_TOO_THIN": 41,
+          "SECONDS_UNAFFORDABLE": 11,
+          "SECONDS_NET_EDGE_TOO_SMALL": 37,
+          "OPTIONS_FEED_UNAVAILABLE": 1,
+          "EXCHANGE_CLOSED": 65
+        },
+        "signal_episodes": 0,
+        "first_episodes": []
+      },
+      "SECONDS_STRIKE_CATCHUP": {
+        "reasons": {
+          "FUTURES_FEED_UNAVAILABLE": 713,
+          "SECONDS_WARMUP": 59,
+          "SECONDS_RULE_NOT_MET": 3656,
+          "SECONDS_NET_EDGE_TOO_SMALL": 352,
+          "SECONDS_UNAFFORDABLE": 414,
+          "SECONDS_DEPTH_TOO_THIN": 162,
+          "OPTIONS_FEED_UNAVAILABLE": 1,
+          "EXCHANGE_CLOSED": 65
+        },
+        "signal_episodes": 0,
+        "first_episodes": []
+      }
+    }
+  },
+  "limits": [
+    "Half-second sampled quotes are not the complete funded feed.",
+    "Socket epochs and invalid packets are absent; continuous-epoch scenario only.",
+    "Current same-day contract metadata is used for identity/lot size; historical price bands are omitted equally in both scenarios.",
+    "Official event receipts absent; event strategy excluded.",
+    "No fills, bankroll returns or missed profits credited."
+  ],
+  "archive_sha256": "1b317e848ac90a86727e87d2ca06ead2caa8fc218e277d0ee80e83dda3695c88",
+  "after_kernel_sha256": "a1f5fa455e03f7fdebda66cc1ed401a7d6c5e1d1ccd34cf119f8e6366c70a6a4"
+}

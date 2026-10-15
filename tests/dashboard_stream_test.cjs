@@ -585,3 +585,15 @@ setImmediate(()=>{
  assert.match(explanation,/0\.5.*4\.6/,'The missing futures impulse must be explained with observed and required values');
  console.log('Funded permission, rejected/exhausted route and concrete seconds reasons remain distinct');
 });
+
+setImmediate(()=>{
+ assert.match(vm.runInContext("secondsExplanation({reason:'SECONDS_UNAFFORDABLE',details:{entry_cash:'8000',exit_fee_reserve:'80',cash_budget:'7415'}})",browser),/cash|afford/i);
+ assert.match(vm.runInContext("secondsExplanation({reason:'OPTIONS_FEED_UNAVAILABLE'})",browser),/option quote/i);
+ browser.blocked.release={upgrade_required:true};
+ browser.blocked.runtime.broker_route_verified=true;
+ vm.runInContext('renderLive(blocked)',browser);
+ assert.match(ids['live-funding'].textContent,/update pending/i);
+ assert.match(ids['live-decision-reason'].textContent,/running trader|trader software/i);
+ delete browser.blocked.release;
+ console.log('Exact execution blockers and funded software update remain visible');
+});

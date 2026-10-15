@@ -57,3 +57,24 @@ def test_recorded_checks_are_bounded_and_marked_partial(tmp_path):
     out = ledger_view(path, strategies=[NAME], now=NOW)['decision_history']
     assert out['strategies'][0]['truncated'] is True
     assert len(out['strategies'][0]['records']) <= 256
+
+
+def test_after_close_missing_quotes_cannot_hide_an_in_session_seconds_signal(tmp_path):
+    from datetime import timedelta
+    path=tmp_path/'ledger.sqlite3';db=sqlite3.connect(path);db.executescript(SCHEMA)
+    calendar={'opens':'2026-10-15T09:15:00+05:30','closes':'2026-10-15T15:40:00+05:30',
+              'checked_at':'2026-10-15T10:00:00+00:00'}
+    db.execute('INSERT INTO observations VALUES(?,?,?,?)',('market-calendar:2026-10-15T10:00:00+00:00',
+        'MARKET_CALENDAR',calendar['checked_at'],json.dumps(calendar)))
+    name='SECONDS_FUTURES_CATCHUP'
+    for i in range(301):
+        at=datetime(2026,10,15,10,11,tzinfo=timezone.utc)+timedelta(seconds=i)
+        if i==0:at=at.replace(hour=9,minute=30)
+        state='SIGNAL' if i==0 else 'UNKNOWN'
+        raw={'strategy':name,'state':state,'reason':'SECONDS_SETUP_DETECTED' if i==0 else 'FUTURES_FEED_UNAVAILABLE','evaluated_at':at.isoformat()}
+        db.execute('INSERT INTO observations VALUES(?,?,?,?)',(f'strategy-evaluation:{name}:{at.isoformat()}:{state}',
+            'STRATEGY_EVALUATION',at.isoformat(),json.dumps(raw)))
+    db.commit();db.close()
+    out=ledger_view(path,strategies=[name],now=datetime(2026,10,15,12,tzinfo=timezone.utc))
+    rows=out['decision_history']['strategies'][0]['records']
+    assert len(rows)==1 and rows[0]['state']=='SIGNAL'

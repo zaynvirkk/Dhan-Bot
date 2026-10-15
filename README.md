@@ -1,5 +1,13 @@
 # SableStone Dhan CAS bot
 
+**15 October signal audit and repairs:** brief quote gaps could erase fitted
+history, missing books could look like no setup, and after-close warnings could
+hide earlier decisions. History retention, exact rejection reasons, durable
+connection evidence, order-purpose labels and funded-runtime update status are
+repaired. Independent calculation corroborates all58pullback no-signals; the
+sampled afternoon comparison credits no entries or profit.
+[Repairs and evidence limits](docs/SIGNAL-AND-OBSERVABILITY-REPAIR-2026-10-15.md).
+
 **15 October route repair:** the operator enabled all seven selected strategies,
 but Dhan rejected the route probe for low strike OI. Liquidity-aware probe
 selection and explicit funded-but-blocked dashboard states are repaired.

@@ -23,8 +23,7 @@ class SecondsEngine:
 
     def ready(self):
         now=self.parent.engine.now();data=self.parent.inputs
-        return bool(data and data.calendar and data.calendar.is_open(now) and self.tape.future
-                    and 0<=int(now.timestamp()*1e9)-self.tape.future[-1][0]<=1_500_000_000)
+        return bool(data and data.calendar and data.calendar.is_open(now) and self.tape.future_current(now))
 
     def refresh(self, *, budget=None, force=False):
         parent=self.parent;engine=parent.engine;now=engine.now()

@@ -19,7 +19,7 @@ from zoneinfo import ZoneInfo
 import httpx
 
 from .account_refresh import AccountRefresh
-from .dashboard.data import account_view
+from .dashboard.data import account_view, order_purposes
 from .auth import session_token
 from .broker import DhanBroker
 from .commissioning import normalize_whitelist
@@ -49,7 +49,9 @@ IST = ZoneInfo("Asia/Kolkata")
 
 
 def write_status(state_dir: Path, runtime, **extra):
-    value = {**runtime.status.as_dict(), **extra, "observed_at": datetime.now(timezone.utc).isoformat(), "writes": runtime.broker.allow_writes}
+    source=Path(__file__).resolve().parents[1].name
+    value = {**runtime.status.as_dict(), **extra, "observed_at": datetime.now(timezone.utc).isoformat(), "writes": runtime.broker.allow_writes,
+             "runtime_revision":2,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
     path = state_dir / "status.json.tmp"
     with path.open("w") as stream:
         json.dump(value, stream, sort_keys=True)
@@ -58,11 +60,11 @@ def write_status(state_dir: Path, runtime, **extra):
     path.replace(state_dir / "status.json")
 
 
-def write_account_observation(state_dir, funds, snapshot, observed_at):
+def write_account_observation(state_dir, funds, snapshot, observed_at, *, purposes=None):
     # Shared read model: no token, account ID or raw provider payload escapes.
     value = {"schema": 1, "account_read_ok": funds is not None,
              "observed_at": observed_at.isoformat(),
-             "account": account_view(funds, snapshot["positions"], snapshot["orders"], observed_at) if funds else None}
+             "account": account_view(funds, snapshot["positions"], snapshot["orders"], observed_at,purposes=purposes) if funds else None}
     path = state_dir / "account-observation.json.tmp"
     path.write_text(json.dumps(value, allow_nan=False))
     path.chmod(0o600)
@@ -191,7 +193,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         order_connected_at = None
         uncertainty = await clock_uncertainty()
         account_refresh = AccountRefresh(runtime, wake, busy=lambda: bool(engine.active or ledger.pending_intents()),
-            publish=lambda funds, snapshot, stamp: write_account_observation(state_dir, funds, snapshot, stamp))
+            publish=lambda funds, snapshot, stamp: write_account_observation(state_dir, funds, snapshot, stamp, purposes=order_purposes(ledger.db)))
         account_task = asyncio.create_task(account_refresh.run())
         if has_directional or (active and json.loads(active["payload"]).get("strategy", CAS) != CAS):
             input_worker = StrategyInputWorker(engine.directional, upstox_token, future_id, wake=wake, stop=stop,indexes=feature_indexes)
@@ -351,7 +353,9 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         last_packets[future_id]=packet
                         engine.directional.seconds.tape.future_tick(mid,received_ns,epoch)
                     except ContractError:
-                        engine.directional.seconds.reset()
+                        last_packets.pop(future_id,None)
+                        engine.directional.seconds.tape.invalidate_future()
+                        runtime.telemetry.reason("FUTURE_BOOK_REJECTED")
                     continue
                 inst = instrument_by_id.get(str(int.from_bytes(packet[4:8], "little")))
                 if packet[0] != 8 or inst is None:
@@ -435,19 +439,27 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             echoed.clear()
             account_refresh.invalidate()
             wake.set()
+        def transport_event(role):
+            def record(event):
+                nonlocal recorder_failed
+                try:
+                    records.put_nowait(("transport:"+today.isoformat()+":"+role+":"+event['at']+":"+event['kind'],
+                                        'TRANSPORT_EVENT',dict(event,role=role)))
+                except asyncio.QueueFull:recorder_failed=True
+            return record
         if upstox:
-            runners.append(WebSocketRunner(upstox_endpoint, {}, record_upstox, subscribe=upstox.subscription_messages([NIFTY_KEY]), binary=True, on_connect=signal_connect, on_disconnect=signal_disconnect))
+            runners.append(WebSocketRunner(upstox_endpoint, {}, record_upstox, subscribe=upstox.subscription_messages([NIFTY_KEY]), binary=True, on_connect=signal_connect, on_disconnect=signal_disconnect,on_event=transport_event("signal")))
             feed_runners["signal"] = runners[-1]
         else:
             engine.signal_reconnect(None)
         if instrument_by_id:
             market_url = config.get("dhan_market_ws_url") or "wss://api-feed.dhan.co?" + urlencode({"version": "2", "token": token, "clientId": broker.account_id, "authType": "2"})
             subscribed=[*instrument_by_id,*([future_id] if has_seconds and future_id else [])]
-            runners.append(WebSocketRunner(market_url, {}, record_dhan, subscribe=market.subscription_messages(subscribed), on_connect=market_connect, on_disconnect=market_disconnect))
+            runners.append(WebSocketRunner(market_url, {}, record_dhan, subscribe=market.subscription_messages(subscribed), on_connect=market_connect, on_disconnect=market_disconnect,on_event=transport_event("market")))
             feed_runners["market"] = runners[-1]
         else:
             engine.market_reconnect(None)
-        runners.append(WebSocketRunner(config.get("dhan_order_ws_url") or "wss://api-order-update.dhan.co", {}, record_order, connect_messages=[{"LoginReq":{"MsgCode":42,"ClientId":broker.account_id,"Token":token},"UserType":"SELF"}], on_connect=order_connect, on_disconnect=order_disconnect))
+        runners.append(WebSocketRunner(config.get("dhan_order_ws_url") or "wss://api-order-update.dhan.co", {}, record_order, connect_messages=[{"LoginReq":{"MsgCode":42,"ClientId":broker.account_id,"Token":token},"UserType":"SELF"}], on_connect=order_connect, on_disconnect=order_disconnect,on_event=transport_event("order")))
         feed_runners["order"] = runners[-1]
         for runner in runners:
             # Receipt and strategy timestamps share the same clock, including

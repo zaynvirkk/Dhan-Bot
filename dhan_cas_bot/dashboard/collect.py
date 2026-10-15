@@ -5,14 +5,16 @@ import argparse
 import asyncio
 import json
 import os
+import sqlite3
 from pathlib import Path
 import tempfile
 import time
 
 from dhan_cas_bot.broker import DhanBroker
 from dhan_cas_bot.config import load_config
-from .data import account_view, daily_monitor_view, freshness, local_snapshot, read_json, shared_account, utcnow, seconds_view
+from .data import account_view, daily_monitor_view, freshness, local_snapshot, read_json, shared_account, utcnow, seconds_view, order_purposes
 from .history import advance_history
+from .session_audit import append_session_audit
 
 
 async def read_account(config):
@@ -27,7 +29,12 @@ async def read_account(config):
         funds = await broker.funds()
         positions = await broker.positions()
         orders = await broker.orders()
-        return account_view(funds, positions, orders, utcnow())
+        purposes={}
+        try:
+            with sqlite3.connect('file:'+str(Path(config['state_dir'])/'ledger.sqlite3')+'?mode=ro',uri=True,timeout=.2) as db:
+                purposes=order_purposes(db)
+        except sqlite3.Error:pass
+        return account_view(funds, positions, orders, utcnow(),purposes=purposes)
     finally:
         await broker.close()
 
@@ -53,6 +60,12 @@ def projection(config, previous, *, checked=None, monitor=None):
         report['independent_check'] = {'observed_at': checked['observed_at'], 'ok': checked['ok']}
     report.update(local_snapshot(config['state_dir'], now))
     report['daily_monitor'] = daily_monitor_view(monitor, now)
+    runtime=report.get('runtime') or {}
+    candidate=Path(__file__).resolve().parents[2].name
+    report['release']={'dashboard_source':candidate if len(candidate)==40 and all(c in '0123456789abcdef' for c in candidate) else None,
+        'funded_source':runtime.get('source_commit'),'required_runtime_revision':2,
+        'funded_runtime_revision':runtime.get('runtime_revision'),
+        'upgrade_required':runtime.get('fresh') is True and (runtime.get('runtime_revision') or 0)<2}
     return report
 
 
@@ -73,6 +86,7 @@ def atomic_json(output, report):
 
 def write_report(output, report, *, embed_history=True,history_cache=None,update_history=True):
     """History failures cannot stop current monitoring or modify the trader."""
+    if update_history:report={**report,'session_audit_status':append_session_audit(output,report,utcnow())}
     history_path = Path(output).with_name('history.json')
     try:
         previous = history_cache if history_cache is not None else read_json(history_path)
