@@ -597,3 +597,11 @@ setImmediate(()=>{
  delete browser.blocked.release;
  console.log('Exact execution blockers and funded software update remain visible');
 });
+
+setImmediate(()=>{
+ vm.runInContext("renderFeeds({fresh:true,monitoring_mode:'IDLE',feed_health:{market:{connected:true,reconnects:1,transport_events:[{kind:'ERROR',at:'2026-10-15T10:00:00Z',error_type:'DhanFeedDisconnect',provider_disconnect_code:805}]}}},'2026-10-15T10:01:00Z')",browser);
+ const read=node=>[node.textContent,...node.children.map(read)].join(' ');
+ assert.match(read(ids['live-connections']),/most recent connection error.*Dhan code 805/);
+ assert.equal(ids['live-connections'].children[1].children[1].textContent,'Connected');
+ console.log('Historical disconnect cause persists without falsely demoting a recovered connection');
+});
