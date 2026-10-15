@@ -20,11 +20,19 @@ Its existing rule runs on completed five-minute decisions from 10:00 to 14:45
 IST, requiring trend, an opposing pullback, and resumed movement. No thresholds,
 entry times, exits, capital allocation or route-probe limits are loosened here.
 
+The operator explicitly selected “Allow real-money testing today” after being
+told that the non-expiry candidate had only slightly positive backtests and one
+modeled fill per period. Both selected names are therefore funded. This is an
+experimental permission, not a claim of established profitability.
+
 The roster-edit command requires both scanning and funded subsets explicitly.
-Use `ops/activate-profit-exit.py --apply --retain 0.50 --scan-only
-CAS_LAG_V1 TREND_PULLBACK_FAST --funded-only CAS_LAG_V1` for observation-only
-testing of the second engine. Adding its name to the funded subset is a separate
-explicit choice to permit real-money experiments. The tool verifies the release,
+The authorized command is:
+
+```bash
+sudo /opt/sablestone-dhan-dashboard/current/.venv/bin/python /opt/sablestone-dhan-dashboard/current/ops/activate-profit-exit.py --apply --retain 0.50 --scan-only CAS_LAG_V1 TREND_PULLBACK_FAST --funded-only CAS_LAG_V1 TREND_PULLBACK_FAST
+```
+
+The tool verifies the release,
 reconciles existing obligations, changes the two lists atomically, and preserves
 the existing mandate and cash caps. It does not itself submit broker orders.
 
