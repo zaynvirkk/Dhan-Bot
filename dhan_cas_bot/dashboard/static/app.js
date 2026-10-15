@@ -434,6 +434,7 @@ function timeOnly(value){const d=new Date(value);return !value||Number.isNaN(d.g
 function strategyLabel(name){return ({TREND_PULLBACK_FAST:'Trend pullback',CAS_LAG_V1:'Expiry auction',ORDINARY_PUBLISHED_PCR_TRAIL:'PCR trend',SECONDS_FUTURES_CATCHUP:'Futures catch-up',SECONDS_FAILED_BREAKOUT:'Failed breakout',SECONDS_FLOW_CONTINUATION:'Flow continuation',SECONDS_STRIKE_CATCHUP:'Strike catch-up',SECONDS_EVENT_IMPULSE:'Event impulse'})[name]||strategyNames[name]||name.replaceAll('_',' ').toLowerCase();}
 function renderSeconds(d){
  const lab=d.seconds_experiments,live=lab?.fresh===true&&lab.status==='AVAILABLE';
+ const marketClosed=live&&d.runtime?.fresh===true&&d.runtime.state==='WAITING_EXCHANGE_SESSION';
  $('seconds-summary').textContent=live?`${lab.evaluations?.length??0} experiments · simulated`:lab?'Updates unavailable':'Not started';
  const failure={SESSION_TOKEN_UNAVAILABLE:'The cached market-data session is unavailable.',STARTING_CASH_UNAVAILABLE:'A fresh broker-cash snapshot is needed to start the model.',PAPER_HISTORY_UNAVAILABLE:'The saved simulation history needs repair; balances have not been reset.',CONTRACT_METADATA_UNAVAILABLE:'The official contract catalogue could not be loaded.',MARKET_ANCHOR_UNAVAILABLE:'A current index price or futures contract is unavailable.',OBSERVER_FAILED:'The experiment worker needs inspection.'};
  $('seconds-context').textContent=live?`Each experiment starts independently with ${cash(lab.initial_bankroll)} in simulated money. ${lab.delay_seconds??'Unknown'}s order delay; fees and observed depth are included. Displayed-depth scenarios do not establish real fills.`:failure[lab?.reason]||'No current experiment observations are available. Your real-money strategies are shown separately above.';
@@ -443,9 +444,9 @@ function renderSeconds(d){
  for(const row of lab?.evaluations||[]){
   const item=el('details',undefined,'live-strategy'),summary=el('summary'),head=el('span',undefined,'live-strategy-head');
   item.dataset.strategy=row.strategy;item.open=expanded.has(row.strategy);
-  const status=!live?'Unknown':row.state==='SIGNAL'?'Setup detected':row.state==='UNKNOWN'?'Data needed':row.state==='WAITING'?(row.reason==='SECONDS_WARMUP'?'Warming up':'Waiting'):row.state==='NOT_APPLICABLE'?'Closed':'No setup';
+  const status=!live?'Unknown':marketClosed?'Closed':row.state==='SIGNAL'?'Setup detected':row.state==='UNKNOWN'?'Data needed':row.state==='WAITING'?(row.reason==='SECONDS_WARMUP'?'Warming up':'Waiting'):row.state==='NOT_APPLICABLE'?'Closed':'No setup';
   head.append(el('strong',strategyLabel(row.strategy)),badge(status,status==='Data needed'?'warn':''));
-  summary.append(head,el('span',live?secondsExplanation(row):'Waiting for a current update.','live-strategy-reason'));
+  summary.append(head,el('span',marketClosed?'The exchange session is closed. Entry checks resume in the next verified session.':live?secondsExplanation(row):'Waiting for a current update.','live-strategy-reason'));
   const result=lab.results?.find(r=>r.strategy===row.strategy);
   if(result)summary.append(el('span',`${result.signals??'Unknown'} signals · ${result.closed??'Unknown'} simulated closes · net ${cash(result.net)}${result.open_position?' · model position open':''}`,'live-strategy-metrics'));
   item.append(summary);const detail=el('div',undefined,'live-strategy-detail');
@@ -486,6 +487,7 @@ function liveStrategyState(name,row,d){
  const owner=d.ledger?.active_trades?.find(t=>t.quantity>0)?.strategy;
  if(owner===name)return {label:'Managing',reason:'A position is open. Its exit rules are being monitored.'};
  if(owner)return {label:'Waiting',reason:'The existing position must be managed before another entry.'};
+ if(rt.state==='WAITING_EXCHANGE_SESSION')return {label:'Market closed',reason:'Entry checks resume in the next verified exchange session.'};
  if(name==='CAS_LAG_V1'){
   if(rt.expiry_today===false)return {label:'Not today',reason:`Next loaded expiry: ${shortDate(rt.observation?.expiry)}.`};
   if(rt.expiry_today!==true)return {label:'Unconfirmed',reason:'Waiting for the exchange expiry check.',kind:'warn'};

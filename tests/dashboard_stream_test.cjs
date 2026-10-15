@@ -573,6 +573,7 @@ setImmediate(()=>{
  browser.blocked.runtime.state='WAITING_EXCHANGE_SESSION';
  vm.runInContext('renderLive(blocked)',browser);
  assert.match(ids['live-decision-reason'].textContent,/exchange session is closed.*open interest.*3 of 3/i);
+ assert.equal(vm.runInContext("liveStrategyState('SECONDS_FUTURES_CATCHUP',null,blocked).label",browser),'Market closed','Expected closed-session silence must not look like a data failure');
  browser.blocked.runtime.state='ARMED_WAITING_SIGNAL';
  browser.blocked.ledger.route_check=null;
  vm.runInContext('renderLive(blocked)',browser);
