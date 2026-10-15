@@ -1,8 +1,19 @@
 from datetime import datetime,timezone
 import json
 from dhan_cas_bot.dashboard.data import seconds_view
+from pathlib import Path
 
 NOW=datetime(2026,10,15,8,tzinfo=timezone.utc)
+
+
+def test_observer_can_read_cached_session_with_same_restricted_groups_as_collector():
+    root=Path(__file__).resolve().parents[1]
+    observer=(root/'ops/dhan-seconds-observer.service').read_text()
+    collector=(root/'ops/dhan-dashboard-collect.service').read_text()
+    for setting in ('User=sablestone','Group=dhan-dashboard','SupplementaryGroups=sablestone',
+                    'Environment=DHAN_BROKER_READ_ONLY=1','InaccessiblePaths=/etc/sablestone-dhan/secrets.env'):
+        assert setting in collector
+        assert setting in observer
 
 
 def test_paper_results_cannot_become_money_permission_or_expose_provider_data():

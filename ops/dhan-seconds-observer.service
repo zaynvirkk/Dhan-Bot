@@ -7,6 +7,7 @@ Wants=network-online.target
 Type=simple
 User=sablestone
 Group=dhan-dashboard
+SupplementaryGroups=sablestone
 WorkingDirectory=/opt/sablestone-dhan-dashboard/current
 ExecStart=/opt/sablestone-dhan-dashboard/current/.venv/bin/python -m dhan_cas_bot.seconds_observer
 Environment=DHAN_BROKER_READ_ONLY=1

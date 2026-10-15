@@ -1,11 +1,12 @@
 """Live quote experiments with paper fills only; no order client or write rail."""
-import argparse,asyncio,json,os,signal,time
+import argparse,asyncio,csv,io,json,os,signal,tempfile,time
 from dataclasses import asdict
 from datetime import datetime,timezone
 from decimal import Decimal as D
 from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import urlencode
+import httpx
 
 from .config import load_config
 from .dashboard.collect import atomic_json
@@ -24,6 +25,35 @@ from .transport import WebSocketRunner,message_received_ns
 
 class ObserverInputError(ValueError):
     pass
+
+
+async def fetch_nifty_master(*, client=None, max_bytes=256*1024*1024):
+    """Spool the exchange-wide CSV to disk; retain only NIFTY rows in memory."""
+    own=client is None
+    client=client or httpx.AsyncClient(timeout=15,follow_redirects=True)
+    try:
+        with tempfile.TemporaryFile(mode='w+b') as source:
+            size=0
+            async with client.stream('GET',DHAN_MASTER_URL,headers={'User-Agent':'sablestone-dhan-cas/0.1'}) as response:
+                response.raise_for_status()
+                async for chunk in response.aiter_bytes():
+                    size+=len(chunk)
+                    if size>max_bytes:raise ValueError('instrument source exceeds bounded size')
+                    source.write(chunk)
+            source.seek(0)
+            text=io.TextIOWrapper(source,encoding='utf-8-sig',newline='')
+            rows=csv.DictReader(text)
+            if not {'SEGMENT','INSTRUMENT','UNDERLYING_SYMBOL','SECURITY_ID'}<=set(rows.fieldnames or ()):
+                raise ValueError('instrument source missing required columns')
+            output=io.StringIO();writer=csv.DictWriter(output,fieldnames=rows.fieldnames)
+            writer.writeheader()
+            for row in rows:
+                if (row.get('UNDERLYING_SYMBOL')=='NIFTY' and row.get('INSTRUMENT') in ('OPTIDX','FUTIDX')
+                        and (row.get('SEGMENT')=='NSE_FNO' or (row.get('EXCH_ID')=='NSE' and row.get('SEGMENT')=='D'))):
+                    writer.writerow(row)
+            return output.getvalue().encode('utf-8')
+    finally:
+        if own:await client.aclose()
 
 
 class ObservedCalendar:
@@ -48,9 +78,9 @@ async def run(config, output, stop):
     if raw_state is None and (root/'seconds-paper-state.json').exists():raise ObserverInputError('PAPER_HISTORY_UNAVAILABLE')
     lab=PaperLab(cash,saved=raw_state)
     token=cached['token']
-    try:master,freeze=await asyncio.gather(RuleSource(timeout=15).fetch(DHAN_MASTER_URL),RuleSource(timeout=15).fetch(NSE_FREEZE_URL))
+    try:master,freeze=await asyncio.gather(fetch_nifty_master(),RuleSource(timeout=15).fetch(NSE_FREEZE_URL))
     except Exception as exc:raise ObserverInputError('CONTRACT_METADATA_UNAVAILABLE') from exc
-    insts,future_id=selected_contracts(master.payload,RuleSource.parse_freeze(freeze.payload),now.astimezone(IST).date())
+    insts,future_id=selected_contracts(master,RuleSource.parse_freeze(freeze.payload),now.astimezone(IST).date())
     status=read_json(state/'status.json') or {};anchor=(status.get('observation') or {}).get('ltp')
     if not anchor or not future_id:raise ObserverInputError('MARKET_ANCHOR_UNAVAILABLE')
     expiry=min(i.expiry for i in insts)
