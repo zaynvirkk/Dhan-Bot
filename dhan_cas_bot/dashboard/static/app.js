@@ -556,9 +556,10 @@ function renderLive(d){
  const otherSignals=(d.ledger?.last_signals||[]).filter(r=>istDay(r.evaluated_at)===istDay(d.server_time)&&r.blocking_reason==='FUNDED_STRATEGY_DISABLED'&&!configured.includes(r.strategy));
  $('other-setups').textContent=otherSignals.length?`${otherSignals.length} other strategy configurations recorded setups today but had no funded permission. These are observations, not verified missed profits.`:'';
  const liveOn=rt?.fresh&&rt.authority==='ENABLED'&&Array.isArray(funded)&&funded.length>0;
- const entryBlocked=rt?.broker_route_verified===false||rt?.account_snapshot_fresh===false||rt?.software_verified===false||['RECOVERING','ENTRY_HALTED'].includes(rt?.state);
- const entryReady=liveOn&&rt.broker_route_verified===true&&rt.account_snapshot_fresh===true&&rt.software_verified===true&&!entryBlocked;
- $('live-funding').textContent=liveOn?(entryBlocked?'Funded · entries blocked':entryReady?'Funded · waiting for a signal':'Funded · readiness unknown'):rt?.fresh&&rt.authority==='DISABLED'?'New entries paused':rt?.fresh&&Array.isArray(funded)&&funded.length===0?'No funded strategies':'Permission unknown';
+ const entryBlocked=rt?.broker_route_verified===false||rt?.account_snapshot_fresh===false||rt?.software_verified===false||rt?.current_account_funded===false||['RECOVERING','ENTRY_HALTED'].includes(rt?.state);
+ const exchangeClosed=rt?.state==='WAITING_EXCHANGE_SESSION';
+ const entryReady=liveOn&&rt.broker_route_verified===true&&rt.account_snapshot_fresh===true&&rt.software_verified===true&&rt.current_account_funded===true&&!entryBlocked&&!exchangeClosed;
+ $('live-funding').textContent=liveOn?(entryBlocked?'Funded · entries blocked':exchangeClosed?'Funded · market closed':entryReady?'Funded · waiting for a signal':'Funded · readiness unknown'):rt?.fresh&&rt.authority==='DISABLED'?'New entries paused':rt?.fresh&&Array.isArray(funded)&&funded.length===0?'No funded strategies':'Permission unknown';
  $('live-funding').className='badge '+(entryReady?'good':'warn');
  const quote=rt?.observation,quoteAge=elapsed(quote?.ltp_at,d.server_time);
  $('live-market').textContent=quote?.ltp!=null?`NIFTY ${points(quote.ltp)} · ${rt?.fresh&&quoteAge!==null&&quoteAge<=5?'live':'last observed'}`:'NIFTY price unavailable';

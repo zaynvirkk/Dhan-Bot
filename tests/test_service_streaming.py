@@ -183,7 +183,9 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             await channels['signal'].send(frame.SerializeToString())
         try:
             await until(lambda:len(channels)==3)
-            await channels['market'].send(full_packet(100)+full_packet(200))
+            # Route-positive books now explicitly carry observed liquidity;
+            # zero/missing OI is covered by separate no-order regressions.
+            await channels['market'].send(full_packet(100,ask=9.05,oi=650000,volume=65000)+full_packet(200,ask=9.05,oi=650000,volume=65000))
             if mode.startswith(('observation_only_', 'funded_directional_')):
                 await until(lambda:status_file().get('books_observed')==2)
                 if mode.startswith('observation_only_'):

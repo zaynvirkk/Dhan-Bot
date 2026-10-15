@@ -564,7 +564,7 @@ setImmediate(()=>{
 setImmediate(()=>{
  browser.blocked={server_time:'2026-10-15T09:00:00Z',runtime:{fresh:true,authority:'ENABLED',state:'ARMED_WAITING_SIGNAL',
    strategies:['SECONDS_FUTURES_CATCHUP'],funded_strategies:['SECONDS_FUTURES_CATCHUP'],software_verified:true,
-   account_snapshot_fresh:true,broker_route_verified:false,route_attempts_used:3,route_attempt_limit:3},
+   account_snapshot_fresh:true,current_account_funded:true,broker_route_verified:false,route_attempts_used:3,route_attempt_limit:3},
    ledger:{available:true,route_check:{state:'REJECTED',reason:'LOW_OPEN_INTEREST'}}};
  vm.runInContext('renderLive(blocked)',browser);
  assert.equal(ids['live-funding'].textContent,'Funded · entries blocked');
