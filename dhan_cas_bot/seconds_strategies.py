@@ -12,6 +12,7 @@ from statistics import median
 from bisect import bisect_right
 
 from .risk import FeeSchedule, worst_case_entry_cash
+from .domain import ContractError
 
 NAMES = ('SECONDS_FUTURES_CATCHUP', 'SECONDS_FAILED_BREAKOUT',
          'SECONDS_FLOW_CONTINUATION', 'SECONDS_STRIKE_CATCHUP', 'SECONDS_EVENT_IMPULSE')
@@ -28,6 +29,17 @@ RULES = {
 
 def ns(at):
     return int(at.timestamp()*1_000_000_000)
+
+
+def future_quote_mid(packet):
+    """A FULL book reference on receipt time, never freshness from trade LTT."""
+    if not packet.bids or not packet.asks:raise ContractError('future book unavailable')
+    bid,ask=packet.bids[0],packet.asks[0]
+    if (not bid.price.is_finite() or not ask.price.is_finite() or bid.price<=0
+            or ask.price<bid.price or bid.quantity<=0 or ask.quantity<=0
+            or (ask.price-bid.price)/bid.price>D('.001')):
+        raise ContractError('future book unusable')
+    return (bid.price+ask.price)/2
 
 
 def current(book, at, max_age=1.5):

@@ -17,7 +17,7 @@ from .feeds import DhanMarketClient
 from .rules import RuleSource,DHAN_MASTER_URL,NSE_FREEZE_URL
 from .strategy_inputs import selected_contracts
 from .session_strategies import IST
-from .seconds_strategies import NAMES,SecondsTape,ns,entry_candidate
+from .seconds_strategies import NAMES,SecondsTape,ns,entry_candidate,future_quote_mid
 from .seconds_events import watch_events
 from .seconds_paper import PaperLab
 from .transport import WebSocketRunner,message_received_ns
@@ -99,14 +99,17 @@ async def run(config, output, stop):
             if packet[0]!=8:continue
             try:
                 if security==future_id:
+                    if seen.get(security)==packet:continue
                     tick=decode_full_binary(packet,future_ref)
-                    if tick.statistics and tick.provider_ts_ms is not None and 0<=received-tick.provider_ts_ms*1_000_000<=2_000_000_000:
-                        tape.future_tick(tick.statistics.last_price,received,epoch)
+                    mid=future_quote_mid(tick)
+                    seen[security]=packet
+                    tape.future_tick(mid,received,epoch)
                 elif security in instruments:
                     if seen.get(security)==packet:continue
                     tick=decode_full_binary(packet,instruments[security]);seen[security]=packet
                     books[security]=book_from_packet(tick,instruments[security],epoch,received)
             except Exception:
+                if security==future_id:tape.reset()
                 books.pop(security,None)
     def connect():market.protocol.on_connect();tape.reset();books.clear();seen.clear()
     def disconnect():market.protocol.on_disconnect();tape.reset();books.clear();seen.clear()

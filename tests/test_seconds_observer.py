@@ -1,6 +1,9 @@
 import asyncio
 import httpx
 import pytest
+from decimal import Decimal
+from types import SimpleNamespace
+from dhan_cas_bot.domain import ContractError, Level
 from dhan_cas_bot.seconds_observer import fetch_nifty_master
 
 
@@ -21,3 +24,12 @@ def test_master_stream_rejects_oversized_or_missing_column_sources():
             with pytest.raises(ValueError):await fetch_nifty_master(client=client,max_bytes=50)
             with pytest.raises(ValueError):await fetch_nifty_master(client=client)
     asyncio.run(run())
+
+
+def test_current_future_quote_does_not_misuse_last_trade_time_as_book_time():
+    from dhan_cas_bot.seconds_strategies import future_quote_mid
+    quote=SimpleNamespace(bids=(Level(Decimal('23000'),65),),asks=(Level(Decimal('23000.05'),65),),provider_ts_ms=1)
+    assert future_quote_mid(quote)==Decimal('23000.025')
+    for bids,asks in [((),quote.asks),(quote.bids,()),(quote.asks,quote.bids),
+                      (quote.bids,(Level(Decimal('23100'),65),))]:
+        with pytest.raises(ContractError):future_quote_mid(SimpleNamespace(bids=bids,asks=asks))

@@ -344,9 +344,12 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                     # the option instrument catalogue or any order candidate.
                     ref=SimpleNamespace(security_id=future_id,tick_size=Decimal('.05'),segment=Segment.NSE_FNO)
                     try:
+                        from .seconds_strategies import future_quote_mid
+                        if last_packets.get(future_id)==packet:continue
                         tick=decode_full_binary(packet,ref)
-                        if tick.statistics and tick.provider_ts_ms is not None and 0<=received_ns-tick.provider_ts_ms*1_000_000<=2_000_000_000:
-                            engine.directional.seconds.tape.future_tick(tick.statistics.last_price,received_ns,epoch)
+                        mid=future_quote_mid(tick)
+                        last_packets[future_id]=packet
+                        engine.directional.seconds.tape.future_tick(mid,received_ns,epoch)
                     except ContractError:
                         engine.directional.seconds.reset()
                     continue

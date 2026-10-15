@@ -8,11 +8,16 @@ or actual funded execution credited by this change.
 
 ## Rules and inputs
 
-The rules use Dhan FULL option quotes and current front-future trade observations
+The rules use Dhan FULL option quotes and current front-future bid/ask midquotes
 on the same receipt clock. Reconnects clear the rolling history. Each rule needs
 at least a minute of fresh observations, except that missing event data remains
-an explicit blocker. Futures LTT is a trade timestamp; option freshness uses
-actual FULL-frame receipt time. A duplicate or stale print cannot renew a book.
+an explicit blocker. Futures LTT is a last-trade timestamp, not the time of a
+book update. Both books use actual FULL-frame receipt time and the current
+socket epoch. Byte-identical repeated frames cannot renew futures freshness;
+crossed, empty or wider-than0.1% futures books are rejected. The live check found
+futures LTT inconsistent with UTC receipt time, so it is not used to timestamp
+the current futures quote or silently timezone-corrected. This is a quote-based
+experiment; exchange-origin book timing is not provided by this packet.
 
 - Futures catch-up fits the option's earlier response to futures using only the
   preceding 60–5 seconds, at least20 paired observations, absolute response
