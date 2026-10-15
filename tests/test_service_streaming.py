@@ -18,7 +18,7 @@ from .test_production_lifecycles import MatchingBroker
 from .acceptance.cas.support import mandate
 
 
-@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames', 'native_status', 'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account', 'route_reconnect', 'exhausted_route_reconnect'])
+@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames', 'native_status', 'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account', 'route_reconnect', 'exhausted_route_reconnect', 'observation_only_nonexpiry', 'observation_only_expiry', 'observation_only_expiry_closed', 'funded_directional_nonexpiry'])
 def test_background_reconciliation_through_production_session(tmp_path, monkeypatch, mode):
     async def run():
         ledger = Ledger(tmp_path/'ledger.sqlite3')
@@ -74,7 +74,8 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
                 return httpx.Response(200, json=await broker.submit_order(order))
             assert request.method == 'GET'
             if path == '/master':
-                return httpx.Response(200, text='SEGMENT,SECURITY_ID,INSTRUMENT,UNDERLYING_SYMBOL,SM_EXPIRY_DATE,OPTION_TYPE,STRIKE_PRICE,LOT_SIZE,TICK_SIZE,SM_FREEZE_QTY\nNSE_FNO,100,OPTIDX,NIFTY,2026-09-15,CE,25000,65,0.05,1800\nNSE_FNO,200,OPTIDX,NIFTY,2026-09-15,PE,25000,65,0.05,1800\n')
+                expiry='2026-09-16' if mode.endswith('nonexpiry') else '2026-09-15'
+                return httpx.Response(200, text=f'SEGMENT,SECURITY_ID,INSTRUMENT,UNDERLYING_SYMBOL,SM_EXPIRY_DATE,OPTION_TYPE,STRIKE_PRICE,LOT_SIZE,TICK_SIZE,SM_FREEZE_QTY\nNSE_FNO,100,OPTIDX,NIFTY,{expiry},CE,25000,65,0.05,1800\nNSE_FNO,200,OPTIDX,NIFTY,{expiry},PE,25000,65,0.05,1800\n')
             if path == '/freeze': return httpx.Response(200, text='SYMBOL,VOL_FRZ_QTY\nNIFTY,1800\n')
             if path == '/authorize': return httpx.Response(200, json={'data':{'authorized_redirect_uri':'signal'}})
             if path == '/v2/profile': return httpx.Response(200, json={'dhanClientId':'TEST','dataPlan':'Active','activeSegment':'E, D, '})
@@ -147,6 +148,20 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
         config = {'state_dir':str(tmp_path),'account_id':'TEST','live_order_authority':True,'expected_egress_ip':'127.0.0.1',
                   'dhan_api_base':'https://fixture/v2','dhan_master_url':'https://fixture/master','nse_freeze_url':'https://fixture/freeze',
                   'upstox_authorize_url':'https://fixture/authorize','dhan_market_ws_url':'market','dhan_order_ws_url':'orders'}
+        if mode.startswith(('observation_only_', 'funded_directional_')):
+            from .test_session_strategies import calendar
+            from dhan_cas_bot.strategy_inputs import StrategyInputWorker
+            config['strategies']=['CAS_LAG_V1','OPEN_DRIVE_FAST']
+            config['funded_strategies']=['OPEN_DRIVE_FAST'] if mode.startswith('funded_directional_') else ['CAS_LAG_V1']
+            # Exchange is open, with live books. Scanning an unfunded ordinary
+            # strategy must never qualify a money route on a non-expiry day,
+            # or bring CAS qualification forward before its own window.
+            clock[0]=clock[0].replace(hour=5,minute=0)  # 10:30 IST
+            if mode.endswith('expiry_closed'):clock[0]=clock[0].replace(hour=2)  # 07:30 IST
+            async def calendar_only(worker):
+                worker.calendar=calendar('2026-09-15','2026-09-16')
+                await stop.wait()
+            monkeypatch.setattr(StrategyInputWorker,'run',calendar_only)
         task = asyncio.create_task(service.serve_session(config, ledger, stop, now_fn=lambda:clock[0]))
         async def until(predicate):
             async def wait():
@@ -169,6 +184,25 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
         try:
             await until(lambda:len(channels)==3)
             await channels['market'].send(full_packet(100)+full_packet(200))
+            if mode.startswith(('observation_only_', 'funded_directional_')):
+                await until(lambda:status_file().get('books_observed')==2)
+                if mode.startswith('observation_only_'):
+                    assert broker.requests==[]
+                    assert not status_file()['broker_route_verified']
+                    assert status_file()['route_attempts_used']==0
+                    if mode.endswith('nonexpiry'):
+                        assert status_file()['state']=='NO_TRADE_DAY'
+                    if mode.endswith('expiry_closed'):
+                        assert status_file()['state']=='WAITING_EXCHANGE_SESSION'
+                else:
+                    await until(lambda:status_file().get('broker_route_verified'))
+                    assert len(broker.requests)==1
+                assert status_file()['strategies']==config['strategies']
+                assert status_file()['funded_strategies']==config['funded_strategies']
+                # Funded CAS may be ineligible, while live observation scans
+                # still need visible freshness checks throughout the session.
+                assert status_file()['monitoring_mode']==('IDLE' if mode.endswith('expiry_closed') else 'ACTIVE')
+                return
             if mode in {'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account'}:
                 await until(lambda:len(broker.requests)==1 and not ledger.pending_intents())
                 await asyncio.sleep(.15)

@@ -113,7 +113,9 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     broker = DhanBroker(config["account_id"], token, config["dhan_api_base"], allow_writes=config["live_order_authority"] and mandate.live_order_authority)
     runtime = AutoLive(ledger, broker, mandate, software_verified=current_verification(Path(__file__).resolve().parents[1], state_dir))
     from .config import funded_strategies
-    runtime.enabled_strategies = frozenset(funded_strategies(config,enabled))
+    funded = frozenset(funded_strategies(config,enabled))
+    has_funded_directional = any(name != CAS for name in funded)
+    runtime.enabled_strategies = funded
     runtime.status.auto_live_armed = broker.allow_writes and not ledger.metadata("disarmed", False)
     tasks = []
     runners = []
@@ -162,7 +164,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                 if config["expected_egress_ip"] not in {ips["primary_ip"], ips["secondary_ip"]}:
                     raise ContractError("Dhan whitelist does not contain this execution IP")
             metadata_admitted = True
-            account_admitted = expiry_today and CAS in enabled
+            account_admitted = expiry_today and CAS in funded
         except Exception as exc:
             metadata_error = type(exc).__name__
             account_admitted = False
@@ -440,8 +442,10 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             monotonic = monotime.monotonic()
             runtime.status.auto_live_armed = broker.allow_writes and not ledger.metadata("disarmed", False)
             calendar = input_worker.calendar if input_worker else None
-            account_admitted = metadata_admitted and ((CAS in enabled and expiry_today)
-                or (has_directional and calendar is not None and calendar.is_open(now())))
+            # Observation-only engines keep their inputs and evaluations, but
+            # cannot admit money writes or qualify an otherwise idle route.
+            account_admitted = metadata_admitted and ((CAS in funded and expiry_today)
+                or (has_funded_directional and calendar is not None and calendar.is_open(now())))
             if input_worker and (calendar is None or not calendar.is_open(now())):
                 account_admitted = False
             try:
@@ -464,7 +468,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         if evidence and evidence[0] == orders.protocol.epoch.id and evidence[1] in {"TRANSIT", "PENDING", "PART_TRADED", "TRADED", "CANCELLED", "EXPIRED"} and saved["state"] != "REJECTED" and not totals["unresolved"]:
                             if totals["quantity"] == 0:
                                 runtime.status.broker_route_verified = True
-                may_probe = (account_refresh.fresh and account_admitted and broker.allow_writes and runtime.status.auto_live_armed and runtime.status.software_verified and uncertainty <= 100 and not runtime.status.broker_route_verified and engine.active is None and not ledger.pending_intents() and orders.protocol.epoch.connected and orders.protocol.epoch.id not in route_failed_epochs and route_window(enabled, current, calendar, expiry_today))
+                may_probe = (account_refresh.fresh and account_admitted and broker.allow_writes and runtime.status.auto_live_armed and runtime.status.software_verified and uncertainty <= 100 and not runtime.status.broker_route_verified and engine.active is None and not ledger.pending_intents() and orders.protocol.epoch.connected and orders.protocol.epoch.id not in route_failed_epochs and route_window(funded, current, calendar, expiry_today))
                 if (account_refresh.fresh and orders.protocol.epoch.connected
                         and not runtime.status.broker_route_verified):
                     from .route import managed_exit_route
@@ -472,7 +476,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         runtime.status.broker_route_verified=True
                         may_probe=False
                 if may_probe:
-                    choices = [book for book in engine.books.values() if (book.instrument.expiry >= today if has_directional else book.instrument.expiry == today) and book.top_bid and book.top_bid.quantity >= book.instrument.lot_size and book.top_bid.price > max(book.instrument.tick_size, book.instrument.lower_limit or 0)]
+                    choices = [book for book in engine.books.values() if (book.instrument.expiry >= today if has_funded_directional else book.instrument.expiry == today) and book.top_bid and book.top_bid.quantity >= book.instrument.lot_size and book.top_bid.price > max(book.instrument.tick_size, book.instrument.lower_limit or 0)]
                     choices.sort(key=lambda book: (book.instrument.lot_size*max(book.instrument.tick_size,book.instrument.lower_limit or 0), int(book.instrument.security_id)))
                     if choices:
                         qualifier = RouteQualifier(ledger, broker, session_id=today.isoformat(), max_attempts=mandate.probe_max_attempts_per_session, debit_cap=mandate.probe_entry_debit_cap_per_session, mandate_spend_cap=mandate.probe_spending_cap_per_mandate)
@@ -495,7 +499,14 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         runtime.telemetry.sample("decision_ms", (runtime.telemetry.clock()-decision_at)*1000)
                 runtime.status.auto_live_armed = armed
                 if not account_admitted and engine.active is None:
-                    runtime.status.state = ("WAITING_EXCHANGE_SESSION" if has_directional else "NO_TRADE_DAY") if not metadata_error else "ENTRY_HALTED"
+                    if metadata_error:
+                        runtime.status.state = "ENTRY_HALTED"
+                    elif not funded:
+                        runtime.status.state = "DISARMED"
+                    elif not has_funded_directional and not expiry_today:
+                        runtime.status.state = "NO_TRADE_DAY"
+                    else:
+                        runtime.status.state = "WAITING_EXCHANGE_SESSION"
             except Exception as exc:
                 runtime.status.reason = f"RECOVERY_REQUIRED:{type(exc).__name__}"
                 runtime.status.state = "RECOVERING"
@@ -525,7 +536,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         feed_health[key] = {'connected': False}
                 monitoring_open = (calendar.is_open(now()) if has_directional and calendar else False) if has_directional else time(15,5) <= current.time() <= time(15,40)
                 idle = (engine.active is None and not ledger.pending_intents()
-                        and (runtime.status.state == "NO_TRADE_DAY" or not monitoring_open))
+                        and ((runtime.status.state == "NO_TRADE_DAY" and not has_directional)
+                             or not monitoring_open))
                 write_status(state_dir, runtime, session=today.isoformat(), contract_count=len(instruments),
                              books_observed=len(engine.books), clock_uncertainty_ms=uncertainty,
                              metadata_error=metadata_error, recorder_failed=recorder_failed,
