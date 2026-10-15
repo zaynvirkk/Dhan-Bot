@@ -1,5 +1,10 @@
 # SableStone Dhan CAS bot
 
+**Friday16October preflight:** live account/calendar/service checks completed;
+an additional shared-token renewal race is repaired. The funded process still
+requires the operator source switch; tomorrow's route acceptance and executable
+signals cannot be certified tonight. [Checks and remaining steps](docs/FRIDAY-PREFLIGHT-2026-10-16.md).
+
 **15 October signal audit and repairs:** brief quote gaps could erase fitted
 history, missing books could look like no setup, and after-close warnings could
 hide earlier decisions. History retention, exact rejection reasons, durable

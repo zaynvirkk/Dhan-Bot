@@ -18,7 +18,7 @@ from .test_production_lifecycles import MatchingBroker
 from .acceptance.cas.support import mandate
 
 
-@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames', 'native_status', 'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account', 'route_reconnect', 'exhausted_route_reconnect', 'observation_only_nonexpiry', 'observation_only_expiry', 'observation_only_expiry_closed', 'funded_directional_nonexpiry'])
+@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'shared_token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames', 'native_status', 'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account', 'route_reconnect', 'exhausted_route_reconnect', 'observation_only_nonexpiry', 'observation_only_expiry', 'observation_only_expiry_closed', 'funded_directional_nonexpiry'])
 def test_background_reconciliation_through_production_session(tmp_path, monkeypatch, mode):
     async def run():
         ledger = Ledger(tmp_path/'ledger.sqlite3')
@@ -294,7 +294,14 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
                 else:
                     import time
                     monkeypatch.delenv('DHAN_ACCESS_TOKEN')
-                    (tmp_path/'dhan_token.json').write_text(json.dumps({'issued':time.time()-21*3600,'account':'TEST','token':'synthetic'}))
+                    # A read-only checker can renew the shared cache before
+                    # the running session notices its own token's age. The
+                    # fresh cache must not conceal an obsolete HTTP/socket
+                    # credential while an unresolved position is retained.
+                    shared = mode == 'shared_token_rotation'
+                    (tmp_path/'dhan_token.json').write_text(json.dumps({
+                        'issued':time.time() if shared else time.time()-21*3600,
+                        'account':'TEST','token':'synthetic-next' if shared else 'synthetic-token'}))
                 await until(task.done)
                 assert any(broker.quantities.values()) and len(broker.requests)==2
                 return

@@ -51,7 +51,7 @@ IST = ZoneInfo("Asia/Kolkata")
 def write_status(state_dir: Path, runtime, **extra):
     source=Path(__file__).resolve().parents[1].name
     value = {**runtime.status.as_dict(), **extra, "observed_at": datetime.now(timezone.utc).isoformat(), "writes": runtime.broker.allow_writes,
-             "runtime_revision":2,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
+             "runtime_revision":3,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
     path = state_dir / "status.json.tmp"
     with path.open("w") as stream:
         json.dump(value, stream, sort_keys=True)
@@ -563,10 +563,18 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                 cached = state_dir / "dhan_token.json"
                 if cached.exists() and not os.environ.get("DHAN_ACCESS_TOKEN"):
                     try:
-                        issued = json.loads(cached.read_text()).get("issued", 0)
+                        record = json.loads(cached.read_text())
+                        issued = record.get("issued", 0)
                         age = monotime.time() - issued
                     except (OSError, ValueError, TypeError):
                         return  # session_token revalidates/replaces bad cache
+                    # The read-only connection checker shares this cache and
+                    # can renew it first. Its new issue time says nothing
+                    # about the credential still held by our HTTP clients
+                    # and sockets. Re-enter through broker-first recovery
+                    # with the replacement credential; preserve obligations.
+                    if record.get("account") != config["account_id"] or record.get("token") != token:
+                        return
                     if not 0 <= age < 20*3600:
                         return
             if monotonic - last_status >= 1:
