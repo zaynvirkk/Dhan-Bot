@@ -436,6 +436,16 @@ setImmediate(()=>{
  assert.match(content(ids['strategy-checks']),/Observation only/);
  assert.match(content(ids['strategy-checks']),/Real-money entries permitted/);
  console.log('Funded versus observed permissions and actual strategy results verified');
+ browser.prunedRoster=structuredClone(browser.strategyResults);
+ browser.prunedRoster.runtime.strategies=['CAS_LAG_V1','TREND_PULLBACK_FAST'];
+ browser.prunedRoster.runtime.funded_strategies=['CAS_LAG_V1','TREND_PULLBACK_FAST'];
+ browser.prunedRoster.runtime.strategy_evaluations.push({strategy:'TREND_PULLBACK_FAST',state:'NO_SIGNAL',enabled:true,funded_enabled:true});
+ browser.prunedRoster.daily_monitor={fresh:true,strategy_evaluations:[{strategy:'GAP_FADE_DOUBLE',state:'SIGNAL'}]};
+ vm.runInContext('renderStrategies(prunedRoster)',browser);
+ assert.equal(ids['strategy-checks'].children.length,2,'A removed engine cannot return through stale checks or a legacy observer');
+ assert.doesNotMatch(content(ids['strategy-checks']),/Morning gap-fade|published pcr/);
+ assert.match(content(ids['strategy-performance']),/ordinary published pcr/,'Disabling an engine must preserve its actual execution history');
+ console.log('Explicit production roster hides removed observers while preserving execution history');
  browser.exitFixture={runtime:{fresh:true,state:'POSITION_OPEN'},account:{fresh:true,positions:[{quantity:65}]},
   ledger:{active_trades:[{strategy:'ORDINARY_PUBLISHED_PCR_TRAIL',quantity:65,trailing:true,stop_fraction:'0.50',target_known:true,target_multiple:null,exit_due:'2026-10-14T10:04:00Z',exit_trigger:null}]}};
  vm.runInContext('renderDecision(exitFixture)',browser);

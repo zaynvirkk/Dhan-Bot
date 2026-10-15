@@ -208,10 +208,11 @@ function renderSelection(d){
 }
 
 function renderStrategies(d){
- const rt=d.runtime,observer=d.daily_monitor,configured=rt?.strategies||[],checks=rt?.strategy_evaluations||[];
+ const rt=d.runtime,observer=d.daily_monitor,hasRoster=Array.isArray(rt?.strategies)&&(rt.strategies.length>0||Array.isArray(rt.funded_strategies)),configured=rt?.strategies||[],checks=rt?.strategy_evaluations||[];
  const funded=rt?.funded_strategies,performance=d.ledger?.strategy_performance||[];
  const performanceAt=name=>performance.find(x=>x.strategy===name);
- const usingObserver=(observer?.strategy_evaluations||[]).some(row=>!configured.includes(row.strategy)),calendar=observer||rt;
+ const observerChecks=hasRoster?[]:observer?.strategy_evaluations||[];
+ const usingObserver=observerChecks.length>0,calendar=hasRoster?rt:observer||rt;
  $('calendar-stamp').textContent=calendar?.calendar_checked_at?`Calendar checked ${at(calendar.calendar_checked_at)}`:'No exchange calendar observation';
  $('strategy-mode').textContent=Array.isArray(funded)?`${funded.length} permitted to trade real money · ${configured.length} scanned configurations. Observation-only rules cannot place new entries. Expand a family for its live inputs and execution history.`:usingObserver?'Daily checks are read-only and cannot submit orders. Funded permissions have not been reported by the trading service.':`${configured.length} scanned configurations. Separate funded permissions have not been reported by this service version.`;
  if(changed('strategy-performance',performance)){
@@ -230,8 +231,8 @@ function renderStrategies(d){
  $('input-history').textContent=!health||!health.fresh?'Completed-candle readiness is unknown until a fresh input check arrives.':
   [['spot','NIFTY'],['future','Futures']].map(([key,name])=>{const row=health[key]||{};return `${name}: ${row.latest_completed?`through ${at(row.latest_completed)}`:'no completed candles'}${row.missing_minutes>0?` · ${row.missing_minutes} missing session minute(s), first ${at(row.first_missing)}`:row.current_complete===false?' · latest completed minute missing':''}${row.error?` · ${row.error}`:''}`;}).join(' / ')+
   ` / Options: ${health.options?.ready??'unknown'} of ${health.options?.requested??'unknown'} watched contracts have the required three completed minutes.`;
- const display=checks.map(row=>({...row,current:rt?.fresh===true,source:'Trading service'}));
- for(const row of observer?.strategy_evaluations||[])if(!configured.includes(row.strategy))display.push({...row,current:observer.fresh===true,source:'Read-only monitor',lastDecision:(observer.last_decisions||[]).find(v=>v.strategy===row.strategy)});
+ const display=checks.filter(row=>!hasRoster||configured.includes(row.strategy)).map(row=>({...row,current:rt?.fresh===true,source:'Trading service'}));
+ for(const row of observerChecks)if(!configured.includes(row.strategy))display.push({...row,current:observer.fresh===true,source:'Read-only monitor',lastDecision:(observer.last_decisions||[]).find(v=>v.strategy===row.strategy)});
  if(configured.includes('CAS_LAG_V1')||(!configured.length&&rt?.observation?.expiry)){
   const expiryToday=rt.expiry_today??(istDay(rt.observation?.expiry)===istDay(d.server_time));
   const closed=expiryToday&&rt?.observation?.phase==='CAS_STOP';

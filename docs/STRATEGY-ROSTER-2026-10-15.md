@@ -40,5 +40,13 @@ The new tests reject implicit funding, duplicate/unsupported/empty scanning
 rosters, removed funded names and ambiguous multiline assignments. They also
 check idempotence and preservation of unrelated tables and money limits.
 
+The active dashboard board follows the trading service's explicit roster.
+Removed names cannot reappear there through the older read-only monitor or
+retained evaluation rows. Actual results and dated session-log entries remain
+visible, including the disabled PCR engine's loss. The browser regression checks
+that distinction; the legacy observer-only dashboard still works without a
+configured trading roster. This display change does not restart the qualified
+funded trader or change its covered Python source.
+
 For the complete comparisons and limitations, see
 [`strategy_inventory_20261015/REPORT.md`](../research/results/strategy_inventory_20261015/REPORT.md).
