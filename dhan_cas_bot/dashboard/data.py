@@ -278,7 +278,8 @@ def strategy_projection(raw):
                     'efficiency','first_half_hour_return','premium_return','premium_return_3m','oi_change','own_oi',
                     'opposite_oi','opposite_return','strike','anchor_spot','prior_oi_wall','iv','realized_vol_30m',
                     'vix_15m','pcr_change_5m','pcr_change','known_max_pain','fii_net_change','dii_net','prior_trend_20d',
-                    'warmup_seconds','future_move_2s','response_beta','target_price'):
+                    'warmup_seconds','future_move_2s','response_beta','target_price','impulse_threshold',
+                    'eligible_contracts','fitted_contracts','breakout_direction','flow_candidates','curvature_candidates'):
             value=(row.get('details') or {}).get(key) if isinstance(row.get('details'), dict) else None
             if money(value) is not None:
                 details[key]=money(value) if key=='target_price' else str(Decimal(str(value)))
@@ -627,6 +628,24 @@ def recorded_decisions(db, strategies, now):
     return {'status': 'AVAILABLE', 'date': day, 'observed_at': now.isoformat(), 'strategies': result}
 
 
+def route_check_view(db, now):
+    from zoneinfo import ZoneInfo
+    ist=ZoneInfo('Asia/Kolkata')
+    row=db.execute("SELECT i.created_at,o.state,o.payload FROM intents i JOIN orders o ON o.intent_id=i.intent_id WHERE i.lifecycle_id='route-probe' ORDER BY i.created_at DESC LIMIT 1").fetchone()
+    if not row:return None
+    at=timestamp(row['created_at'])
+    if not at or datetime.fromisoformat(at)>now or datetime.fromisoformat(at).astimezone(ist).date()!=now.astimezone(ist).date():return None
+    reason=None
+    if row['state']=='REJECTED':
+        reason='BROKER_REJECTED'
+        try:
+            raw=json.loads(row['payload']) if len(row['payload'])<=100_000 else {}
+            text=str(raw.get('omsErrorDescription','')).lower()
+            if 'open interest' in text and ('below' in text or 'limit' in text):reason='LOW_OPEN_INTEREST'
+        except (ValueError,TypeError,AttributeError):pass
+    return {'state':choice(row['state'],ORDER_STATES,'UNKNOWN'),'reason':reason,'occurred_at':at}
+
+
 def ledger_view(path, *, strategies=(), now=None):
     """One SQLite read transaction, no schema initialization or broker methods."""
     now = now or utcnow()
@@ -678,6 +697,7 @@ def ledger_view(path, *, strategies=(), now=None):
                     'strategy_performance':strategy_performance(db),
                     'last_signals':last_signal_views(db),'cash_reconciliation':cash_reconciliation(db),
                     'active_trades':active_trade_views(db),
+                    'route_check':route_check_view(db,now),
                     'decision_history':recorded_decisions(db,strategies,now)}
     except (sqlite3.Error, OSError, ValueError):
         return out

@@ -136,7 +136,24 @@ function conditionDetail(c){
  if(c.key==='selloff')return `${pct(c.value)} from open; needs ${pct(c.maximum)} or lower.`;
  return 'Condition unavailable.';
 }
+function secondsExplanation(row){
+ const why={FUTURES_FEED_UNAVAILABLE:'Waiting for a fresh futures quote.',SECONDS_WARMUP:'Building a minute of live quote history.',SECONDS_EDGE_BELOW_COSTS:'The price gap does not clear the cost, cash and liquidity checks.',EVENT_FEED_UNAVAILABLE:'The official event feed is unavailable.',NO_FRESH_EVENT:'No fresh qualifying official event has been received.',CALENDAR_UNAVAILABLE:'Waiting for a current exchange calendar.',EXCHANGE_CLOSED:'Outside a verified open exchange session.',STRATEGY_INPUTS_STALE:'The last experiment update is historical.'};
+ if(why[row.reason])return why[row.reason];
+ if(row.reason==='SECONDS_RULE_NOT_MET'){
+  const v=row.details||{};
+  if(row.strategy==='SECONDS_FUTURES_CATCHUP'){
+   if(v.impulse_threshold!=null&&v.future_move_2s!=null&&Math.abs(Number(v.future_move_2s))<Number(v.impulse_threshold))return `Futures moved ${points(v.future_move_2s)} points in 2s; needs at least ${points(v.impulse_threshold)} points in either direction.`;
+   if(v.fitted_contracts!=null&&Number(v.fitted_contracts)===0)return 'No stable option response to the recent futures quotes has been confirmed.';
+   return v.future_move_2s!=null?`Futures moved ${points(v.future_move_2s)} points in 2s; the impulse and option catch-up checks have not confirmed.`:'The futures impulse and option catch-up checks have not confirmed.';
+  }
+  if(row.strategy==='SECONDS_FAILED_BREAKOUT')return 'A breakout, return inside the earlier range and reversal have not confirmed together.';
+  if(row.strategy==='SECONDS_FLOW_CONTINUATION')return 'Rising premium, traded-volume growth and sustained bid pressure have not confirmed together.';
+  if(row.strategy==='SECONDS_STRIKE_CATCHUP')return 'No qualifying price gap between synchronised neighbouring strikes clears all checks.';
+ }
+ return row.state==='SIGNAL'?'Entry conditions met; execution checks still apply.':row.state==='UNKNOWN'?'A required live input is unavailable.':'Waiting for the entry conditions.';
+}
 function conditionSummary(row){
+ if(row.strategy?.startsWith('SECONDS_'))return secondsExplanation(row);
  const checks=row.conditions||[],failed=checks.filter(c=>c.state==='FAIL'),missing=checks.filter(c=>c.state==='UNKNOWN');
  if(row.state==='NO_SIGNAL'&&failed.length)return `Skipped: ${failed.map(c=>conditionNames[c.key]).join(', ')} not met.`;
  if(row.state==='UNKNOWN'&&missing.length)return `Cannot decide: ${missing.map(c=>conditionNames[c.key]).join(', ')} ${missing.length===1?'is':'are'} unavailable.`;
@@ -423,13 +440,12 @@ function renderSeconds(d){
  if(!changed('seconds-strategies',lab))return;
  const expanded=new Set([...$('seconds-strategies').children].filter(n=>n.open).map(n=>n.dataset.strategy));
  $('seconds-strategies').replaceChildren();
- const reasons={FUTURES_FEED_UNAVAILABLE:'Waiting for a fresh futures quote.',SECONDS_WARMUP:'Building a minute of live quote history.',SECONDS_RULE_NOT_MET:'The observed prices and flow do not meet this entry rule.',SECONDS_EDGE_BELOW_COSTS:'The price gap does not clear the cost and liquidity checks.',EVENT_FEED_UNAVAILABLE:'The official event feed is unavailable.',NO_FRESH_EVENT:'No fresh qualifying official event has been received.',CALENDAR_UNAVAILABLE:'Waiting for a current exchange calendar.',EXCHANGE_CLOSED:'Outside a verified open exchange session.',STRATEGY_INPUTS_STALE:'The last experiment update is historical.'};
  for(const row of lab?.evaluations||[]){
   const item=el('details',undefined,'live-strategy'),summary=el('summary'),head=el('span',undefined,'live-strategy-head');
   item.dataset.strategy=row.strategy;item.open=expanded.has(row.strategy);
   const status=!live?'Unknown':row.state==='SIGNAL'?'Setup detected':row.state==='UNKNOWN'?'Data needed':row.state==='WAITING'?(row.reason==='SECONDS_WARMUP'?'Warming up':'Waiting'):row.state==='NOT_APPLICABLE'?'Closed':'No setup';
   head.append(el('strong',strategyLabel(row.strategy)),badge(status,status==='Data needed'?'warn':''));
-  summary.append(head,el('span',live?(reasons[row.reason]||row.reason.replaceAll('_',' ').toLowerCase()):'Waiting for a current update.','live-strategy-reason'));
+  summary.append(head,el('span',live?secondsExplanation(row):'Waiting for a current update.','live-strategy-reason'));
   const result=lab.results?.find(r=>r.strategy===row.strategy);
   if(result)summary.append(el('span',`${result.signals??'Unknown'} signals · ${result.closed??'Unknown'} simulated closes · net ${cash(result.net)}${result.open_position?' · model position open':''}`,'live-strategy-metrics'));
   item.append(summary);const detail=el('div',undefined,'live-strategy-detail');
@@ -540,8 +556,10 @@ function renderLive(d){
  const otherSignals=(d.ledger?.last_signals||[]).filter(r=>istDay(r.evaluated_at)===istDay(d.server_time)&&r.blocking_reason==='FUNDED_STRATEGY_DISABLED'&&!configured.includes(r.strategy));
  $('other-setups').textContent=otherSignals.length?`${otherSignals.length} other strategy configurations recorded setups today but had no funded permission. These are observations, not verified missed profits.`:'';
  const liveOn=rt?.fresh&&rt.authority==='ENABLED'&&Array.isArray(funded)&&funded.length>0;
- $('live-funding').textContent=liveOn?'Real money on':rt?.fresh&&rt.authority==='DISABLED'?'New entries paused':rt?.fresh&&Array.isArray(funded)&&funded.length===0?'No funded strategies':'Permission unknown';
- $('live-funding').className='badge '+(liveOn?'good':'warn');
+ const entryBlocked=rt?.broker_route_verified===false||rt?.account_snapshot_fresh===false||rt?.software_verified===false||['RECOVERING','ENTRY_HALTED'].includes(rt?.state);
+ const entryReady=liveOn&&rt.broker_route_verified===true&&rt.account_snapshot_fresh===true&&rt.software_verified===true&&!entryBlocked;
+ $('live-funding').textContent=liveOn?(entryBlocked?'Funded · entries blocked':entryReady?'Funded · waiting for a signal':'Funded · readiness unknown'):rt?.fresh&&rt.authority==='DISABLED'?'New entries paused':rt?.fresh&&Array.isArray(funded)&&funded.length===0?'No funded strategies':'Permission unknown';
+ $('live-funding').className='badge '+(entryReady?'good':'warn');
  const quote=rt?.observation,quoteAge=elapsed(quote?.ltp_at,d.server_time);
  $('live-market').textContent=quote?.ltp!=null?`NIFTY ${points(quote.ltp)} · ${rt?.fresh&&quoteAge!==null&&quoteAge<=5?'live':'last observed'}`:'NIFTY price unavailable';
  const snapshots=configured.map(name=>{const row=rt.strategy_evaluations?.find(r=>r.strategy===name);return {name,row,snapshot:liveStrategyState(name,row,d)};}).sort((a,b)=>Number(['Not today','Closed','Observe only'].includes(a.snapshot.label))-Number(['Not today','Closed','Observe only'].includes(b.snapshot.label)));
@@ -556,8 +574,16 @@ function renderLive(d){
  else if(!funded.length){title='No strategies are funded';reason='The configured strategies can observe without opening new money positions.';}
  else if(rt.software_verified===false){title='Entries are blocked';reason='The running software needs matching verification. See System.';}
  else if(rt.account_snapshot_fresh===false){title='Waiting for the account check';reason='New entries need a fresh reconciled balance and position read.';}
- else if(rt.state==='WAITING_EXCHANGE_SESSION'){title='Waiting for the market to open';reason='New entries wait for a verified exchange session.';}
- else if(rt.broker_route_verified===false){title='Checking the order connection';reason='The broker route must qualify before the bot can enter a trade.';}
+ else if(rt.state==='WAITING_EXCHANGE_SESSION'&&rt.broker_route_verified!==false){title='Waiting for the market to open';reason='New entries wait for a verified exchange session.';}
+ else if(rt.broker_route_verified===false){
+  const used=rt.route_attempts_used,limit=rt.route_attempt_limit,exhausted=Number.isSafeInteger(used)&&Number.isSafeInteger(limit)&&limit>0&&used>=limit;
+  const check=d.ledger?.route_check;
+  if(exhausted){
+   title=check?.state==='REJECTED'?'Entries blocked: order check rejected':'Entries blocked: route attempts exhausted';
+   reason=(check?.reason==='LOW_OPEN_INTEREST'?'Dhan rejected the check because its option strike had insufficient open interest. ':check?.state==='REJECTED'?'Dhan rejected the latest order check. ':'The order route has not qualified. ')+`${used} of ${limit} authorized attempts are used. No further check can run under the current allowance.`;
+  }else{title='Checking the order connection';reason='The broker route must qualify before the bot can enter a trade.';}
+  if(rt.state==='WAITING_EXCHANGE_SESSION')reason='The exchange session is closed. '+reason;
+ }
  else if(rt.state==='ENTRY_HALTED'){title='New entries are blocked';reason='See System for the trader’s recorded blocking reason.';}
  else{
   const relevant=snapshots.find(x=>x.name!=='CAS_LAG_V1'&&!['Not today','Observe only'].includes(x.snapshot.label))||snapshots[0];

@@ -1,5 +1,11 @@
 # SableStone Dhan CAS bot
 
+**15 October route repair:** the operator enabled all seven selected strategies,
+but Dhan rejected the route probe for low strike OI. Liquidity-aware probe
+selection and explicit funded-but-blocked dashboard states are repaired.
+Read-side deployment preserves the running trader; the funded source upgrade
+remains operator-run. [Repair, limits and validation](docs/ROUTE-SELECTION-REPAIR-2026-10-15.md).
+
 **15 October seconds experiments:** five quote-driven engines now have shared-OMS
 entry/exit implementations and a separate live-data simulator. Financial activation
 remains an operator-run step. [Rules, limits and activation](docs/SECONDS-STRATEGIES-2026-10-15.md).

@@ -502,8 +502,11 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         runtime.status.broker_route_verified=True
                         may_probe=False
                 if may_probe:
-                    choices = [book for book in engine.books.values() if (book.instrument.expiry >= today if has_funded_directional else book.instrument.expiry == today) and book.top_bid and book.top_bid.quantity >= book.instrument.lot_size and book.top_bid.price > max(book.instrument.tick_size, book.instrument.lower_limit or 0)]
-                    choices.sort(key=lambda book: (book.instrument.lot_size*max(book.instrument.tick_size,book.instrument.lower_limit or 0), int(book.instrument.security_id)))
+                    from .route import probe_candidates,rejected_probe_contracts
+                    remaining=min(mandate.probe_entry_debit_cap_per_session-ledger.counter(f'probe.debit:{today.isoformat()}'),
+                                  mandate.probe_spending_cap_per_mandate-probe_totals['entry_debit']-probe_totals['reserved'])
+                    choices=probe_candidates((book for book in engine.books.values() if has_funded_directional or book.instrument.expiry==today),
+                        now(),market.protocol.epoch.id,rejected=rejected_probe_contracts(ledger,now()),remaining_debit=remaining)
                     if choices:
                         qualifier = RouteQualifier(ledger, broker, session_id=today.isoformat(), max_attempts=mandate.probe_max_attempts_per_session, debit_cap=mandate.probe_entry_debit_cap_per_session, mandate_spend_cap=mandate.probe_spending_cap_per_mandate)
                         try:

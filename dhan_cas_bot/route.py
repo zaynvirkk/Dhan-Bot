@@ -11,6 +11,38 @@ from .orders import Broker, OrderManager
 from .risk import FeeSchedule, worst_case_entry_cash, reserve_cash
 
 
+def probe_candidates(books, now, epoch, *, rejected=(), remaining_debit=None):
+    """Observed liquidity prefilter, not a guarantee of broker RMS eligibility."""
+    from .session_strategies import IST
+    stamp=int(now.timestamp()*1_000_000_000);day=now.astimezone(IST).date()
+    result=[]
+    for b in books:
+        inst=b.instrument;stats=b.statistics;bid=b.top_bid;ask=b.top_ask
+        if (inst.security_id in rejected or b.epoch!=epoch or not 0<=stamp-b.received_ns<=2_000_000_000
+                or inst.expiry<day or not bid or not ask or bid.quantity<inst.lot_size or ask.quantity<inst.lot_size
+                or ask.price<bid.price or (ask.price-bid.price)/bid.price>Decimal('.02')
+                or stats is None or stats.open_interest<100*inst.lot_size or stats.volume<100*inst.lot_size):continue
+        floor=max(inst.tick_size,inst.lower_limit or Decimal(0))
+        if floor>=bid.price or (inst.upper_limit is not None and floor>inst.upper_limit):continue
+        cost=reserve_cash(worst_case_entry_cash(inst.lot_size,floor,1,FeeSchedule()))
+        if remaining_debit is not None and cost>remaining_debit:continue
+        result.append(b)
+    result.sort(key=lambda b:(-b.statistics.open_interest,-b.statistics.volume,
+        (b.top_ask.price-b.top_bid.price)/b.top_bid.price,b.instrument.expiry,int(b.instrument.security_id)))
+    return result
+
+
+def rejected_probe_contracts(ledger, now):
+    from .session_strategies import IST
+    day=now.astimezone(IST).date();result=set()
+    for row in ledger.db.execute("SELECT i.security_id,i.created_at FROM intents i JOIN orders o ON o.intent_id=i.intent_id WHERE i.lifecycle_id='route-probe' AND o.state='REJECTED' ORDER BY i.created_at DESC LIMIT 128"):
+        try:
+            at=datetime.fromisoformat(row['created_at'])
+            if at.tzinfo and at<=now and at.astimezone(IST).date()==day:result.add(row['security_id'])
+        except (ValueError,TypeError):continue
+    return result
+
+
 def extra_attempts(ledger, session_id, normal_limit, now):
     """An explicit operator grant is one extra attempt on exactly one IST date."""
     from .session_strategies import IST

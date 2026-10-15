@@ -180,6 +180,7 @@ class SecondsTape:
         if event_ready:result[NAMES[4]]=Evaluation(NAMES[4],'NO_SIGNAL','SECONDS_RULE_NOT_MET',at)
         eligible=[books[k] for k in self.options if k in books and current(books[k],at) and books[k].epoch==self.epoch]
         eligible.sort(key=lambda b:(abs(b.instrument.strike-future),b.instrument.security_id))
+        fitted_count=0;flow_count=0;curve_count=0
         previous=[p for t,p in self.future if stamp-65_000_000_000<=t<stamp-5_000_000_000]
         recent=[p for t,p in self.future if stamp-5_000_000_000<=t<=stamp]
         breakout_side=0
@@ -201,6 +202,7 @@ class SecondsTape:
         for b in eligible:
             rows=list(self.options[b.instrument.security_id]);side=1 if b.instrument.option_type.value=='CE' else -1
             beta=self.beta(b.instrument.security_id,stamp)
+            if beta is not None and side*beta>0:fitted_count+=1
             anchor=next((r for r in reversed(rows) if r[0]<=stamp-2_000_000_000),None)
             if beta is not None and side*beta>0 and anchor and stamp-anchor[0]<=4_000_000_000:
                 f0=self.future_at(anchor[0])
@@ -220,6 +222,7 @@ class SecondsTape:
                     and all(a[1]<c[1] for a,c in zip(last,last[1:]))
                     and all(D(r[3]-r[4])/max(1,r[3]+r[4])>=D('.6') for r in last)
                     and side*move>0):
+                flow_count+=1
                 emit(NAMES[2],b,midpoint(b)+max(D(0),midpoint(b)-anchor[1]))
             peers=sorted((x for x in eligible if x.instrument.option_type==b.instrument.option_type
                           and x.instrument.expiry==b.instrument.expiry),key=lambda x:x.instrument.strike)
@@ -231,6 +234,7 @@ class SecondsTape:
                 curve_key=(left.instrument.security_id,b.instrument.security_id,right.instrument.security_id)
                 cached=self.curve_cache.get(curve_key)
                 if cached and 0<=stamp-cached[0]<5_000_000_000:
+                    curve_count+=1
                     emit(NAMES[3],b,(midpoint(left)+midpoint(right))/2-cached[1]);continue
                 offsets=[]
                 lookup={p.instrument.security_id:([r[0] for r in self.options[p.instrument.security_id]],list(self.options[p.instrument.security_id])) for p in (left,right)}
@@ -243,6 +247,7 @@ class SecondsTape:
                         if old_row:neighbours.append(old_row[1])
                     if len(neighbours)==2:offsets.append(sum(neighbours)/2-p)
                 if len(offsets)>=20:
+                    curve_count+=1
                     curve=D(median(offsets));self.curve_cache[curve_key]=(stamp,curve)
                     emit(NAMES[3],b,(midpoint(left)+midpoint(right))/2-curve)
         # A mathematical discrepancy with negative conditional net value is
@@ -250,4 +255,9 @@ class SecondsTape:
         for name,sample in list(result.items()):
             if sample.state=='SIGNAL' and entry_candidate(sample,books,D('1000000000'),at) is None:
                 result[name]=replace(sample,state='NO_SIGNAL',reason='SECONDS_EDGE_BELOW_COSTS',side=None)
+        diagnostics={'future_move_2s':str(move),'impulse_threshold':str(future*D('.0002')),
+            'eligible_contracts':str(len(eligible)),'fitted_contracts':str(fitted_count),
+            'breakout_direction':str(breakout_side),'flow_candidates':str(flow_count),'curvature_candidates':str(curve_count)}
+        for name in NAMES[:4]:
+            result[name]=replace(result[name],details={**result[name].details,**diagnostics})
         return result

@@ -18,16 +18,18 @@ from tests.test_production_lifecycles import MatchingBroker
 from tests.acceptance.cas.support import mandate
 
 
-def full_packet(security, bid=9, ask=10):
+def full_packet(security, bid=9, ask=10, *, oi=0, volume=0):
     payload = bytearray(162)
     struct.pack_into("<BhBI",payload,0,8,162,2,security)
     struct.pack_into("<f",payload,8,ask)
     struct.pack_into("<i",payload,14,1)
+    struct.pack_into("<I",payload,22,volume)
+    struct.pack_into("<I",payload,34,oi)
     struct.pack_into("<IIhhff",payload,62,195,195,1,1,bid,ask)
     return bytes(payload)
 
 
-def connected_session(tmp_path, monkeypatch, *, funds_failure=False, insufficient_reference=False, recovery_rotation=None):
+def connected_session(tmp_path, monkeypatch, *, funds_failure=False, insufficient_reference=False, recovery_rotation=None, low_oi_first=False, all_low_oi=False):
     async def run():
         clock = [datetime(2026,9,15,9,35,tzinfo=timezone.utc)]
         ledger = Ledger(tmp_path / "ledger.sqlite3")
@@ -120,8 +122,15 @@ def connected_session(tmp_path, monkeypatch, *, funds_failure=False, insufficien
                 await asyncio.sleep(.05)
             try:
                 await until(lambda:len(sockets)==3)
-                await sockets["market"].send(full_packet(100)+full_packet(200))
+                await sockets["market"].send(full_packet(100,ask=9.05,oi=0 if low_oi_first or all_low_oi else 650000,volume=65000)+full_packet(200,ask=9.05,oi=0 if all_low_oi else 650000,volume=65000))
+                if all_low_oi:
+                    await until(lambda:(tmp_path/'status.json').exists())
+                    await asyncio.sleep(.2)
+                    assert broker.requests==[] and ledger.counter('probe.attempts:2026-09-15')==0
+                    return
                 await until(lambda:len(broker.requests)==1)
+                if low_oi_first:
+                    assert broker.requests[0]['securityId']=='200','A cheap low-OI strike cannot consume a route attempt'
                 assert broker.requests[0]["correlationId"].startswith("p") and broker.requests[0]["price"]=="0.05"
                 await until(lambda:(tmp_path/"status.json").exists() and json.loads((tmp_path/"status.json").read_text())["broker_route_verified"])
                 # A documented initial snapshot may be labelled live_feed;
@@ -182,6 +191,14 @@ def connected_session(tmp_path, monkeypatch, *, funds_failure=False, insufficien
 
 def test_connected_service_qualifies_route_freezes_reference_buys_and_exits(tmp_path, monkeypatch):
     connected_session(tmp_path, monkeypatch)
+
+
+def test_connected_service_does_not_probe_a_low_oi_strike(tmp_path, monkeypatch):
+    connected_session(tmp_path, monkeypatch,low_oi_first=True)
+
+
+def test_connected_service_preserves_attempts_when_no_liquid_probe_exists(tmp_path, monkeypatch):
+    connected_session(tmp_path, monkeypatch,all_low_oi=True)
 
 
 def test_connected_service_exits_during_funds_http_outage(tmp_path, monkeypatch):

@@ -560,3 +560,27 @@ setImmediate(()=>{
  assert.equal(ids['seconds-strategies'].children[0].children[0].children[0].children[1].textContent,'Unknown');
  console.log('Five-strategy simulation is separate from funded permission and real cash');
 });
+
+setImmediate(()=>{
+ browser.blocked={server_time:'2026-10-15T09:00:00Z',runtime:{fresh:true,authority:'ENABLED',state:'ARMED_WAITING_SIGNAL',
+   strategies:['SECONDS_FUTURES_CATCHUP'],funded_strategies:['SECONDS_FUTURES_CATCHUP'],software_verified:true,
+   account_snapshot_fresh:true,broker_route_verified:false,route_attempts_used:3,route_attempt_limit:3},
+   ledger:{available:true,route_check:{state:'REJECTED',reason:'LOW_OPEN_INTEREST'}}};
+ vm.runInContext('renderLive(blocked)',browser);
+ assert.equal(ids['live-funding'].textContent,'Funded · entries blocked');
+ assert.match(ids['live-decision-title'].textContent,/order check rejected/i);
+ assert.match(ids['live-decision-reason'].textContent,/open interest.*3 of 3/i);
+ browser.blocked.runtime.state='WAITING_EXCHANGE_SESSION';
+ vm.runInContext('renderLive(blocked)',browser);
+ assert.match(ids['live-decision-reason'].textContent,/exchange session is closed.*open interest.*3 of 3/i);
+ browser.blocked.runtime.state='ARMED_WAITING_SIGNAL';
+ browser.blocked.ledger.route_check=null;
+ vm.runInContext('renderLive(blocked)',browser);
+ assert.match(ids['live-decision-title'].textContent,/attempts exhausted/i);
+ browser.blocked.runtime.broker_route_verified=true;
+ vm.runInContext('renderLive(blocked)',browser);
+ assert.equal(ids['live-funding'].textContent,'Funded · waiting for a signal');
+ const explanation=vm.runInContext("conditionSummary({strategy:'SECONDS_FUTURES_CATCHUP',state:'NO_SIGNAL',reason:'SECONDS_RULE_NOT_MET',details:{future_move_2s:'0.50',impulse_threshold:'4.60'}})",browser);
+ assert.match(explanation,/0\.5.*4\.6/,'The missing futures impulse must be explained with observed and required values');
+ console.log('Funded permission, rejected/exhausted route and concrete seconds reasons remain distinct');
+});
