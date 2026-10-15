@@ -1,0 +1,3170 @@
+{
+  "session_date": "2026-10-15",
+  "audit_as_of": "2026-10-15T17:31:16.372458+05:30",
+  "market_query_as_of": "2026-10-15T17:35:39.391245+05:30",
+  "writes_to_broker": false,
+  "broker": {
+    "orders": [
+      {
+        "tradingSymbol": "NIFTY-Nov2026-20050-PE",
+        "exchangeSegment": "NSE_FNO",
+        "transactionType": "BUY",
+        "orderStatus": "REJECTED",
+        "quantity": 65,
+        "filledQty": 0,
+        "price": "0.05",
+        "averageTradedPrice": "0.0",
+        "createTime": "2026-10-15 14:24:57",
+        "updateTime": "2026-10-15 14:24:57",
+        "exchangeTime": "0001-01-01 00:00:00",
+        "error_category": "LOW_OPEN_INTEREST"
+      },
+      {
+        "tradingSymbol": "NIFTY-Oct2026-20200-PE",
+        "exchangeSegment": "NSE_FNO",
+        "transactionType": "BUY",
+        "orderStatus": "CANCELLED",
+        "quantity": 65,
+        "filledQty": 0,
+        "price": "0.05",
+        "averageTradedPrice": "0.0",
+        "createTime": "2026-10-15 10:15:38",
+        "updateTime": "2026-10-15 10:15:38",
+        "exchangeTime": "2026-10-15 10:15:38",
+        "error_category": "EXCHANGE_SYSTEM_CANCEL"
+      },
+      {
+        "tradingSymbol": "NIFTY-Nov2026-20050-PE",
+        "exchangeSegment": "NSE_FNO",
+        "transactionType": "BUY",
+        "orderStatus": "REJECTED",
+        "quantity": 65,
+        "filledQty": 0,
+        "price": "0.05",
+        "averageTradedPrice": "0.0",
+        "createTime": "2026-10-15 10:15:36",
+        "updateTime": "2026-10-15 10:15:36",
+        "exchangeTime": "0001-01-01 00:00:00",
+        "error_category": "LOW_OPEN_INTEREST"
+      }
+    ],
+    "trade_count": 0,
+    "trade_summary": [],
+    "open_position_count": 0,
+    "spendable_cash": "7805.94"
+  },
+  "ledger_today_fill_count": 0,
+  "intents": [
+    {
+      "created_at": "2026-10-15T10:15:36.053807+05:30",
+      "lifecycle_kind": "PROBE",
+      "side": "BUY",
+      "quantity": 65,
+      "limit": "0.0500",
+      "state": "REJECTED"
+    },
+    {
+      "created_at": "2026-10-15T10:15:38.333562+05:30",
+      "lifecycle_kind": "PROBE",
+      "side": "BUY",
+      "quantity": 65,
+      "limit": "0.0500",
+      "state": "CANCELLED"
+    },
+    {
+      "created_at": "2026-10-15T14:24:57.070373+05:30",
+      "lifecycle_kind": "PROBE",
+      "side": "BUY",
+      "quantity": 65,
+      "limit": "0.0500",
+      "state": "REJECTED"
+    }
+  ],
+  "today_incidents": [],
+  "pullback": {
+    "completed_no_signal": 58,
+    "weak_trend": 49,
+    "trend_but_no_opposite_pullback": 9,
+    "unknown_receipts": 9,
+    "unknown_times": [
+      "2026-10-15T10:15:00+05:30",
+      "2026-10-15T10:40:00+05:30",
+      "2026-10-15T10:50:00+05:30",
+      "2026-10-15T11:30:00+05:30",
+      "2026-10-15T11:45:00+05:30",
+      "2026-10-15T11:55:00+05:30",
+      "2026-10-15T13:20:00+05:30",
+      "2026-10-15T13:55:00+05:30",
+      "2026-10-15T14:05:00+05:30"
+    ]
+  },
+  "seconds_in_session": [
+    {
+      "strategy": "SECONDS_FUTURES_CATCHUP",
+      "checks": 3776,
+      "reasons": {
+        "FUTURES_FEED_UNAVAILABLE": 248,
+        "SECONDS_WARMUP": 589,
+        "SECONDS_RULE_NOT_MET": 2860,
+        "SECONDS_EDGE_BELOW_COSTS": 25,
+        "EXCHANGE_CLOSED": 54
+      },
+      "hourly": {
+        "14": {
+          "FUTURES_FEED_UNAVAILABLE": 122,
+          "SECONDS_WARMUP": 155,
+          "SECONDS_RULE_NOT_MET": 1539,
+          "SECONDS_EDGE_BELOW_COSTS": 15
+        },
+        "15": {
+          "SECONDS_RULE_NOT_MET": 1321,
+          "FUTURES_FEED_UNAVAILABLE": 126,
+          "SECONDS_EDGE_BELOW_COSTS": 10,
+          "SECONDS_WARMUP": 434,
+          "EXCHANGE_CLOSED": 54
+        }
+      },
+      "diagnostic_ranges": {
+        "future_move_2s": {
+          "min": -7.7,
+          "max": 6.9,
+          "samples": 2885,
+          "zero": 646
+        }
+      }
+    },
+    {
+      "strategy": "SECONDS_FAILED_BREAKOUT",
+      "checks": 3776,
+      "reasons": {
+        "FUTURES_FEED_UNAVAILABLE": 248,
+        "SECONDS_WARMUP": 589,
+        "SECONDS_RULE_NOT_MET": 2885,
+        "EXCHANGE_CLOSED": 54
+      },
+      "hourly": {
+        "14": {
+          "FUTURES_FEED_UNAVAILABLE": 122,
+          "SECONDS_WARMUP": 155,
+          "SECONDS_RULE_NOT_MET": 1554
+        },
+        "15": {
+          "SECONDS_RULE_NOT_MET": 1331,
+          "FUTURES_FEED_UNAVAILABLE": 126,
+          "SECONDS_WARMUP": 434,
+          "EXCHANGE_CLOSED": 54
+        }
+      },
+      "diagnostic_ranges": {
+        "future_move_2s": {
+          "min": -7.7,
+          "max": 6.9,
+          "samples": 2885,
+          "zero": 646
+        }
+      }
+    },
+    {
+      "strategy": "SECONDS_FLOW_CONTINUATION",
+      "checks": 3776,
+      "reasons": {
+        "FUTURES_FEED_UNAVAILABLE": 248,
+        "SECONDS_WARMUP": 589,
+        "SECONDS_RULE_NOT_MET": 2840,
+        "SECONDS_EDGE_BELOW_COSTS": 45,
+        "EXCHANGE_CLOSED": 54
+      },
+      "hourly": {
+        "14": {
+          "FUTURES_FEED_UNAVAILABLE": 122,
+          "SECONDS_WARMUP": 155,
+          "SECONDS_RULE_NOT_MET": 1537,
+          "SECONDS_EDGE_BELOW_COSTS": 17
+        },
+        "15": {
+          "SECONDS_RULE_NOT_MET": 1303,
+          "FUTURES_FEED_UNAVAILABLE": 126,
+          "SECONDS_WARMUP": 434,
+          "SECONDS_EDGE_BELOW_COSTS": 28,
+          "EXCHANGE_CLOSED": 54
+        }
+      },
+      "diagnostic_ranges": {
+        "future_move_2s": {
+          "min": -7.7,
+          "max": 6.9,
+          "samples": 2885,
+          "zero": 646
+        }
+      }
+    },
+    {
+      "strategy": "SECONDS_STRIKE_CATCHUP",
+      "checks": 3776,
+      "reasons": {
+        "FUTURES_FEED_UNAVAILABLE": 248,
+        "SECONDS_WARMUP": 589,
+        "SECONDS_RULE_NOT_MET": 2795,
+        "SECONDS_EDGE_BELOW_COSTS": 90,
+        "EXCHANGE_CLOSED": 54
+      },
+      "hourly": {
+        "14": {
+          "FUTURES_FEED_UNAVAILABLE": 122,
+          "SECONDS_WARMUP": 155,
+          "SECONDS_RULE_NOT_MET": 1496,
+          "SECONDS_EDGE_BELOW_COSTS": 58
+        },
+        "15": {
+          "SECONDS_RULE_NOT_MET": 1299,
+          "FUTURES_FEED_UNAVAILABLE": 126,
+          "SECONDS_WARMUP": 434,
+          "SECONDS_EDGE_BELOW_COSTS": 32,
+          "EXCHANGE_CLOSED": 54
+        }
+      },
+      "diagnostic_ranges": {
+        "future_move_2s": {
+          "min": -7.7,
+          "max": 6.9,
+          "samples": 2885,
+          "zero": 646
+        }
+      }
+    },
+    {
+      "strategy": "SECONDS_EVENT_IMPULSE",
+      "checks": 3776,
+      "reasons": {
+        "NO_FRESH_EVENT": 3722,
+        "EXCHANGE_CLOSED": 54
+      },
+      "hourly": {
+        "14": {
+          "NO_FRESH_EVENT": 1831
+        },
+        "15": {
+          "NO_FRESH_EVENT": 1891,
+          "EXCHANGE_CLOSED": 54
+        }
+      },
+      "diagnostic_ranges": {}
+    }
+  ],
+  "simulation_only": {
+    "observed_at": "2026-10-15T12:01:26.661193+00:00",
+    "mode": "SIMULATION",
+    "writes_to_broker": false,
+    "initial_bankroll": "7805.94",
+    "results": [
+      {
+        "cash": "7805.94",
+        "closed": 0,
+        "entries": 0,
+        "last_result": "NO_MODEL_TRADE",
+        "missed": 0,
+        "net": "0",
+        "open_position": false,
+        "signals": 0,
+        "strategy": "SECONDS_EVENT_IMPULSE"
+      },
+      {
+        "cash": "7805.94",
+        "closed": 0,
+        "entries": 0,
+        "last_result": "NO_MODEL_TRADE",
+        "missed": 0,
+        "net": "0",
+        "open_position": false,
+        "signals": 0,
+        "strategy": "SECONDS_FAILED_BREAKOUT"
+      },
+      {
+        "cash": "7805.94",
+        "closed": 0,
+        "entries": 0,
+        "last_result": "NO_MODEL_TRADE",
+        "missed": 0,
+        "net": "0",
+        "open_position": false,
+        "signals": 0,
+        "strategy": "SECONDS_FLOW_CONTINUATION"
+      },
+      {
+        "cash": "7805.94",
+        "closed": 0,
+        "entries": 0,
+        "last_result": "LIMIT_OR_SIGNAL_MISS",
+        "missed": 1,
+        "net": "0",
+        "open_position": false,
+        "signals": 1,
+        "strategy": "SECONDS_FUTURES_CATCHUP"
+      },
+      {
+        "cash": "7805.94",
+        "closed": 0,
+        "entries": 0,
+        "last_result": "NO_MODEL_TRADE",
+        "missed": 0,
+        "net": "0",
+        "open_position": false,
+        "signals": 0,
+        "strategy": "SECONDS_STRIKE_CATCHUP"
+      }
+    ],
+    "events": [
+      {
+        "at": "2026-10-15T09:30:09.537677+00:00",
+        "kind": "MODEL_SIGNAL",
+        "strategy": "SECONDS_FUTURES_CATCHUP"
+      },
+      {
+        "at": "2026-10-15T09:30:11.582184+00:00",
+        "kind": "MODEL_MISS",
+        "strategy": "SECONDS_FUTURES_CATCHUP"
+      }
+    ],
+    "feed_connected": true,
+    "future_current": false,
+    "options_observed": 24,
+    "event_feed": {
+      "observed_at": "2026-10-15T12:01:22.705943+00:00",
+      "reason": "NO_FRESH_EVENT",
+      "state": "CONNECTED"
+    },
+    "quote_archive_within_cap": true
+  },
+  "earlier_observation_only_signals": [
+    {
+      "strategy": "OPEN_DRIVE_FAST",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T09:55:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "open_return": "0.007366141332874603573681262",
+            "future_vwap": "22766.61739161849710982658960"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "OPEN_DRIVE_SWING",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T09:55:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "open_return": "0.007366141332874603573681262",
+            "future_vwap": "22766.61739161849710982658960"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "OPEN_DRIVE_DOUBLE",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T09:55:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "open_return": "0.007366141332874603573681262",
+            "future_vwap": "22766.61739161849710982658960"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_TREND_TARGET",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T10:00:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.004525861595239822306628772",
+            "future_15m": "0.004391357807834182329176181",
+            "future_vwap": "22779.45147095487409623535278"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:05:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.003124561157140851004072462",
+            "future_15m": "0.003200631357418449666783585",
+            "future_vwap": "22792.59272925170068027210884"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:10:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.001762390370561731827675440",
+            "future_15m": "0.001880685794261721483554934",
+            "future_vwap": "22809.14936442318113552262839"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_TREND_TRAIL",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T10:00:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.004525861595239822306628772",
+            "future_15m": "0.004391357807834182329176181",
+            "future_vwap": "22779.45147095487409623535278"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:05:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.003124561157140851004072462",
+            "future_15m": "0.003200631357418449666783585",
+            "future_vwap": "22792.59272925170068027210884"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:10:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.001762390370561731827675440",
+            "future_15m": "0.001880685794261721483554934",
+            "future_vwap": "22809.14936442318113552262839"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "ORDINARY_IV_CHEAP_TREND_TARGET",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T10:00:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.004525861595239822306628772",
+            "future_15m": "0.004391357807834182329176181",
+            "future_vwap": "22779.45147095487409623535278",
+            "iv": "11.693124719489756",
+            "realized_vol_30m": "13.10991586895874",
+            "vix_15m": "0.001362397820163487738419619"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:05:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.003124561157140851004072462",
+            "future_15m": "0.003200631357418449666783585",
+            "future_vwap": "22792.59272925170068027210884",
+            "iv": "11.797156651344661",
+            "realized_vol_30m": "13.05481021030534",
+            "vix_15m": "0.007529089664613278576317591"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:10:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.001762390370561731827675440",
+            "future_15m": "0.001880685794261721483554934",
+            "future_vwap": "22809.14936442318113552262839",
+            "iv": "11.771247582526978",
+            "realized_vol_30m": "12.613434081249885",
+            "vix_15m": "0.000680735194009530292716133"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "ORDINARY_IV_CHEAP_TREND_TRAIL",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T10:00:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.004525861595239822306628772",
+            "future_15m": "0.004391357807834182329176181",
+            "future_vwap": "22779.45147095487409623535278",
+            "iv": "11.693124719489756",
+            "realized_vol_30m": "13.10991586895874",
+            "vix_15m": "0.001362397820163487738419619"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:05:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.003124561157140851004072462",
+            "future_15m": "0.003200631357418449666783585",
+            "future_vwap": "22792.59272925170068027210884",
+            "iv": "11.797156651344661",
+            "realized_vol_30m": "13.05481021030534",
+            "vix_15m": "0.007529089664613278576317591"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:10:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.001762390370561731827675440",
+            "future_15m": "0.001880685794261721483554934",
+            "future_vwap": "22809.14936442318113552262839",
+            "iv": "11.771247582526978",
+            "realized_vol_30m": "12.613434081249885",
+            "vix_15m": "0.000680735194009530292716133"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "ORDINARY_SECTOR_CONFIRM_TARGET",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T10:00:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.004525861595239822306628772",
+            "bank_15m": "0.003183851648748105923948337",
+            "it_15m": "0.006913007531864644092188594"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:05:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.003124561157140851004072462",
+            "bank_15m": "0.001323871107188530052774726",
+            "it_15m": "0.002015802597066157184029015"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:10:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.001762390370561731827675440",
+            "bank_15m": "0.000613451682134883812970995",
+            "it_15m": "0.000954939501583189173677393"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "ORDINARY_SECTOR_CONFIRM_TRAIL",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T10:00:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.004525861595239822306628772",
+            "bank_15m": "0.003183851648748105923948337",
+            "it_15m": "0.006913007531864644092188594"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:05:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.003124561157140851004072462",
+            "bank_15m": "0.001323871107188530052774726",
+            "it_15m": "0.002015802597066157184029015"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:10:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.001762390370561731827675440",
+            "bank_15m": "0.000613451682134883812970995",
+            "it_15m": "0.000954939501583189173677393"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "ORDINARY_PCR_CONFIRM_TARGET",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T10:00:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.004525861595239822306628772",
+            "future_15m": "0.004391357807834182329176181",
+            "future_vwap": "22779.45147095487409623535278",
+            "pcr_change_5m": "0.109376880907109730018815039"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "ORDINARY_PCR_CONFIRM_TRAIL",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T10:00:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.004525861595239822306628772",
+            "future_15m": "0.004391357807834182329176181",
+            "future_vwap": "22779.45147095487409623535278",
+            "pcr_change_5m": "0.109376880907109730018815039"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "ORDINARY_INSTITUTIONAL_ALIGN_TARGET",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T10:00:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.004525861595239822306628772",
+            "future_15m": "0.004391357807834182329176181",
+            "future_vwap": "22779.45147095487409623535278",
+            "fii_net_change": "6365",
+            "dii_net": "2439.24"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:05:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.003124561157140851004072462",
+            "future_15m": "0.003200631357418449666783585",
+            "future_vwap": "22792.59272925170068027210884",
+            "fii_net_change": "6365",
+            "dii_net": "2439.24"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:10:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.001762390370561731827675440",
+            "future_15m": "0.001880685794261721483554934",
+            "future_vwap": "22809.14936442318113552262839",
+            "fii_net_change": "6365",
+            "dii_net": "2439.24"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    },
+    {
+      "strategy": "ORDINARY_INSTITUTIONAL_ALIGN_TRAIL",
+      "signal_episodes": [
+        {
+          "at": "2026-10-15T10:00:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.004525861595239822306628772",
+            "future_15m": "0.004391357807834182329176181",
+            "future_vwap": "22779.45147095487409623535278",
+            "fii_net_change": "6365",
+            "dii_net": "2439.24"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:05:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.003124561157140851004072462",
+            "future_15m": "0.003200631357418449666783585",
+            "future_vwap": "22792.59272925170068027210884",
+            "fii_net_change": "6365",
+            "dii_net": "2439.24"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        },
+        {
+          "at": "2026-10-15T10:10:00+05:30",
+          "side": "CE",
+          "reason": "EXPANDED_RULE_CONFIRMED",
+          "details": {
+            "spot_15m": "0.001762390370561731827675440",
+            "future_15m": "0.001880685794261721483554934",
+            "future_vwap": "22809.14936442318113552262839",
+            "fii_net_change": "6365",
+            "dii_net": "2439.24"
+          },
+          "last_execution_reason": null,
+          "execution_blocking_reason": null
+        }
+      ]
+    }
+  ],
+  "earlier_saved_assessments": [
+    {
+      "strategy": "ORDINARY_SECTOR_CONFIRM_TRAIL",
+      "evaluated_at": "2026-10-15T04:30:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "ORDINARY_SECTOR_CONFIRM_TARGET",
+      "evaluated_at": "2026-10-15T04:30:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "ORDINARY_PCR_CONFIRM_TRAIL",
+      "evaluated_at": "2026-10-15T04:30:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "ORDINARY_PCR_CONFIRM_TARGET",
+      "evaluated_at": "2026-10-15T04:30:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "ORDINARY_IV_CHEAP_TREND_TRAIL",
+      "evaluated_at": "2026-10-15T04:30:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "ORDINARY_IV_CHEAP_TREND_TARGET",
+      "evaluated_at": "2026-10-15T04:30:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "ORDINARY_INSTITUTIONAL_ALIGN_TRAIL",
+      "evaluated_at": "2026-10-15T04:30:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "ORDINARY_INSTITUTIONAL_ALIGN_TARGET",
+      "evaluated_at": "2026-10-15T04:30:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_TREND_TRAIL",
+      "evaluated_at": "2026-10-15T04:30:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "ORDINARY_FUTURE_TREND_TARGET",
+      "evaluated_at": "2026-10-15T04:30:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "OPEN_DRIVE_SWING",
+      "evaluated_at": "2026-10-15T04:25:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "OPEN_DRIVE_FAST",
+      "evaluated_at": "2026-10-15T04:25:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    },
+    {
+      "strategy": "OPEN_DRIVE_DOUBLE",
+      "evaluated_at": "2026-10-15T04:25:00+00:00",
+      "side": "CE",
+      "outcome": "UNKNOWN",
+      "blocking_reason": "FUNDED_STRATEGY_DISABLED",
+      "candidate_checks": []
+    }
+  ],
+  "market": {
+    "bars": 375,
+    "first_available": "2026-10-15T09:16:00+05:30",
+    "last_available": "2026-10-15T15:30:00+05:30",
+    "open": "22671.3",
+    "last_close": "22997.35",
+    "high": "23056.4",
+    "low": "22637.4",
+    "hourly": [
+      {
+        "hour_ist": 9,
+        "bars": 44,
+        "open": "22671.3",
+        "close": "22839.55",
+        "high": "22844.5",
+        "low": "22637.4"
+      },
+      {
+        "hour_ist": 10,
+        "bars": 60,
+        "open": "22839.65",
+        "close": "22934.35",
+        "high": "22950.0",
+        "low": "22839.65"
+      },
+      {
+        "hour_ist": 11,
+        "bars": 60,
+        "open": "22934.35",
+        "close": "22973.05",
+        "high": "22983.35",
+        "low": "22894.15"
+      },
+      {
+        "hour_ist": 12,
+        "bars": 60,
+        "open": "22972.35",
+        "close": "23012.9",
+        "high": "23020.5",
+        "low": "22936.4"
+      },
+      {
+        "hour_ist": 13,
+        "bars": 60,
+        "open": "23012.8",
+        "close": "23044.8",
+        "high": "23056.4",
+        "low": "22991.65"
+      },
+      {
+        "hour_ist": 14,
+        "bars": 60,
+        "open": "23045.75",
+        "close": "22966.65",
+        "high": "23050.6",
+        "low": "22954.1"
+      },
+      {
+        "hour_ist": 15,
+        "bars": 31,
+        "open": "22966.65",
+        "close": "22997.35",
+        "high": "22997.35",
+        "low": "22926.05"
+      }
+    ]
+  },
+  "calendar": {
+    "opens": "2026-10-15T09:15:00+05:30",
+    "closes": "2026-10-15T15:40:00+05:30",
+    "next_opens": "2026-10-16T09:15:00+05:30",
+    "next_closes": "2026-10-16T15:40:00+05:30",
+    "checked_at": "2026-10-15T17:25:07.004021+05:30",
+    "session_date": null
+  },
+  "services": [
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T07:11:59.248351+05:30",
+      "action": "Stopping"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T07:12:01.505770+05:30",
+      "action": "Stopped"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T07:12:01.506383+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T07:12:02.219613+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T10:14:39.948182+05:30",
+      "action": "Stopping"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T10:14:52.181482+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T10:14:52.181872+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T10:14:52.182461+05:30",
+      "action": "Stopped"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T10:14:52.183103+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T10:14:52.822254+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T14:23:50.468489+05:30",
+      "action": "Stopping"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T14:23:52.612214+05:30",
+      "action": "Stopped"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T14:23:52.615198+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-cas.service",
+      "at": "2026-10-15T14:23:53.332657+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:46:57.379243+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:08.905019+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:08.905742+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:08.905888+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:18.920108+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:18.932105+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:25.137533+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:25.138016+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:35.168552+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:35.176098+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:40.436387+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:40.436939+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:40.437376+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:50.668920+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:50.676611+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:59.186123+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:59.187405+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:47:59.189500+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:09.419100+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:09.430102+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:20.140125+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:20.142786+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:20.145042+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:30.168568+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:30.176130+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:37.915660+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:37.916611+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:37.917726+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:47.918524+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:47.925236+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:54.386684+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:54.387262+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:48:54.389108+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:04.418610+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:04.425323+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:14.400093+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:14.400947+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:14.401717+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:24.419002+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:24.428347+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:33.133641+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:33.135025+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:33.137621+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:43.168549+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:43.175099+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:50.648758+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:50.650248+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:49:50.650400+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:00.669108+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:00.696105+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:09.940528+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:09.941478+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:09.941745+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:20.168108+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:20.176110+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:29.635810+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:29.636716+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:29.637803+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:39.668096+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:39.675523+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:52.700060+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:52.881520+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:50:52.881733+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:51:02.919705+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:51:02.928526+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:51:12.390691+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:51:12.392335+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:51:12.393455+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:51:22.425256+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:51:22.433870+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:51:27.663212+05:30",
+      "action": "Stopping"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:51:27.663766+05:30",
+      "action": "Stopped"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:51:27.879451+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:52:11.407720+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:52:11.408517+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:52:11.412064+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:52:21.419100+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:52:21.425882+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:53:06.629743+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:53:06.630027+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:53:06.630210+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:53:16.423218+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:53:16.427902+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:54:06.923859+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:54:06.925379+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:54:06.925653+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:54:17.169032+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:54:17.179175+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:55:06.666631+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:55:06.667651+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:55:06.668369+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:55:16.669128+05:30",
+      "action": "Scheduled restart"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:55:16.676162+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:56:03.678054+05:30",
+      "action": "Stopping"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:56:16.386156+05:30",
+      "action": "Main process exited"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:56:16.386380+05:30",
+      "action": "Failed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:56:16.387190+05:30",
+      "action": "Stopped"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T13:56:16.390023+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T14:00:36.991478+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T14:08:35.479174+05:30",
+      "action": "Stopping"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T14:08:36.490504+05:30",
+      "action": "Stopped"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T14:08:36.490695+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T14:08:36.508175+05:30",
+      "action": "Started"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T17:17:11.820366+05:30",
+      "action": "Stopping"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T17:17:12.247918+05:30",
+      "action": "Stopped"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T17:17:12.248181+05:30",
+      "action": "Consumed"
+    },
+    {
+      "unit": "dhan-seconds-observer.service",
+      "at": "2026-10-15T17:17:12.258113+05:30",
+      "action": "Started"
+    }
+  ],
+  "journal_error_categories": {
+    "dhan-cas.service": {
+      "error_categories": {
+        "SIGKILL": 1
+      },
+      "times": {
+        "SIGKILL": {
+          "first": "2026-10-15T10:14:52.170068+05:30",
+          "last": "2026-10-15T10:14:52.170068+05:30",
+          "count": 1
+        }
+      }
+    },
+    "dhan-seconds-observer.service": {
+      "error_categories": {
+        "Traceback": 14,
+        "PermissionError": 14,
+        "oom-kill": 5,
+        "SIGKILL": 1
+      },
+      "times": {
+        "Traceback": {
+          "first": "2026-10-15T13:47:08.634135+05:30",
+          "last": "2026-10-15T13:51:11.392175+05:30",
+          "count": 14
+        },
+        "PermissionError": {
+          "first": "2026-10-15T13:47:08.640100+05:30",
+          "last": "2026-10-15T13:51:11.397469+05:30",
+          "count": 14
+        },
+        "oom-kill": {
+          "first": "2026-10-15T13:52:11.408517+05:30",
+          "last": "2026-10-15T13:56:16.386380+05:30",
+          "count": 5
+        },
+        "SIGKILL": {
+          "first": "2026-10-15T13:56:16.155207+05:30",
+          "last": "2026-10-15T13:56:16.155207+05:30",
+          "count": 1
+        }
+      }
+    }
+  },
+  "monitor_history": {
+    "history_summary": {
+      "date": "2026-10-15",
+      "first_at": "2026-10-14T18:30:06.907714+00:00",
+      "gaps": 0,
+      "last_at": "2026-10-15T12:04:21.482122+00:00",
+      "last_state": "WAITING_EXCHANGE_SESSION",
+      "samples": 3258,
+      "states": [
+        "WAITING_EXCHANGE_SESSION",
+        "NO_TRADE_DAY",
+        "UNKNOWN",
+        "RECOVERING",
+        "ARMED_WAITING_SIGNAL"
+      ],
+      "unknown_samples": 2
+    },
+    "retained_monitor_events": 240,
+    "retained_first": "2026-10-15T11:41:00.078990+00:00",
+    "retained_last": "2026-10-15T12:04:21.482122+00:00",
+    "retained_states": {
+      "WAITING_EXCHANGE_SESSION": 240
+    },
+    "retained_stale": 0
+  },
+  "same_minute_funded_checks": [
+    {
+      "evaluated_at": "2026-10-15T09:30:00.325087+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:01.549192+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:02.801541+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:04.043505+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:05.077456+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:06.298391+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:07.526232+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:08.538378+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:09.775772+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_EDGE_BELOW_COSTS"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:10.784571+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:11.801641+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:13.026433+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:14.052224+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:15.277785+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:16.330000+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:17.535230+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:18.581291+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:19.797484+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:20.813374+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:22.058344+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:23.274299+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:24.299740+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:25.525693+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:26.575645+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:27.780783+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:28.816168+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:30.541532+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:32.033221+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:33.039255+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:34.308317+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:35.565314+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:36.825229+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:38.279174+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:39.792949+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:40.826032+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:43.062122+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:44.314249+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:45.812270+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:47.039812+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:48.040150+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:49.055851+00:00",
+      "state": "NO_SIGNAL",
+      "reason": "SECONDS_RULE_NOT_MET"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:50.288521+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:51.525692+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:52.557682+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:53.560234+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:54.578405+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:56.029199+00:00",
+      "state": "UNKNOWN",
+      "reason": "FUTURES_FEED_UNAVAILABLE"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:57.323958+00:00",
+      "state": "WAITING",
+      "reason": "SECONDS_WARMUP"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:58.577415+00:00",
+      "state": "WAITING",
+      "reason": "SECONDS_WARMUP"
+    },
+    {
+      "evaluated_at": "2026-10-15T09:30:59.785980+00:00",
+      "state": "WAITING",
+      "reason": "SECONDS_WARMUP"
+    }
+  ],
+  "current_source": {
+    "funded": "bc3b50a04ef3493d2779031bd0016f629f447b9d",
+    "funded_pid": "404513",
+    "dashboard": "377e404bef36ff6b1421b918b5ea631cb70dff30",
+    "funded_strategies": [
+      "CAS_LAG_V1",
+      "TREND_PULLBACK_FAST",
+      "SECONDS_FUTURES_CATCHUP",
+      "SECONDS_FAILED_BREAKOUT",
+      "SECONDS_FLOW_CONTINUATION",
+      "SECONDS_STRIKE_CATCHUP",
+      "SECONDS_EVENT_IMPULSE"
+    ],
+    "route_verified": false
+  },
+  "coverage_limits": [
+    "Dashboard event detail retains at most 240 samples; whole-day connection uptime cannot be reconstructed from it.",
+    "Quote archive is sampled, lacks OI and does not prove executable queue position or fills.",
+    "No recorded full-depth affordability/fill assessment for earlier disabled strategies.",
+    "Broker ledger request for 15 October returned two carry-forward rows dated 14 October, not itemized 15 October expenses.",
+    "Market-data reconnect count is known; exact causes and timing of every reconnect are not retained."
+  ],
+  "probe_debit_counters_are_budget_consumption_not_executed_loss": true,
+  "seconds_shared_input_state_runs": [
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:24:54.039484+05:30",
+      "to": "2026-10-15T14:24:56.069408+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T14:24:57.800259+05:30",
+      "to": "2026-10-15T14:25:56.579825+05:30",
+      "checks": 54
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:26:04.294462+05:30",
+      "to": "2026-10-15T14:26:04.294462+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:26:16.548420+05:30",
+      "to": "2026-10-15T14:26:16.548420+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:26:18.782169+05:30",
+      "to": "2026-10-15T14:26:18.782169+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:26:50.308495+05:30",
+      "to": "2026-10-15T14:26:50.308495+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:26:54.057727+05:30",
+      "to": "2026-10-15T14:26:54.057727+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:27:02.519594+05:30",
+      "to": "2026-10-15T14:27:06.544569+05:30",
+      "checks": 4
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:27:10.045734+05:30",
+      "to": "2026-10-15T14:27:10.045734+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:27:12.539228+05:30",
+      "to": "2026-10-15T14:27:12.539228+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:27:19.331554+05:30",
+      "to": "2026-10-15T14:27:19.331554+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:27:26.038865+05:30",
+      "to": "2026-10-15T14:27:26.038865+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:27:29.293028+05:30",
+      "to": "2026-10-15T14:27:29.293028+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:27:44.779037+05:30",
+      "to": "2026-10-15T14:27:44.779037+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:28:06.042610+05:30",
+      "to": "2026-10-15T14:28:06.042610+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:28:09.309604+05:30",
+      "to": "2026-10-15T14:28:09.309604+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:28:31.281414+05:30",
+      "to": "2026-10-15T14:28:31.281414+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:28:34.324398+05:30",
+      "to": "2026-10-15T14:28:34.324398+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:28:47.795835+05:30",
+      "to": "2026-10-15T14:28:47.795835+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:28:56.035970+05:30",
+      "to": "2026-10-15T14:28:56.035970+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:28:59.303639+05:30",
+      "to": "2026-10-15T14:28:59.303639+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:29:39.568173+05:30",
+      "to": "2026-10-15T14:29:39.568173+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:29:42.804864+05:30",
+      "to": "2026-10-15T14:29:42.804864+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:30:06.285717+05:30",
+      "to": "2026-10-15T14:30:06.285717+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:30:59.539573+05:30",
+      "to": "2026-10-15T14:30:59.539573+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:31:14.542328+05:30",
+      "to": "2026-10-15T14:31:14.542328+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:31:24.781224+05:30",
+      "to": "2026-10-15T14:31:24.781224+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:31:31.298816+05:30",
+      "to": "2026-10-15T14:31:31.298816+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:31:38.045833+05:30",
+      "to": "2026-10-15T14:31:38.045833+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:31:54.772594+05:30",
+      "to": "2026-10-15T14:31:54.772594+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:32:01.328135+05:30",
+      "to": "2026-10-15T14:32:01.328135+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:32:24.775678+05:30",
+      "to": "2026-10-15T14:32:24.775678+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:32:36.310356+05:30",
+      "to": "2026-10-15T14:32:36.310356+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:32:39.568036+05:30",
+      "to": "2026-10-15T14:32:39.568036+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:33:14.542250+05:30",
+      "to": "2026-10-15T14:33:14.542250+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:33:17.825992+05:30",
+      "to": "2026-10-15T14:33:17.825992+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:33:21.303261+05:30",
+      "to": "2026-10-15T14:33:21.303261+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:34:18.040876+05:30",
+      "to": "2026-10-15T14:34:18.040876+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:34:21.528233+05:30",
+      "to": "2026-10-15T14:34:21.528233+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:34:59.321713+05:30",
+      "to": "2026-10-15T14:34:59.321713+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:35:04.311504+05:30",
+      "to": "2026-10-15T14:35:04.311504+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:35:12.275976+05:30",
+      "to": "2026-10-15T14:35:13.310936+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:35:15.546894+05:30",
+      "to": "2026-10-15T14:35:15.546894+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:35:19.300895+05:30",
+      "to": "2026-10-15T14:35:19.300895+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:35:39.546970+05:30",
+      "to": "2026-10-15T14:35:39.546970+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:35:54.563416+05:30",
+      "to": "2026-10-15T14:35:54.563416+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:36:01.280448+05:30",
+      "to": "2026-10-15T14:36:01.280448+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:36:37.795700+05:30",
+      "to": "2026-10-15T14:36:37.795700+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:36:41.069638+05:30",
+      "to": "2026-10-15T14:36:41.069638+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:36:48.033112+05:30",
+      "to": "2026-10-15T14:36:48.033112+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:37:14.556094+05:30",
+      "to": "2026-10-15T14:37:14.556094+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:37:24.575873+05:30",
+      "to": "2026-10-15T14:37:24.575873+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:37:53.043703+05:30",
+      "to": "2026-10-15T14:37:53.043703+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:38:03.061635+05:30",
+      "to": "2026-10-15T14:38:03.061635+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:38:05.572844+05:30",
+      "to": "2026-10-15T14:38:07.565332+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:38:09.802489+05:30",
+      "to": "2026-10-15T14:38:10.821064+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:38:13.810658+05:30",
+      "to": "2026-10-15T14:38:13.810658+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:38:16.038434+05:30",
+      "to": "2026-10-15T14:38:16.038434+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:38:18.322573+05:30",
+      "to": "2026-10-15T14:38:18.322573+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:38:20.800733+05:30",
+      "to": "2026-10-15T14:38:20.800733+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:38:23.073430+05:30",
+      "to": "2026-10-15T14:38:29.776557+05:30",
+      "checks": 7
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T14:38:30.794813+05:30",
+      "to": "2026-10-15T14:38:35.770000+05:30",
+      "checks": 5
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:38:36.795322+05:30",
+      "to": "2026-10-15T14:38:36.795322+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T14:38:38.045844+05:30",
+      "to": "2026-10-15T14:38:48.543785+05:30",
+      "checks": 10
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:38:49.775169+05:30",
+      "to": "2026-10-15T14:38:49.775169+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T14:38:50.793327+05:30",
+      "to": "2026-10-15T14:38:55.275963+05:30",
+      "checks": 5
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:38:56.321728+05:30",
+      "to": "2026-10-15T14:38:56.321728+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T14:38:57.535345+05:30",
+      "to": "2026-10-15T14:39:29.304873+05:30",
+      "checks": 28
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:41:15.784448+05:30",
+      "to": "2026-10-15T14:41:15.784448+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:42:18.783109+05:30",
+      "to": "2026-10-15T14:42:18.783109+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:42:42.026953+05:30",
+      "to": "2026-10-15T14:42:42.026953+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:43:20.544209+05:30",
+      "to": "2026-10-15T14:43:20.544209+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:43:35.577101+05:30",
+      "to": "2026-10-15T14:43:35.577101+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:44:40.772617+05:30",
+      "to": "2026-10-15T14:44:40.772617+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:45:02.578751+05:30",
+      "to": "2026-10-15T14:45:02.578751+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:46:00.809730+05:30",
+      "to": "2026-10-15T14:46:00.809730+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:46:10.822983+05:30",
+      "to": "2026-10-15T14:46:10.822983+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:46:21.044402+05:30",
+      "to": "2026-10-15T14:46:21.044402+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:46:45.821842+05:30",
+      "to": "2026-10-15T14:46:45.821842+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:46:49.315243+05:30",
+      "to": "2026-10-15T14:46:49.315243+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:46:55.821722+05:30",
+      "to": "2026-10-15T14:46:55.821722+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:46:59.301347+05:30",
+      "to": "2026-10-15T14:46:59.301347+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:47:02.566638+05:30",
+      "to": "2026-10-15T14:47:02.566638+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:47:05.048542+05:30",
+      "to": "2026-10-15T14:47:05.048542+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:47:24.536300+05:30",
+      "to": "2026-10-15T14:47:24.536300+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:47:42.570595+05:30",
+      "to": "2026-10-15T14:47:42.570595+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:47:57.771414+05:30",
+      "to": "2026-10-15T14:47:57.771414+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:48:01.023988+05:30",
+      "to": "2026-10-15T14:48:01.023988+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:48:06.045539+05:30",
+      "to": "2026-10-15T14:48:06.045539+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:48:32.521360+05:30",
+      "to": "2026-10-15T14:48:32.521360+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:48:59.810591+05:30",
+      "to": "2026-10-15T14:48:59.810591+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:49:02.046230+05:30",
+      "to": "2026-10-15T14:49:02.046230+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:49:25.563247+05:30",
+      "to": "2026-10-15T14:49:25.563247+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:49:27.572782+05:30",
+      "to": "2026-10-15T14:49:27.572782+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:49:30.543735+05:30",
+      "to": "2026-10-15T14:49:30.543735+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:49:33.028315+05:30",
+      "to": "2026-10-15T14:49:33.028315+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:49:39.287752+05:30",
+      "to": "2026-10-15T14:49:39.287752+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:49:58.300346+05:30",
+      "to": "2026-10-15T14:49:58.300346+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:50:00.785907+05:30",
+      "to": "2026-10-15T14:50:00.785907+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:50:04.312442+05:30",
+      "to": "2026-10-15T14:50:06.318364+05:30",
+      "checks": 3
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T14:50:07.528469+05:30",
+      "to": "2026-10-15T14:51:06.300476+05:30",
+      "checks": 53
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:55:08.037610+05:30",
+      "to": "2026-10-15T14:55:08.037610+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:56:23.066099+05:30",
+      "to": "2026-10-15T14:56:23.066099+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:56:41.571491+05:30",
+      "to": "2026-10-15T14:56:41.571491+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:56:56.529550+05:30",
+      "to": "2026-10-15T14:56:56.529550+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:57:29.774976+05:30",
+      "to": "2026-10-15T14:57:29.774976+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:58:24.311603+05:30",
+      "to": "2026-10-15T14:58:24.311603+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:58:27.585711+05:30",
+      "to": "2026-10-15T14:58:27.585711+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:59:04.534236+05:30",
+      "to": "2026-10-15T14:59:04.534236+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:59:19.306717+05:30",
+      "to": "2026-10-15T14:59:19.306717+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:59:40.792781+05:30",
+      "to": "2026-10-15T14:59:40.792781+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:59:54.316978+05:30",
+      "to": "2026-10-15T14:59:54.316978+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T14:59:59.302504+05:30",
+      "to": "2026-10-15T14:59:59.302504+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:00:02.801541+05:30",
+      "to": "2026-10-15T15:00:02.801541+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:00:17.535230+05:30",
+      "to": "2026-10-15T15:00:17.535230+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:00:26.575645+05:30",
+      "to": "2026-10-15T15:00:26.575645+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:00:28.816168+05:30",
+      "to": "2026-10-15T15:00:28.816168+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:00:32.033221+05:30",
+      "to": "2026-10-15T15:00:34.308317+05:30",
+      "checks": 3
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:00:36.825229+05:30",
+      "to": "2026-10-15T15:00:36.825229+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:00:39.792949+05:30",
+      "to": "2026-10-15T15:00:39.792949+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:00:44.314249+05:30",
+      "to": "2026-10-15T15:00:44.314249+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:00:50.288521+05:30",
+      "to": "2026-10-15T15:00:56.029199+05:30",
+      "checks": 6
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:00:57.323958+05:30",
+      "to": "2026-10-15T15:01:01.078738+05:30",
+      "checks": 4
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:01:03.303376+05:30",
+      "to": "2026-10-15T15:01:04.321547+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:01:05.537703+05:30",
+      "to": "2026-10-15T15:01:05.537703+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:01:07.061776+05:30",
+      "to": "2026-10-15T15:01:07.061776+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:01:08.331933+05:30",
+      "to": "2026-10-15T15:01:09.821468+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:01:11.154507+05:30",
+      "to": "2026-10-15T15:01:14.320190+05:30",
+      "checks": 4
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:01:15.566562+05:30",
+      "to": "2026-10-15T15:01:21.311596+05:30",
+      "checks": 6
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:01:22.546749+05:30",
+      "to": "2026-10-15T15:01:22.546749+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:01:23.578938+05:30",
+      "to": "2026-10-15T15:01:31.551661+05:30",
+      "checks": 8
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:01:32.561609+05:30",
+      "to": "2026-10-15T15:01:32.561609+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:01:33.590198+05:30",
+      "to": "2026-10-15T15:01:34.789274+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:01:35.791794+05:30",
+      "to": "2026-10-15T15:01:35.791794+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:01:36.825680+05:30",
+      "to": "2026-10-15T15:02:01.341762+05:30",
+      "checks": 23
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:02:02.802412+05:30",
+      "to": "2026-10-15T15:02:02.802412+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:02:04.030520+05:30",
+      "to": "2026-10-15T15:02:14.085033+05:30",
+      "checks": 10
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:03:57.795022+05:30",
+      "to": "2026-10-15T15:03:57.795022+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:04:24.288415+05:30",
+      "to": "2026-10-15T15:04:24.288415+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:04:55.793823+05:30",
+      "to": "2026-10-15T15:04:55.793823+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:05:40.827210+05:30",
+      "to": "2026-10-15T15:05:40.827210+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:07:02.787475+05:30",
+      "to": "2026-10-15T15:07:02.787475+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:07:46.541927+05:30",
+      "to": "2026-10-15T15:07:46.541927+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:07:59.804169+05:30",
+      "to": "2026-10-15T15:07:59.804169+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:08:08.054486+05:30",
+      "to": "2026-10-15T15:08:08.054486+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:08:47.554915+05:30",
+      "to": "2026-10-15T15:08:47.554915+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:09:06.783117+05:30",
+      "to": "2026-10-15T15:09:06.783117+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:09:12.308169+05:30",
+      "to": "2026-10-15T15:09:12.308169+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:09:37.832543+05:30",
+      "to": "2026-10-15T15:09:37.832543+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:09:42.578430+05:30",
+      "to": "2026-10-15T15:09:42.578430+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:10:08.538855+05:30",
+      "to": "2026-10-15T15:10:08.538855+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:11:41.330373+05:30",
+      "to": "2026-10-15T15:11:44.565998+05:30",
+      "checks": 3
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:11:46.827179+05:30",
+      "to": "2026-10-15T15:11:48.034226+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:11:50.580344+05:30",
+      "to": "2026-10-15T15:11:50.580344+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:11:54.535755+05:30",
+      "to": "2026-10-15T15:12:02.817650+05:30",
+      "checks": 8
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:12:05.063946+05:30",
+      "to": "2026-10-15T15:12:06.320630+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:12:08.037001+05:30",
+      "to": "2026-10-15T15:12:09.089816+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:12:11.541844+05:30",
+      "to": "2026-10-15T15:12:12.583193+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:12:13.584166+05:30",
+      "to": "2026-10-15T15:12:20.290725+05:30",
+      "checks": 7
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:12:21.296567+05:30",
+      "to": "2026-10-15T15:13:01.792940+05:30",
+      "checks": 35
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:13:02.808479+05:30",
+      "to": "2026-10-15T15:13:02.808479+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:13:04.030557+05:30",
+      "to": "2026-10-15T15:13:20.086455+05:30",
+      "checks": 15
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:13:49.576350+05:30",
+      "to": "2026-10-15T15:13:49.576350+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:14:29.794048+05:30",
+      "to": "2026-10-15T15:14:29.794048+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:14:47.814598+05:30",
+      "to": "2026-10-15T15:14:47.814598+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:17:42.551563+05:30",
+      "to": "2026-10-15T15:17:42.551563+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:20:33.823454+05:30",
+      "to": "2026-10-15T15:20:38.080215+05:30",
+      "checks": 5
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:20:39.287234+05:30",
+      "to": "2026-10-15T15:21:37.068957+05:30",
+      "checks": 45
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:22:03.790374+05:30",
+      "to": "2026-10-15T15:22:07.075468+05:30",
+      "checks": 4
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:22:08.310545+05:30",
+      "to": "2026-10-15T15:22:44.807697+05:30",
+      "checks": 31
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:22:46.057964+05:30",
+      "to": "2026-10-15T15:22:46.057964+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:22:47.313135+05:30",
+      "to": "2026-10-15T15:22:47.313135+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:22:48.340780+05:30",
+      "to": "2026-10-15T15:22:48.340780+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:22:49.808843+05:30",
+      "to": "2026-10-15T15:22:52.044857+05:30",
+      "checks": 3
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:22:53.081792+05:30",
+      "to": "2026-10-15T15:22:55.290558+05:30",
+      "checks": 3
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:22:56.329209+05:30",
+      "to": "2026-10-15T15:23:07.314325+05:30",
+      "checks": 10
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:23:08.574149+05:30",
+      "to": "2026-10-15T15:23:08.574149+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:23:09.582486+05:30",
+      "to": "2026-10-15T15:23:12.809465+05:30",
+      "checks": 3
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:23:13.835895+05:30",
+      "to": "2026-10-15T15:23:13.835895+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:23:15.063063+05:30",
+      "to": "2026-10-15T15:23:34.038592+05:30",
+      "checks": 15
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:23:35.327638+05:30",
+      "to": "2026-10-15T15:23:35.327638+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:23:36.544031+05:30",
+      "to": "2026-10-15T15:23:55.324268+05:30",
+      "checks": 16
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:24:02.538695+05:30",
+      "to": "2026-10-15T15:24:06.286863+05:30",
+      "checks": 4
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:24:07.569487+05:30",
+      "to": "2026-10-15T15:25:05.581038+05:30",
+      "checks": 46
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:25:59.066708+05:30",
+      "to": "2026-10-15T15:25:59.066708+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:26:03.561776+05:30",
+      "to": "2026-10-15T15:26:03.561776+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:26:06.036714+05:30",
+      "to": "2026-10-15T15:26:09.296553+05:30",
+      "checks": 4
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:26:10.556966+05:30",
+      "to": "2026-10-15T15:27:08.550126+05:30",
+      "checks": 47
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:27:27.825368+05:30",
+      "to": "2026-10-15T15:27:27.825368+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:28:06.841932+05:30",
+      "to": "2026-10-15T15:28:09.051701+05:30",
+      "checks": 3
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:28:10.067951+05:30",
+      "to": "2026-10-15T15:29:02.534747+05:30",
+      "checks": 45
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:29:03.586941+05:30",
+      "to": "2026-10-15T15:29:03.586941+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:29:05.069818+05:30",
+      "to": "2026-10-15T15:29:09.578378+05:30",
+      "checks": 5
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:32:45.318555+05:30",
+      "to": "2026-10-15T15:32:45.318555+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:33:51.791927+05:30",
+      "to": "2026-10-15T15:33:51.791927+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:34:06.570586+05:30",
+      "to": "2026-10-15T15:34:06.570586+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:34:08.797106+05:30",
+      "to": "2026-10-15T15:34:08.797106+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:34:14.040343+05:30",
+      "to": "2026-10-15T15:34:15.585384+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:34:26.299363+05:30",
+      "to": "2026-10-15T15:34:33.539925+05:30",
+      "checks": 7
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:34:35.058793+05:30",
+      "to": "2026-10-15T15:34:39.055051+05:30",
+      "checks": 4
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:34:40.543777+05:30",
+      "to": "2026-10-15T15:34:40.543777+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:34:42.329935+05:30",
+      "to": "2026-10-15T15:34:43.550217+05:30",
+      "checks": 2
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:34:45.323490+05:30",
+      "to": "2026-10-15T15:34:51.789694+05:30",
+      "checks": 6
+    },
+    {
+      "reason": "SECONDS_WARMUP",
+      "from": "2026-10-15T15:34:52.805594+05:30",
+      "to": "2026-10-15T15:35:51.852437+05:30",
+      "checks": 51
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:35:59.559882+05:30",
+      "to": "2026-10-15T15:35:59.559882+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:36:10.538310+05:30",
+      "to": "2026-10-15T15:36:10.538310+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:38:17.063730+05:30",
+      "to": "2026-10-15T15:38:17.063730+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:38:21.535709+05:30",
+      "to": "2026-10-15T15:38:21.535709+05:30",
+      "checks": 1
+    },
+    {
+      "reason": "FUTURES_FEED_UNAVAILABLE",
+      "from": "2026-10-15T15:38:34.553013+05:30",
+      "to": "2026-10-15T15:38:34.553013+05:30",
+      "checks": 1
+    }
+  ]
+}
