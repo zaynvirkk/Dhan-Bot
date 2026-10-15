@@ -10,7 +10,7 @@ from dhan_cas_bot.config import load_config,load_mandate
 from dhan_cas_bot.broker import DhanBroker
 from dhan_cas_bot.ledger import Ledger
 from dhan_cas_bot.profit_activation import amend_config,require_managed
-from dhan_cas_bot.funded_activation import amend_funded
+from dhan_cas_bot.funded_activation import amend_funded,amend_roster
 from dhan_cas_bot.release import run_verification,current_verification
 from dhan_cas_bot.dashboard.data import read_json
 
@@ -34,14 +34,17 @@ async def account(config,ledger):
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--apply',action='store_true');parser.add_argument('--retain',default='0.50')
     parser.add_argument('--funded-only',nargs='*',default=None,help='Explicit subset permitted to submit new entries; scans remain configured.')
+    parser.add_argument('--scan-only',nargs='+',default=None,help='Replace scanned roster; requires an explicit --funded-only subset, including an empty subset.')
     args=parser.parse_args();retain=Decimal(args.retain)
+    if args.scan_only is not None and args.funded_only is None:parser.error('--scan-only requires --funded-only')
     if os.geteuid()!=0 or ROOT.parent!=Path('/opt/sablestone-dhan-dashboard/releases') or not re.fullmatch('[0-9a-f]{40}',ROOT.name):
         raise ValueError('run from the installed immutable release on the VM')
     spec=importlib.util.spec_from_file_location('upgrade',ROOT/'ops/upgrade-session-strategies.py');upgrade=importlib.util.module_from_spec(spec);spec.loader.exec_module(upgrade)
     path=Path('/etc/sablestone-dhan/production.toml');config=load_config(path);state=Path(config['state_dir']);original=path.read_bytes();stat=path.stat()
     upgrade.require_existing_authority(config,load_mandate(state/'mandate.json').live_order_authority)
     updated=amend_config(original.decode(),retain).encode()
-    if args.funded_only is not None:updated=amend_funded(updated.decode(),args.funded_only).encode()
+    if args.scan_only is not None:updated=amend_roster(updated.decode(),args.scan_only,args.funded_only).encode()
+    elif args.funded_only is not None:updated=amend_funded(updated.decode(),args.funded_only).encode()
     with tempfile.TemporaryDirectory(prefix='dhan-profit-activation-') as temporary:
         print('Verifying the complete release while the existing trader continues managing its position.',flush=True)
         verified=run_verification(ROOT,temporary)
@@ -103,6 +106,7 @@ def main():
             if lock is not None:os.close(lock)
             stop_bound.unlink(missing_ok=True)
         print(json.dumps({'applied':True,'source':ROOT.name,'profit_exit_policy':'NET_PROFIT_RATCHET_V1',
+            'scanned_strategies':args.scan_only if args.scan_only is not None else config['strategies'],
             'retention':str(retain),'existing_position_migrated_forward_only':migrated is not None,
             'funded_strategies':args.funded_only if args.funded_only is not None else config.get('funded_strategies',config['strategies']),
             'mandate_and_probe_caps_unchanged':True,'broker_orders_submitted_by_upgrade':0}),flush=True)

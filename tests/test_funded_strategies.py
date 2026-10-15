@@ -57,3 +57,32 @@ def test_funded_change_preserves_all_other_configuration_and_is_idempotent():
     assert before==after
     assert amend_funded(result,['CAS_LAG_V1'])==result
 
+
+def test_roster_edit_requires_explicit_funding_and_rejects_removed_funded_name():
+    from dhan_cas_bot.funded_activation import amend_roster
+    source='strategies = ["CAS_LAG_V1", "OPEN_DRIVE_FAST"]\nfunded_strategies = ["CAS_LAG_V1"]\nlive_order_authority = true\n'
+    for scanned,funded in [(['CAS_LAG_V1'],None),(['CAS_LAG_V1'],['OPEN_DRIVE_FAST']),
+                           ([],[]),(['CAS_LAG_V1','CAS_LAG_V1'],[]),(['MADE_UP'],[])]:
+        with pytest.raises(ValueError):amend_roster(source,scanned,funded)
+
+
+def test_roster_edit_preserves_caps_tables_and_explicit_observation_permission():
+    import tomllib
+    from dhan_cas_bot.funded_activation import amend_roster
+    source='strategies = ["CAS_LAG_V1", "OPEN_DRIVE_FAST"]\nfunded_strategies = ["CAS_LAG_V1"]\nallocated_capital = "9411.18"\nprofit_exit_retain = "0.50"\n[limits]\nprobe = 2\n'
+    names=['CAS_LAG_V1','TREND_PULLBACK_FAST']
+    result=amend_roster(source,names,['CAS_LAG_V1'])
+    before=tomllib.loads(source);after=tomllib.loads(result)
+    assert after.pop('strategies')==names
+    assert after.pop('funded_strategies')==['CAS_LAG_V1']
+    before.pop('strategies');before.pop('funded_strategies')
+    assert before==after
+    assert amend_roster(result,names,['CAS_LAG_V1'])==result
+    assert tomllib.loads(amend_roster(source,names,[]))['funded_strategies']==[]
+
+
+def test_roster_edit_rejects_multiline_assignment_instead_of_corrupting_config():
+    from dhan_cas_bot.funded_activation import amend_roster
+    source='strategies = [\n"CAS_LAG_V1",\n"OPEN_DRIVE_FAST"\n]\nfunded_strategies = ["CAS_LAG_V1"]\n'
+    with pytest.raises(ValueError):amend_roster(source,['CAS_LAG_V1'],['CAS_LAG_V1'])
+

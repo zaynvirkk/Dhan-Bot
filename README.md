@@ -1,5 +1,11 @@
 # SableStone Dhan CAS bot
 
+**15 October narrowed roster:** the selected production scan is CAS_LAG_V1 plus
+TREND_PULLBACK_FAST; the other 135 configurations are disabled, with their history
+retained. CAS remains funded; the non-expiry candidate is observation-only until
+an explicit funded experiment is selected. See the
+[roster and evidence limits](docs/STRATEGY-ROSTER-2026-10-15.md).
+
 **13 October strategy expansion:** the production registry now covers 137 NIFTY
 configurations across 41 rule families plus CAS. Shared-capital selection uses
 already closed executions, with unknown profitability explicitly unranked;
