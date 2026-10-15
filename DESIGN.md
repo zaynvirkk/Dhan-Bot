@@ -129,7 +129,7 @@ separate. Fresh incoming frames cannot conceal genuinely stale option books.
 15 October compact operating views: Live, History and System now select separate
 panels instead of scrolling through one long page. Live contains three money
 observations, one concrete decision, an open position when present and compact
-native disclosures for the configured strategies. Cumulative closed-trade P&L is
+native disclosures for the configured strategies. Recorded closed-trade P&L is
 labelled separately from cash and today's completed count. Recorded trend and
 pullback measurements explain waiting; unavailable confirmations remain unknown.
 Completed trades, holding time, per-strategy outcomes and route attempts live in

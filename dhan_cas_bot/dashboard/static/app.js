@@ -219,9 +219,9 @@ function renderStrategies(d){
   $('strategy-performance').replaceChildren();
   if(performance.length){
    const wrap=el('div',undefined,'table-wrap'),table=el('table'),head=el('tr');
-   for(const text of ['Strategy','Closed trades','Gross P&L','Broker charges','Net P&L'])head.append(el('th',text));
+   for(const text of ['Strategy','Closed trades','Net P&L'])head.append(el('th',text));
    table.append(head);
-   for(const row of performance){const tr=el('tr');for(const text of [strategyNames[row.strategy]||row.strategy.replaceAll('_',' ').toLowerCase(),String(row.filled_closed),cash(row.gross_pnl),row.charges_complete?cash(row.reported_charges):'Awaiting final fees',row.charges_complete?cash(row.net_pnl):'Awaiting final fees'])tr.append(el('td',text));table.append(tr);}
+   for(const row of performance){const tr=el('tr');for(const text of [strategyLabel(row.strategy),String(row.filled_closed),row.charges_complete?cash(row.net_pnl):'Awaiting final fees'])tr.append(el('td',text));table.append(tr);}
    wrap.append(table);$('strategy-performance').append(wrap);
   }else $('strategy-performance').append(el('p',d.ledger?.available?'No completed filled trades recorded.':'Execution history is unavailable.','subtle'));
  }
@@ -414,12 +414,12 @@ function renderDecision(d){
 }
 
 function timeOnly(value){const d=new Date(value);return !value||Number.isNaN(d.getTime())?'Time unknown':new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' IST';}
-function strategyLabel(name){return ({TREND_PULLBACK_FAST:'Trend pullback',CAS_LAG_V1:'Expiry auction'})[name]||strategyNames[name]||name.replaceAll('_',' ').toLowerCase();}
+function strategyLabel(name){return ({TREND_PULLBACK_FAST:'Trend pullback',CAS_LAG_V1:'Expiry auction',ORDINARY_PUBLISHED_PCR_TRAIL:'PCR trend'})[name]||strategyNames[name]||name.replaceAll('_',' ').toLowerCase();}
 function signedPercent(value){if(value===null||value===undefined||value==='')return 'Not reported';const n=Number(value);return Number.isFinite(n)?`${n>0?'+':''}${(n*100).toFixed(2)}%`:'Not reported';}
 function closedTradeData(d){
  const performance=d.ledger?.strategy_performance||[];
  const trades=performance.flatMap(row=>(row.trades||[]).map(trade=>({...trade,strategy:row.strategy})));
- const complete=d.ledger?.available===true&&(performance.length>0?performance.every(row=>Number.isSafeInteger(row.filled_closed)&&Array.isArray(row.trades)&&row.trades.length===row.filled_closed):d.ledger?.counts?.fills===0);
+ const complete=d.ledger?.available===true&&(performance.length>0?performance.every(row=>Number.isSafeInteger(row.filled_closed)&&Array.isArray(row.trades)&&row.trades.length===row.filled_closed&&row.trades.every(t=>t.exit_at&&Number.isFinite(Date.parse(t.exit_at)))):d.ledger?.counts?.fills===0);
  return {trades:trades.sort((a,b)=>(b.exit_at||'').localeCompare(a.exit_at||'')),complete,total:performance.reduce((n,row)=>n+(Number.isSafeInteger(row.filled_closed)?row.filled_closed:0),0)};
 }
 function liveStrategyState(name,row,d){
@@ -454,7 +454,7 @@ function liveStrategyState(name,row,d){
    return {label:row.state==='WAITING'?'Between checks':'No entry',reason,check};
   }
  }
- return {label:row.state==='WAITING'?'Waiting':'No entry',reason:conditionSummary(row)};
+ return {label:row.state==='WAITING'?'Waiting':'No entry',reason:name==='TREND_PULLBACK_FAST'&&row.reason==='OUTSIDE_STRATEGY_WINDOW'?'Between scheduled five-minute decisions.':conditionSummary(row)};
 }
 function renderLive(d){
  const rt=d.runtime,a=d.account,configured=rt?.strategies||[],funded=rt?.funded_strategies;
@@ -466,14 +466,23 @@ function renderLive(d){
  pnl('live-net',netComplete?settlement.net_after_reported_charges:null);
  $('live-net-note').textContent=netComplete?`${settlement.closed_trades} closed trades · after fees`:settlement?.status==='CHARGES_PENDING'?'Final fees pending':'Execution history unavailable';
  $('live-positions').textContent=a?.open_position_count??'—';
+ if(changed('live-held',[a?.positions,d.ledger?.active_trades,a?.fresh])){
+  $('live-held').replaceChildren();
+  for(const position of a?.positions||[]){
+   const line=el('div',undefined,'live-held-row');
+   const info=el('div');info.append(el('strong',position.symbol||'Open broker position'),el('p',`${position.quantity??'Unknown'} units · average buy ${cash(position.average_price)}`,'subtle'));
+   const value=el('div');value.append(el('span',a?.fresh?'Unrealised P&L':'Last unrealised P&L','metric-label'),el('strong',cash(position.unrealised),position.unrealised==null||position.unrealised==='0.00'?'':position.unrealised.startsWith('-')?'negative':'positive'));
+   line.append(info,value);$('live-held').append(line);
+  }
+ }
  const closed=closedTradeData(d),today=closed.trades.filter(t=>istDay(t.exit_at)===istDay(d.server_time)).length;
  $('live-trades-today').textContent=closed.complete?`${today} completed ${today===1?'trade':'trades'} today`:'Today’s completed count unknown';
  const liveOn=rt?.fresh&&rt.authority==='ENABLED'&&Array.isArray(funded)&&funded.length>0;
- $('live-funding').textContent=liveOn?'Real money on':rt?.fresh&&rt.authority==='DISABLED'?'New entries paused':'Permission unknown';
+ $('live-funding').textContent=liveOn?'Real money on':rt?.fresh&&rt.authority==='DISABLED'?'New entries paused':rt?.fresh&&Array.isArray(funded)&&funded.length===0?'No funded strategies':'Permission unknown';
  $('live-funding').className='badge '+(liveOn?'good':'warn');
  const quote=rt?.observation,quoteAge=elapsed(quote?.ltp_at,d.server_time);
  $('live-market').textContent=quote?.ltp!=null?`NIFTY ${points(quote.ltp)} · ${rt?.fresh&&quoteAge!==null&&quoteAge<=5?'live':'last observed'}`:'NIFTY price unavailable';
- const snapshots=configured.map(name=>{const row=rt.strategy_evaluations?.find(r=>r.strategy===name);return {name,row,snapshot:liveStrategyState(name,row,d)};});
+ const snapshots=configured.map(name=>{const row=rt.strategy_evaluations?.find(r=>r.strategy===name);return {name,row,snapshot:liveStrategyState(name,row,d)};}).sort((a,b)=>Number(['Not today','Closed','Observe only'].includes(a.snapshot.label))-Number(['Not today','Closed','Observe only'].includes(b.snapshot.label)));
  let title='Waiting for a setup',reason='The bot will enter only when a strategy and its execution checks pass.';
  if(!rt?.fresh){title='Live status unavailable';reason='The last snapshot is historical. Check System for the connection status.';}
  else if(['POSITION_OPEN','ENTRY_PENDING','EXIT_PENDING','SETTLEMENT_PENDING','RECOVERING'].includes(rt.state)){
@@ -481,6 +490,8 @@ function renderLive(d){
   reason=rt.state==='POSITION_OPEN'?'Live position and exit information are shown below.':'Waiting for broker confirmation before another decision.';
  }else if(rt.authority==='DISABLED'){title='New trades are paused';reason='Existing positions can still be managed.';}
  else if(rt.authority!=='ENABLED'){title='Trading permission is unknown';reason='A fresh confirmed trading state is needed.';}
+ else if(!Array.isArray(funded)){title='Funded strategies are unknown';reason='The trader has not reported which strategies can use real money.';}
+ else if(!funded.length){title='No strategies are funded';reason='The configured strategies can observe without opening new money positions.';}
  else if(rt.software_verified===false){title='Entries are blocked';reason='The running software needs matching verification. See System.';}
  else if(rt.account_snapshot_fresh===false){title='Waiting for the account check';reason='New entries need a fresh reconciled balance and position read.';}
  else if(rt.state==='WAITING_EXCHANGE_SESSION'){title='Waiting for the market to open';reason='New entries wait for a verified exchange session.';}
@@ -535,8 +546,8 @@ function renderLive(d){
     const tr=el('tr'),duration=(Date.parse(trade.exit_at)-Date.parse(trade.entry_at))/1000;
     const hold=Number.isFinite(duration)&&duration>=0?(duration<60?`${duration.toFixed(1)}s`:`${Math.floor(duration/60)}m ${Math.floor(duration%60)}s`):'Unknown';
     for(const text of [at(trade.exit_at),strategyLabel(trade.strategy),hold])tr.append(el('td',text));
-    tr.append(el('td',trade.charges_complete?cash(trade.net_pnl):'Fees pending',trade.net_pnl?.startsWith('-')?'negative':trade.charges_complete?'positive':''));
-    const cell=el('td'),detail=el('details');detail.append(el('summary','Details'),el('p',`${trade.quantity} units · bought ${cash(trade.entry_price)} · sold ${cash(trade.exit_price)} · gross ${cash(trade.gross_pnl)}.`));cell.append(detail);tr.append(cell);table.append(tr);
+    tr.append(el('td',trade.charges_complete?cash(trade.net_pnl):'Fees pending',!trade.charges_complete||trade.net_pnl==null||trade.net_pnl==='0.00'?'':trade.net_pnl.startsWith('-')?'negative':'positive'));
+    const cell=el('td'),detail=el('details');detail.append(el('summary','Details'),el('p',`${trade.quantity} units · bought ${cash(trade.entry_price)} · sold ${cash(trade.exit_price)} · gross ${cash(trade.gross_pnl)} · reported fees ${cash(trade.reported_charges)}.`));cell.append(detail);tr.append(cell);table.append(tr);
    }
    wrap.append(table);$('completed-trades').append(wrap);
   }else $('completed-trades').append(el('p',closed.complete?'No completed trades yet.':'Completed-trade records are unavailable.','empty'));

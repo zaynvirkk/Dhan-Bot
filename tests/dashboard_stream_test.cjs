@@ -444,7 +444,7 @@ setImmediate(()=>{
  vm.runInContext('renderStrategies(prunedRoster)',browser);
  assert.equal(ids['strategy-checks'].children.length,2,'A removed engine cannot return through stale checks or a legacy observer');
  assert.doesNotMatch(content(ids['strategy-checks']),/Morning gap-fade|published pcr/);
- assert.match(content(ids['strategy-performance']),/ordinary published pcr/,'Disabling an engine must preserve its actual execution history');
+ assert.match(content(ids['strategy-performance']),/PCR trend/,'Disabling an engine must preserve its actual execution history');
  console.log('Explicit production roster hides removed observers while preserving execution history');
  browser.exitFixture={runtime:{fresh:true,state:'POSITION_OPEN'},account:{fresh:true,positions:[{quantity:65}]},
   ledger:{active_trades:[{strategy:'ORDINARY_PUBLISHED_PCR_TRAIL',quantity:65,trailing:true,stop_fraction:'0.50',target_known:true,target_multiple:null,exit_due:'2026-10-14T10:04:00Z',exit_trigger:null}]}};
@@ -473,12 +473,13 @@ setImmediate(()=>{
  assert.equal(ids['live-trades-today'].textContent,'0 completed trades today');
  assert.equal(ids['live-decision-title'].textContent,'Waiting for a pullback');
  assert.equal(ids['live-strategies'].children.length,2);
+ assert.equal(ids['live-strategies'].children[0].dataset.strategy,'TREND_PULLBACK_FAST','Today’s eligible strategy comes before an ineligible expiry engine');
  browser.compact.runtime.strategy_evaluations[0]={strategy:'TREND_PULLBACK_FAST',state:'WAITING',evaluated_at:'2026-10-15T05:01:00Z',details:{}};
  browser.compact.server_time='2026-10-15T05:01:00Z';
- ids['live-strategies'].children[1].open=true;
+ ids['live-strategies'].children.find(n=>n.dataset.strategy==='TREND_PULLBACK_FAST').open=true;
  vm.runInContext('renderLive(compact)',browser);
  assert.match(ids['live-decision-reason'].textContent,/10:30.*Last|Last decision 10:30/,'Between-check updates must retain the dated completed decision');
- assert.equal(ids['live-strategies'].children[1].open,true,'Live updates must preserve an expanded strategy explanation');
+ assert.equal(ids['live-strategies'].children.find(n=>n.dataset.strategy==='TREND_PULLBACK_FAST').open,true,'Live updates must preserve an expanded strategy explanation');
  browser.compact.runtime.broker_route_verified=false;
  vm.runInContext('renderLive(compact)',browser);
  assert.equal(ids['live-decision-title'].textContent,'Checking the order connection','Permission alone is not entry readiness');
@@ -497,4 +498,22 @@ setImmediate(()=>{
  vm.runInContext("selectView('live',false)",browser);
  assert.equal(ids.overview.hidden,false);assert.equal(ids['history-view'].hidden,true);assert.equal(ids.system.hidden,true);
  console.log('Compact money, dated reasons, pane isolation, missing inputs and stale permission verified');
+});
+
+setImmediate(()=>{
+ browser.compact.runtime.fresh=true;browser.compact.runtime.authority='ENABLED';
+ browser.compact.runtime.state='POSITION_OPEN';browser.compact.account.open_position_count=1;
+ browser.compact.account.positions=[{symbol:'NIFTY fixture',quantity:65,average_price:'100.00',unrealised:'-300.00'}];
+ browser.compact.ledger.active_trades=[{strategy:'TREND_PULLBACK_FAST',quantity:65}];
+ vm.runInContext('renderLive(compact)',browser);
+ assert.equal(ids['live-decision-title'].textContent,'Managing your position','Position management takes priority over cached no-entry reasons');
+ assert.equal(ids['live-held'].children[0].children[1].children[1].textContent,'-₹300.00');
+ browser.compact.account.positions[0].unrealised=null;
+ vm.runInContext('renderLive(compact)',browser);
+ assert.equal(ids['live-held'].children[0].children[1].children[1].textContent,'—');
+ assert.equal(ids['live-held'].children[0].children[1].children[1].className,undefined,'Unknown P&L cannot receive a profitable color');
+ browser.compact.ledger.strategy_performance=[{strategy:'CAS_LAG_V1',filled_closed:1,trades:[{exit_at:null}]}];
+ vm.runInContext('renderLive(compact)',browser);
+ assert.match(ids['live-trades-today'].textContent,/unknown/,'Missing close timestamps cannot prove zero trades today');
+ console.log('Held-position priority, unknown unrealised P&L and incomplete dates verified');
 });

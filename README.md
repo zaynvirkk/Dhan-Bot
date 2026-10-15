@@ -1,5 +1,10 @@
 # SableStone Dhan CAS bot
 
+**15 October compact dashboard:** Live, History and System are separate views.
+The default view shows money, the current decision and compact strategy checks;
+actual completed trades, holding times and net results have their own history.
+[Scope and validation](docs/DASHBOARD-LIVE-VIEWS-2026-10-15.md).
+
 **15 October narrowed roster:** the selected production scan is CAS_LAG_V1 plus
 TREND_PULLBACK_FAST; the other 135 configurations are disabled, with their history
 retained. The operator explicitly authorized real-money testing of the non-expiry

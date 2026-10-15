@@ -6,7 +6,7 @@ viewport before this change. All anchor links previously led into that same page
 
 The dashboard now has three actual views:
 
-- **Live:** available cash with source age, cumulative closed-trade net P&L after
+- **Live:** available cash with source age, reported closed-trade net P&L after
   reported fees, open positions and a short current decision. Two collapsed
   strategy rows show eligibility, recorded inputs and the reason for waiting.
   An existing position remains visible with its recorded exit information.
@@ -32,3 +32,12 @@ The browser regression suite checks pane isolation, stale permission, unknown
 inputs/fees, route qualification versus standing permission, retained dated
 checks, expanded disclosures and incomplete history. Existing authentication,
 streaming, source-age, account-failure and actual-history checks remain in place.
+
+First signed-in browser pass verified HTTP200, isolated views, all17 actual
+completed trades and zero horizontal overflow at1440px and390px. Live measured
+1012px on a1000px desktop viewport and869px on an844px phone viewport, compared
+with20,010px before. The final bounded refinement prioritizes today’s eligible
+engine, uses a flex page to remove spare vertical overflow, compresses history
+rows and shows a three-column strategy summary. Accounting, individual fees
+and full position/exit information remain in disclosures. No browser fixture
+was presented as a real held position; held/unknown states use DOM fixtures.
