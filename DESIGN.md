@@ -125,3 +125,14 @@ No execution rule or strategy clock is changed by this read-only presentation.
 Provider-confirmed CAS_STOP is a closed auction entry phase, not missing feed
 data. Its strategy row says Closed, while exposure/settlement handling remains
 separate. Fresh incoming frames cannot conceal genuinely stale option books.
+
+15 October compact operating views: Live, History and System now select separate
+panels instead of scrolling through one long page. Live contains three money
+observations, one concrete decision, an open position when present and compact
+native disclosures for the configured strategies. Cumulative closed-trade P&L is
+labelled separately from cash and today's completed count. Recorded trend and
+pullback measurements explain waiting; unavailable confirmations remain unknown.
+Completed trades, holding time, per-strategy outcomes and route attempts live in
+History; diagnostics and detailed accounting remain in System. The journal
+palette, native disclosure controls and read-only model are retained. No trading
+policy, authority or funded process is changed.

@@ -1,6 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const state = {data:null, source:'broker', fetching:false, generation:0, historyDate:'', historyFetchedAt:null};
+const state = {data:null, source:'broker', fetching:false, generation:0, historyDate:'', historyFetchedAt:null, liveChecks:{}};
 const rendered=new Map();
 function changed(key,value){const encoded=JSON.stringify(value);if(rendered.get(key)===encoded)return false;rendered.set(key,encoded);return true;}
 const names = {dhan_auth:'Dhan authentication', dhan_account:'Dhan account', egress:'Static IP & whitelist', contract_metadata:'Contract catalogue', upstox_feed:'Upstox index feed', dhan_market_feed:'Dhan options feed', dhan_order_socket:'Order-update socket'};
@@ -413,6 +413,148 @@ function renderDecision(d){
  $('system-summary').textContent=!current?'Current health unknown':`${connected} of 3 sockets connected`;
 }
 
+function timeOnly(value){const d=new Date(value);return !value||Number.isNaN(d.getTime())?'Time unknown':new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' IST';}
+function strategyLabel(name){return ({TREND_PULLBACK_FAST:'Trend pullback',CAS_LAG_V1:'Expiry auction'})[name]||strategyNames[name]||name.replaceAll('_',' ').toLowerCase();}
+function signedPercent(value){if(value===null||value===undefined||value==='')return 'Not reported';const n=Number(value);return Number.isFinite(n)?`${n>0?'+':''}${(n*100).toFixed(2)}%`:'Not reported';}
+function closedTradeData(d){
+ const performance=d.ledger?.strategy_performance||[];
+ const trades=performance.flatMap(row=>(row.trades||[]).map(trade=>({...trade,strategy:row.strategy})));
+ const complete=d.ledger?.available===true&&(performance.length>0?performance.every(row=>Number.isSafeInteger(row.filled_closed)&&Array.isArray(row.trades)&&row.trades.length===row.filled_closed):d.ledger?.counts?.fills===0);
+ return {trades:trades.sort((a,b)=>(b.exit_at||'').localeCompare(a.exit_at||'')),complete,total:performance.reduce((n,row)=>n+(Number.isSafeInteger(row.filled_closed)?row.filled_closed:0),0)};
+}
+function liveStrategyState(name,row,d){
+ const rt=d.runtime;
+ if(!rt?.fresh)return {label:'Unknown',reason:'A fresh bot update is needed.',kind:'warn'};
+ if(!Array.isArray(rt.funded_strategies))return {label:'Unknown',reason:'Trading permission has not been reported.',kind:'warn'};
+ if(!rt.funded_strategies.includes(name))return {label:'Observe only',reason:'This strategy cannot open a real-money trade.'};
+ const owner=d.ledger?.active_trades?.find(t=>t.quantity>0)?.strategy;
+ if(owner===name)return {label:'Managing',reason:'A position is open. Its exit rules are being monitored.'};
+ if(owner)return {label:'Waiting',reason:'The existing position must be managed before another entry.'};
+ if(name==='CAS_LAG_V1'){
+  if(rt.expiry_today===false)return {label:'Not today',reason:`Next loaded expiry: ${shortDate(rt.observation?.expiry)}.`};
+  if(rt.expiry_today!==true)return {label:'Unconfirmed',reason:'Waiting for the exchange expiry check.',kind:'warn'};
+  if(rt.observation?.phase==='CAS_STOP')return {label:'Closed',reason:'The exchange has ended auction entries.'};
+  return {label:'Watching',reason:rt.observation?.iep?'Watching auction value and executable option prices.':'Waiting for the exchange auction and an official value.'};
+ }
+ if(!row)return {label:'Loading',reason:'Waiting for this strategy’s first evaluation.'};
+ if(row.reason==='EXCHANGE_CLOSED')return {label:'Market closed',reason:'Checks resume during a verified exchange session.'};
+ if(row.state==='UNKNOWN')return {label:'Data needed',reason:conditionSummary(row),kind:'warn'};
+ if(row.state==='NOT_APPLICABLE')return {label:'Not today',reason:conditionSummary(row)};
+ if(row.state==='SIGNAL')return {label:'Signal',reason:row.execution_blocking_reason?'Signal found; an execution check is blocking entry.':'Signal found; the trader is checking price, cash and liquidity.',kind:'good'};
+ const key=istDay(d.server_time)+':'+name;
+ if(['SIGNAL','NO_SIGNAL'].includes(row.state)&&Object.keys(row.details||{}).length){
+  const previous=state.liveChecks[key];
+  if(!previous||Date.parse(row.evaluated_at)>=Date.parse(previous.evaluated_at))state.liveChecks[key]=row;
+ }
+ const check=Object.keys(row.details||{}).length?row:state.liveChecks[key];
+ if(name==='TREND_PULLBACK_FAST'&&check){
+  const trend=Number(check.details?.trend_30m),pull=Number(check.details?.pullback_10m);
+  if(check.details?.trend_30m!=null&&Number.isFinite(trend)&&check.details?.pullback_10m!=null&&Number.isFinite(pull)){
+   const reason=Math.abs(trend)<.0025?'The 30-minute trend is below the entry threshold.':trend*pull>=0?'No opposing pullback has formed.':'Waiting for the price and futures confirmations.';
+   return {label:row.state==='WAITING'?'Between checks':'No entry',reason,check};
+  }
+ }
+ return {label:row.state==='WAITING'?'Waiting':'No entry',reason:conditionSummary(row)};
+}
+function renderLive(d){
+ const rt=d.runtime,a=d.account,configured=rt?.strategies||[],funded=rt?.funded_strategies;
+ if(state.liveDay!==istDay(d.server_time)){state.liveChecks={};state.liveDay=istDay(d.server_time);}
+ $('live-stamp').textContent=rt?.observed_at?`${rt.fresh?'Updated':'Last update'} ${timeOnly(rt.observed_at)}`:'Waiting for the bot';
+ $('live-cash-label').textContent=a?.fresh?'Available cash':'Last observed cash';
+ $('live-cash').textContent=cash(a?.available_cash);$('live-cash-note').textContent=a?`${age(a.age_seconds)} · ${a.fresh?'Dhan':'historical'}`:'Awaiting account';
+ const settlement=d.ledger?.cash_reconciliation,netComplete=settlement?.status==='REPORTED_CHARGES_COMPLETE';
+ pnl('live-net',netComplete?settlement.net_after_reported_charges:null);
+ $('live-net-note').textContent=netComplete?`${settlement.closed_trades} closed trades · after fees`:settlement?.status==='CHARGES_PENDING'?'Final fees pending':'Execution history unavailable';
+ $('live-positions').textContent=a?.open_position_count??'—';
+ const closed=closedTradeData(d),today=closed.trades.filter(t=>istDay(t.exit_at)===istDay(d.server_time)).length;
+ $('live-trades-today').textContent=closed.complete?`${today} completed ${today===1?'trade':'trades'} today`:'Today’s completed count unknown';
+ const liveOn=rt?.fresh&&rt.authority==='ENABLED'&&Array.isArray(funded)&&funded.length>0;
+ $('live-funding').textContent=liveOn?'Real money on':rt?.fresh&&rt.authority==='DISABLED'?'New entries paused':'Permission unknown';
+ $('live-funding').className='badge '+(liveOn?'good':'warn');
+ const quote=rt?.observation,quoteAge=elapsed(quote?.ltp_at,d.server_time);
+ $('live-market').textContent=quote?.ltp!=null?`NIFTY ${points(quote.ltp)} · ${rt?.fresh&&quoteAge!==null&&quoteAge<=5?'live':'last observed'}`:'NIFTY price unavailable';
+ const snapshots=configured.map(name=>{const row=rt.strategy_evaluations?.find(r=>r.strategy===name);return {name,row,snapshot:liveStrategyState(name,row,d)};});
+ let title='Waiting for a setup',reason='The bot will enter only when a strategy and its execution checks pass.';
+ if(!rt?.fresh){title='Live status unavailable';reason='The last snapshot is historical. Check System for the connection status.';}
+ else if(['POSITION_OPEN','ENTRY_PENDING','EXIT_PENDING','SETTLEMENT_PENDING','RECOVERING'].includes(rt.state)){
+  title=({POSITION_OPEN:'Managing your position',ENTRY_PENDING:'Entry order sent',EXIT_PENDING:'Exit order sent',SETTLEMENT_PENDING:'Waiting for settlement',RECOVERING:'Checking the account'})[rt.state];
+  reason=rt.state==='POSITION_OPEN'?'Live position and exit information are shown below.':'Waiting for broker confirmation before another decision.';
+ }else if(rt.authority==='DISABLED'){title='New trades are paused';reason='Existing positions can still be managed.';}
+ else if(rt.authority!=='ENABLED'){title='Trading permission is unknown';reason='A fresh confirmed trading state is needed.';}
+ else if(rt.software_verified===false){title='Entries are blocked';reason='The running software needs matching verification. See System.';}
+ else if(rt.account_snapshot_fresh===false){title='Waiting for the account check';reason='New entries need a fresh reconciled balance and position read.';}
+ else if(rt.state==='WAITING_EXCHANGE_SESSION'){title='Waiting for the market to open';reason='New entries wait for a verified exchange session.';}
+ else if(rt.broker_route_verified===false){title='Checking the order connection';reason='The broker route must qualify before the bot can enter a trade.';}
+ else if(rt.state==='ENTRY_HALTED'){title='New entries are blocked';reason='See System for the trader’s recorded blocking reason.';}
+ else{
+  const relevant=snapshots.find(x=>x.name!=='CAS_LAG_V1'&&!['Not today','Observe only'].includes(x.snapshot.label))||snapshots[0];
+  if(relevant){const snap=relevant.snapshot;
+   if(snap.label==='Data needed'){title='Waiting for usable market data';reason=snap.reason;}
+   else if(snap.label==='Signal'){title='A setup has been detected';reason=snap.reason;}
+   else if(snap.label==='Not today'){title='Waiting for an eligible session';reason=snap.reason;}
+   else if(relevant.name==='TREND_PULLBACK_FAST'&&snap.check){
+    title=snap.reason.startsWith('No opposing')?'Waiting for a pullback':snap.reason.startsWith('The 30-minute')?'Waiting for a stronger trend':'Waiting for confirmation';
+    reason=`Last decision ${timeOnly(snap.check.evaluated_at)}. ${snap.reason}`;
+   }
+  }
+ }
+ $('live-decision-title').textContent=title;$('live-decision-reason').textContent=reason;
+ $('live-strategy-count').textContent=Array.isArray(funded)?`${funded.length} funded`:'Permissions unknown';
+ if(changed('live-strategies',[snapshots,rt?.fresh,funded])){
+  const expanded=new Set([...$('live-strategies').children].filter(n=>n.open).map(n=>n.dataset.strategy));
+  $('live-strategies').replaceChildren();
+  for(const {name,row,snapshot:snap} of snapshots){
+   const detail=el('details',undefined,'live-strategy'),summary=el('summary'),head=el('span',undefined,'live-strategy-head');
+   detail.dataset.strategy=name;detail.open=expanded.has(name);
+   head.append(el('strong',strategyLabel(name)),badge(snap.label,snap.kind||''));
+   summary.append(head,el('span',snap.reason,'live-strategy-reason'));
+   const check=snap.check||row;
+   if(name==='TREND_PULLBACK_FAST'&&check?.details&&check.details.trend_30m!=null)summary.append(el('span',`30 min ${signedPercent(check.details.trend_30m)} · pullback ${signedPercent(check.details.pullback_10m)} · ${timeOnly(check.evaluated_at)}`,'live-strategy-metrics'));
+   else if(name==='TREND_PULLBACK_FAST')summary.append(el('span','Experimental · checks every 5 minutes','live-strategy-metrics'));
+   detail.append(summary);const body=el('div',undefined,'live-strategy-detail');
+   if(name==='TREND_PULLBACK_FAST'){
+    body.append(el('p','Needs a 30-minute move of at least 0.25%, a pullback against it, then three-close and futures confirmation.'));
+    body.append(el('p','Experimental: the retained simulations had only one filled trade per period.'));
+    if(check?.details)body.append(el('p',`Recorded trend ${signedPercent(check.details.trend_30m)}; pullback ${signedPercent(check.details.pullback_10m)}. Other confirmation values were not supplied in this snapshot.`));
+   }else if(name==='CAS_LAG_V1')body.append(el('p','On eligible expiry sessions, compares official auction value with executable option prices. Price, depth, cash and broker checks must pass.'));
+   else if(row?.entry_rule)body.append(el('p',row.entry_rule));
+   if(check?.evaluated_at)body.append(el('p',`Checked ${at(check.evaluated_at)}.`));
+   if(row?.next_check_at)body.append(el('p',`Next check ${at(row.next_check_at)}.`));
+   if(row?.execution_blocking_reason||row?.last_execution_reason)body.append(el('p',`Recorded execution check: ${(row.execution_blocking_reason||row.last_execution_reason).replaceAll('_',' ').toLowerCase()}.`));
+   detail.append(body);$('live-strategies').append(detail);
+  }
+  if(!snapshots.length)$('live-strategies').append(el('p','No strategy roster has been reported.','empty'));
+ }
+ if(changed('completed-trades',[closed,d.ledger?.available])){
+  $('completed-trades').replaceChildren();$('closed-trades-count').textContent=closed.trades.length?`${closed.trades.length} shown${closed.complete?'':` · ${closed.total} recorded`}`:'';
+  if(closed.trades.length){
+   const wrap=el('div',undefined,'table-wrap'),table=el('table'),head=el('tr');
+   wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Completed trades');
+   for(const text of ['Closed','Strategy','Held','Net P&L',''])head.append(el('th',text));table.append(head);
+   for(const trade of closed.trades){
+    const tr=el('tr'),duration=(Date.parse(trade.exit_at)-Date.parse(trade.entry_at))/1000;
+    const hold=Number.isFinite(duration)&&duration>=0?(duration<60?`${duration.toFixed(1)}s`:`${Math.floor(duration/60)}m ${Math.floor(duration%60)}s`):'Unknown';
+    for(const text of [at(trade.exit_at),strategyLabel(trade.strategy),hold])tr.append(el('td',text));
+    tr.append(el('td',trade.charges_complete?cash(trade.net_pnl):'Fees pending',trade.net_pnl?.startsWith('-')?'negative':trade.charges_complete?'positive':''));
+    const cell=el('td'),detail=el('details');detail.append(el('summary','Details'),el('p',`${trade.quantity} units · bought ${cash(trade.entry_price)} · sold ${cash(trade.exit_price)} · gross ${cash(trade.gross_pnl)}.`));cell.append(detail);tr.append(cell);table.append(tr);
+   }
+   wrap.append(table);$('completed-trades').append(wrap);
+  }else $('completed-trades').append(el('p',closed.complete?'No completed trades yet.':'Completed-trade records are unavailable.','empty'));
+ }
+}
+function selectView(view,updateHash=true){
+ const ids={live:'overview',history:'history-view',system:'system'};if(!(view in ids))view='live';
+ for(const [name,id] of Object.entries(ids))$(id).hidden=name!==view;
+ for(const link of document.querySelectorAll('[data-view-link]')){if(link.dataset.viewLink===view)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}
+ if(updateHash){
+  if(window.location?.hash!=='#'+ids[view])window.history?.pushState(null,'','#'+ids[view]);
+  window.scrollTo?.(0,0);
+  const title=$(({live:'session-title',history:'history-view-title',system:'system-title'})[view]);title.tabIndex=-1;title.focus?.({preventScroll:true});
+ }
+ return view;
+}
+function viewFromHash(){const hash=window.location?.hash;return ['#system','#setup'].includes(hash)?'system':['#history-view','#history','#orders','#activity'].includes(hash)?'history':'live';}
+
 function render(d){
  if(state.data?.server_time&&d.server_time&&Date.parse(d.server_time)<Date.parse(state.data.server_time))return;
  d=structuredClone(d);
@@ -428,14 +570,17 @@ function render(d){
  const au=rt?.authority||'UNKNOWN';$('authority').className='authority '+(au==='ENABLED'?'enabled':au==='UNKNOWN'?'neutral':'');$('authority').textContent=au==='ENABLED'?'Trading authority enabled':au==='DISABLED'?'New entries disabled':'Trading status unknown';$('authority-note').textContent=au==='ENABLED'?'The bot reports write authority and is armed. Individual orders still require all entry conditions.':au==='DISABLED'?'The bot reports new entries disabled. Existing positions may still require exit handling.':'No current bot observation establishes whether trading is enabled.';$('heartbeat').textContent=rt?.observed_at?`${rt.fresh?'Current':'Stale'} · ${age(rt.age_seconds)}`:'Unknown';$('runtime-state').textContent=(rt?.state||'UNKNOWN').replaceAll('_',' ').toLowerCase();$('books').textContent=rt?.books_observed??'—';$('contracts').textContent=rt?.contract_count??'—';$('clock-error').textContent=rt?.clock_uncertainty_ms===null||rt?.clock_uncertainty_ms===undefined?'—':rt.clock_uncertainty_ms+' ms';$('decision').textContent=rt?.reason||'No decision observation is available.';
  $('connection-age').textContent=cs?.observed_at?`${cs.fresh?'Recent check':'Historical check'} · ${at(cs.observed_at)}`:'No explicit connection check has been recorded.';if(changed('diagnostics',[cs?.checks,cs?.fresh])){$('connections').replaceChildren();for(const [index,c] of (cs?.checks||Object.keys(names).map(name=>({name,status:'UNKNOWN',facts:{}}))).entries()){const row=el('div',undefined,'connection-row');const text=el('div');text.append(el('p',names[c.name]||'Connection','connection-name'),el('p',details(c),'connection-detail'));let status=c.status==='PASS'?'Passed':c.status==='FAIL'?'Failed':c.status==='NO_DATA'?'No data':c.status==='SKIP'?'Skipped':'Unknown';const kind=c.status==='FAIL'?'bad':c.status==='PASS'&&cs?.fresh?'good':'warn';if(c.status==='PASS'&&!cs?.fresh)status='Past pass';row.append(text,badge(status,kind));$('connections').append(row);}}
  $('positions-stamp').textContent=a?at(a.observed_at)+(a.positions_truncated?' · first 100 shown':''):'No observation';rows('positions',a?.positions||[],[{read:r=>r.symbol||r.security_id},{read:r=>r.product},{numeric:true,read:r=>r.quantity},{numeric:true,read:r=>cash(r.average_price)},{numeric:true,read:r=>cash(r.unrealised)}]);$('positions-empty').hidden=Boolean(a?.positions?.length);$('positions-empty').textContent=a?'Dhan reported no open positions in this snapshot.':'No verified account observation is available.';
- $('ledger-count').textContent=ledger?.available?`${ledger.counts.intents} intents · ${ledger.counts.fills} fills`:'Ledger unavailable';const events=[...(ledger?.orders||[]).map(r=>({t:r.occurred_at,title:`${r.side||'Order'} · ${r.security_id||'Unknown contract'}`,description:`${r.quantity??'—'} units at ${cash(r.price)} · ${r.state}`})),...(ledger?.fills||[]).map(r=>({t:r.occurred_at,title:'Fill recorded · '+(r.security_id||'Unknown contract'),description:`${r.quantity??'—'} units at ${cash(r.price)}`})),...(ledger?.incidents||[]).map(r=>({t:r.occurred_at,title:'Runtime incident recorded',description:'Details remain in the bot’s private operational logs.'}))].sort((x,y)=>(y.t||'').localeCompare(x.t||'')).slice(0,30);if(changed('activity',events)){$('timeline').replaceChildren();for(const e of events){const li=el('li');const time=el('time',at(e.t));if(e.t)time.dateTime=e.t;const info=el('div');info.append(el('strong',e.title),el('p',e.description));li.append(time,info);$('timeline').append(li);}}$('activity-empty').hidden=events.length>0;$('activity-empty').textContent=ledger?.available?'The ledger contains no recorded trading activity yet.':'The bot’s ledger could not be read. This does not establish that no trades occurred.';renderOrders();renderDecision(d);
+ $('ledger-count').textContent=ledger?.available?`${ledger.counts.intents} intents · ${ledger.counts.fills} fills`:'Ledger unavailable';const events=[...(ledger?.orders||[]).map(r=>({t:r.occurred_at,title:`${r.side||'Order'} · ${r.security_id||'Unknown contract'}`,description:`${r.quantity??'—'} units at ${cash(r.price)} · ${r.state}`})),...(ledger?.fills||[]).map(r=>({t:r.occurred_at,title:'Fill recorded · '+(r.security_id||'Unknown contract'),description:`${r.quantity??'—'} units at ${cash(r.price)}`})),...(ledger?.incidents||[]).map(r=>({t:r.occurred_at,title:'Runtime incident recorded',description:'Details remain in the bot’s private operational logs.'}))].sort((x,y)=>(y.t||'').localeCompare(x.t||'')).slice(0,30);if(changed('activity',events)){$('timeline').replaceChildren();for(const e of events){const li=el('li');const time=el('time',at(e.t));if(e.t)time.dateTime=e.t;const info=el('div');info.append(el('strong',e.title),el('p',e.description));li.append(time,info);$('timeline').append(li);}}$('activity-empty').hidden=events.length>0;$('activity-empty').textContent=ledger?.available?'The ledger contains no recorded trading activity yet.':'The bot’s ledger could not be read. This does not establish that no trades occurred.';renderOrders();renderDecision(d);renderLive(d);
 }
 async function refresh(){if(state.fetching)return;state.fetching=true;const generation=state.generation;$('refresh').disabled=true;try{const fullHistory=state.historyFetchedAt===null||Date.now()-state.historyFetchedAt>=60000;const response=await fetch(fullHistory?'/api/status':'/api/status?history=omit',{cache:'no-store',credentials:'same-origin',signal:AbortSignal.timeout(8000)});if(response.status===401){window.location.replace('/login');throw new Error('AUTH');}const data=await response.json();if(!response.ok&&response.status!==503)throw new Error('HTTP');if(fullHistory&&data.history){state.historyFetchedAt=Date.now();if(state.data?.server_time&&Date.parse(data.server_time)<Date.parse(state.data.server_time))render({...state.data,history:data.history,history_unchanged:false});}render(data);$('refresh-status').textContent='Last refresh '+at(new Date().toISOString());}catch(error){if(generation!==state.generation)return;if(state.data){const old=structuredClone(state.data);old.collector={...old.collector,fresh:false};for(const key of ['runtime','account','connections','daily_monitor'])if(old[key])old[key].fresh=false;if(old.runtime)old.runtime.authority='UNKNOWN';render(old);}$('notice').hidden=false;$('notice').className='notice error';$('notice').textContent=error.message==='AUTH'?'Your dashboard sign-in is required. Reload the page to sign in.':'Dashboard connection lost. Any values below are historical; current trading status is unknown.';$('authority').textContent='Trading status unknown';$('authority').className='authority neutral';$('authority-note').textContent='The latest dashboard request failed.';$('refresh-status').textContent='Refresh failed';}finally{state.fetching=false;$('refresh').disabled=false;}}
 $('history-date').addEventListener('change',()=>{state.historyDate=$('history-date').value;renderHistory(state.data);});
 for(const [id,offset] of [['history-today',0],['history-yesterday',86400000]])$(id).addEventListener('click',()=>{if(!state.data?.server_time)return;state.historyDate=istDay(new Date(Date.parse(state.data.server_time)-offset).toISOString());renderHistory(state.data);});
 $('refresh').addEventListener('click',refresh);$('order-filter').addEventListener('change',renderOrders);const tabs=[...document.querySelectorAll('[data-source]')];function selectTab(tab){state.source=tab.dataset.source;for(const b of tabs){b.setAttribute('aria-selected',String(b===tab));b.tabIndex=b===tab?0:-1;}$('order-panel').setAttribute('aria-labelledby',tab.id);renderOrders();}for(const tab of tabs){tab.addEventListener('click',()=>selectTab(tab));tab.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const i=event.key==='Home'?0:event.key==='End'?tabs.length-1:(tabs.indexOf(tab)+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;selectTab(tabs[i]);tabs[i].focus();});}
 for(const button of document.querySelectorAll('[data-copy]'))button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText($(button.dataset.copy).textContent);button.textContent='Copied';}catch{button.textContent='Select text to copy';}setTimeout(()=>button.textContent=button.dataset.copy.includes('check')||button.dataset.copy.includes('pause')?'Copy commands':'Copy command',2400);});
-for(const link of document.querySelectorAll('.navigation a'))link.addEventListener('click',()=>{document.querySelectorAll('.navigation a').forEach(a=>a.removeAttribute('aria-current'));link.setAttribute('aria-current','page');});
+for(const link of document.querySelectorAll('[data-view-link]'))link.addEventListener('click',event=>{event.preventDefault();selectView(link.dataset.viewLink);});
+window.addEventListener('hashchange',()=>selectView(viewFromHash(),false));
+window.addEventListener('popstate',()=>selectView(viewFromHash(),false));
+selectView(viewFromHash(),false);
 function clock(){ $('clock').textContent=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date())+' IST'; }clock();setInterval(clock,1000);
 const monitor=new DashboardStream({source:url=>new EventSource(url+'?history=omit'),onTime:(stamp,observations)=>{if(!state.data)return;const data=structuredClone(state.data);for(const key of ['collector','runtime','account','connections','daily_monitor']){if(data[key]&&typeof observations?.[key]==='string')data[key].observed_at=observations[key];}render({...data,server_time:stamp});},onData:data=>{render(data);$('refresh-status').textContent='Live updates · '+at(data.server_time);},refresh,signIn:()=>window.location.replace('/login')});
 if(!document.hidden)monitor.start();

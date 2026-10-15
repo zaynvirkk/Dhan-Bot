@@ -458,3 +458,43 @@ setImmediate(()=>{
  vm.runInContext('renderDecision(exitFixture)',browser);
  assert.equal(ids['position-exits'].hidden,true,'Unknown exit policy cannot retain an old policy');
 });
+
+setImmediate(()=>{
+ const stamp='2026-10-15T05:00:00Z';
+ browser.compact={server_time:stamp,collector:{fresh:true},account_read_ok:true,
+  account:{fresh:true,available_cash:'7805.94',open_position_count:0,positions:[],age_seconds:1},
+  runtime:{fresh:true,authority:'ENABLED',state:'ARMED_WAITING_SIGNAL',broker_route_verified:true,expiry_today:false,
+   strategies:['CAS_LAG_V1','TREND_PULLBACK_FAST'],funded_strategies:['CAS_LAG_V1','TREND_PULLBACK_FAST'],
+   observation:{expiry:'2026-10-19'},strategy_evaluations:[{strategy:'TREND_PULLBACK_FAST',funded_enabled:true,state:'NO_SIGNAL',evaluated_at:stamp,details:{trend_30m:'.003',pullback_10m:'.001'}}]},
+  ledger:{available:true,counts:{fills:0},strategy_performance:[],cash_reconciliation:{status:'CHARGES_PENDING'}}};
+ vm.runInContext('renderLive(compact)',browser);
+ assert.equal(ids['live-cash'].textContent,'₹7,805.94');
+ assert.equal(ids['live-net'].textContent,'—','Pending fees must never become zero net profit');
+ assert.equal(ids['live-trades-today'].textContent,'0 completed trades today');
+ assert.equal(ids['live-decision-title'].textContent,'Waiting for a pullback');
+ assert.equal(ids['live-strategies'].children.length,2);
+ browser.compact.runtime.strategy_evaluations[0]={strategy:'TREND_PULLBACK_FAST',state:'WAITING',evaluated_at:'2026-10-15T05:01:00Z',details:{}};
+ browser.compact.server_time='2026-10-15T05:01:00Z';
+ ids['live-strategies'].children[1].open=true;
+ vm.runInContext('renderLive(compact)',browser);
+ assert.match(ids['live-decision-reason'].textContent,/10:30.*Last|Last decision 10:30/,'Between-check updates must retain the dated completed decision');
+ assert.equal(ids['live-strategies'].children[1].open,true,'Live updates must preserve an expanded strategy explanation');
+ browser.compact.runtime.broker_route_verified=false;
+ vm.runInContext('renderLive(compact)',browser);
+ assert.equal(ids['live-decision-title'].textContent,'Checking the order connection','Permission alone is not entry readiness');
+ browser.compact.runtime.fresh=false;
+ vm.runInContext('renderLive(compact)',browser);
+ assert.equal(ids['live-funding'].textContent,'Permission unknown');
+ assert.equal(ids['live-decision-title'].textContent,'Live status unavailable');
+ assert.equal(vm.runInContext("signedPercent(null)",browser),'Not reported','A missing input is not a zero percent observation');
+ browser.compact.ledger.strategy_performance=[{strategy:'CAS_LAG_V1',filled_closed:4,trades:[]}];
+ vm.runInContext('renderLive(compact)',browser);
+ assert.match(ids['live-trades-today'].textContent,/unknown/,'Truncated history must not claim zero completed trades');
+ vm.runInContext("selectView('history',false)",browser);
+ assert.equal(ids.overview.hidden,true);assert.equal(ids['history-view'].hidden,false);assert.equal(ids.system.hidden,true);
+ vm.runInContext("selectView('system',false)",browser);
+ assert.equal(ids.overview.hidden,true);assert.equal(ids['history-view'].hidden,true);assert.equal(ids.system.hidden,false);
+ vm.runInContext("selectView('live',false)",browser);
+ assert.equal(ids.overview.hidden,false);assert.equal(ids['history-view'].hidden,true);assert.equal(ids.system.hidden,true);
+ console.log('Compact money, dated reasons, pane isolation, missing inputs and stale permission verified');
+});
