@@ -667,11 +667,12 @@ function viewFromHash(){const hash=window.location?.hash;return ['#system','#set
 function renderLearning(d){
  const review=d.learning;if(!changed('learning',review))return;
  const target=$('learning-days'),lessons=$('learning-lessons');if(!target||!lessons)return;
+ const expanded=new Set([...target.querySelectorAll('details[open]')].map(n=>n.dataset.date));
  target.replaceChildren();lessons.replaceChildren();
  $('learning-stamp').textContent=review?.observed_at?'Updated '+at(review.observed_at):'Not available';
  $('learning-context').textContent=review?.status==='AVAILABLE'?'Real executions grouped by exit date. Net P&L needs complete broker charges; missing charges stay unknown.'+(review.coverage==='LATEST_5000_LIFECYCLES'?' The recent ledger window is partial; older archived reviews are retained.':''):'Session reviews are unavailable. Current trading status is shown in Live.';
  for(const day of review?.days||[]){
-  const detail=el('details',undefined,'session-review');const summary=el('summary');
+  const detail=el('details',undefined,'session-review');detail.dataset.date=day.date;detail.open=expanded.has(day.date);const summary=el('summary');
   summary.append(el('strong',new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',year:'numeric'}).format(new Date(day.date+'T12:00:00+05:30'))));
   summary.append(el('span',!day.closed_trades?'No closed trades':day.charges_complete?cash(day.net_pnl)+' net':cash(day.gross_pnl)+' gross · charges pending',day.charges_complete?(Number(day.net_pnl)<0?'negative':'positive'):''));
   summary.append(el('span',`${day.closed_trades} closed · ${day.filled_entries}/${day.entry_attempts} entries filled`,'subtle'));detail.append(summary);

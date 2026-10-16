@@ -175,3 +175,20 @@ def test_provider_future_disconnect_reaches_transport_reconnect_handler():
     feed=FutureInput(SecondsTape(),'100',lambda:'e');feed.connect()
     frame=struct.pack('<BHBIH',50,10,2,100,805)
     with pytest.raises(DhanFeedDisconnect):feed.receive(frame,int(NOW.timestamp()*1e9))
+
+
+def test_daily_net_aggregates_exact_charges_before_display_rounding(tmp_path):
+    from dhan_cas_bot.dashboard.learning import session_reviews
+    ledger=Ledger(tmp_path/'rounding')
+    try:
+        for number in range(2):
+            life='l'+str(number)
+            ledger.db.execute("INSERT INTO lifecycles VALUES(?, '2026-10-16','100','1000','CLOSED',?)",(life,json.dumps({'strategy':'CAS_LAG_V1'})))
+            for side,price in [('BUY','10'),('SELL','10.2')]:
+                ident=life+side
+                ledger.db.execute('INSERT INTO intents VALUES(?,?,?,?,?,?,?,?,?,?,?)',(ident,ident,life,side,'100',65,price,'FILLED','0','{}',NOW.isoformat()))
+                ledger.db.execute('INSERT INTO fills VALUES(?,?,?,?,?,?,?,?,?)',(ident,ident,ident,'100',65,price,'0',NOW.isoformat(),'{}'))
+                ledger.db.execute('INSERT INTO order_charges VALUES(?,?,?,?,?,?)',(ident,ident,'1.0025',1,NOW.isoformat(),'{}'))
+        review=session_reviews(ledger.db,NOW)['days'][0]
+        assert review['net_pnl']=='21.99'
+    finally:ledger.close()

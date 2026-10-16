@@ -31,6 +31,8 @@ def day_at(value):
 def session_reviews(db, now):
     db.row_factory = __import__('sqlite3').Row
     trades = defaultdict(list)
+    exact_net = defaultdict(lambda:D(0))
+    exact_gross = defaultdict(lambda:D(0))
     attempts = defaultdict(lambda: defaultdict(lambda: [0, 0]))
     lifecycle_rows = list(db.execute('SELECT * FROM lifecycles ORDER BY rowid DESC LIMIT 5001'))
     for row in lifecycle_rows[:5000]:
@@ -68,6 +70,9 @@ def session_reviews(db, now):
             reason = 'NOT_RECORDED'
         if reason not in EXIT_REASONS:
             reason = 'NOT_RECORDED'
+        exit_day=day_at(sells[-1]['occurred_at'])
+        exact_gross[exit_day]+=gross
+        if complete:exact_net[exit_day]+=gross-fees
         instrument = payload.get('instrument') or {}
         trades[day_at(sells[-1]['occurred_at'])].append({'strategy': strategy,
             'entry_at': buys[0]['occurred_at'], 'exit_at': sells[-1]['occurred_at'],
@@ -81,17 +86,17 @@ def session_reviews(db, now):
     for day in sorted(set(trades)|set(attempts), reverse=True):
         rows = trades[day]
         complete = bool(rows) and all(r['charges_complete'] for r in rows)
-        gross = sum((D(r['gross_pnl']) for r in rows), D(0))
+        gross = exact_gross[day]
         entry_attempts = sum(a[0] for a in attempts[day].values())
         filled_entries = sum(a[1] for a in attempts[day].values())
         days.append({'date': day, 'closed_trades': len(rows), 'entry_attempts': entry_attempts,
             'filled_entries': filled_entries, 'unfilled_entries': entry_attempts-filled_entries,
-            'gross_pnl': money(gross), 'net_pnl': money(sum((D(r['net_pnl']) for r in rows), D(0))) if complete else None,
+            'gross_pnl': money(gross), 'net_pnl': money(exact_net[day]) if complete else None,
             'charges_complete': complete, 'input_loss_exits': sum(r['exit_reason']=='SECONDS_INPUT_LOST' for r in rows),
             'strategies': [{'strategy': k, 'entry_attempts': a[0], 'filled_entries': a[1]} for k,a in attempts[day].items()],
             'findings':([{'code':'INPUT_LOSS_EXITS','count':sum(r['exit_reason']=='SECONDS_INPUT_LOST' for r in rows)}] if any(r['exit_reason']=='SECONDS_INPUT_LOST' for r in rows) else [])
                 +([{'code':'FINAL_CHARGES_PENDING'}] if rows and not complete else [])
-                +([{'code':'REALIZED_NET_LOSS'}] if complete and sum(D(r['net_pnl']) for r in rows)<0 else []),
+                +([{'code':'REALIZED_NET_LOSS'}] if complete and exact_net[day]<0 else []),
             'trades': rows})
     return {'schema': 1, 'status': 'AVAILABLE', 'observed_at': now.isoformat(),
         'coverage': 'LATEST_5000_LIFECYCLES' if len(lifecycle_rows)>5000 else 'RECORDED_LIFECYCLES', 'days': days}
