@@ -5,6 +5,39 @@ import json
 import sys
 
 
+def verify_local_dashboard(headers, *, open_url=None, pause=None, attempts=15):
+    """Bounded startup retries; missing authentication never becomes a pass."""
+    import time
+    from urllib.request import Request, urlopen
+    from urllib.error import HTTPError, URLError
+    open_url=open_url or urlopen
+    pause=pause or time.sleep
+    url='http://127.0.0.1:8088/api/status?history=omit'
+    for attempt in range(attempts):
+        try:
+            with open_url(url,timeout=2):pass
+        except HTTPError as exc:
+            if exc.code!=401:raise
+            break
+        except (URLError,OSError,TimeoutError):
+            if attempt==attempts-1:raise RuntimeError('Dashboard did not become ready') from None
+            pause(1)
+        else:raise RuntimeError('Dashboard must require authentication')
+    for attempt in range(attempts):
+        try:
+            with open_url(Request(url,headers=headers),timeout=5) as response:
+                report=json.load(response)
+            if report.get('collector',{}).get('fresh'):
+                if report.get('available') is not True or report.get('writes_to_broker') is not False:
+                    raise RuntimeError('Dashboard status is not an available read-only observation')
+                return report
+        except HTTPError as exc:
+            if exc.code in (401,403):raise
+        except (URLError,OSError,TimeoutError):pass
+        if attempt<attempts-1:pause(1)
+    raise RuntimeError('Dashboard collector did not become ready')
+
+
 def validate_firewall(rules, network):
     if not isinstance(rules, list) or len(rules) > 1:
         raise ValueError('Expected at most one named dashboard firewall rule')

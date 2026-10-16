@@ -2,7 +2,7 @@
 
 **16 October live recovery repair:** provider heartbeat handling, fair ordered
 decoding, bounded discovery-budget work, concurrent reconciled account reads,
-and explicit completed-order/recovery status. Existing funded scope and money
+explicit completed-order/recovery status and bounded deployment startup checks. Existing funded scope and money
 limits are preserved. [Repair and validation](docs/LIVE-RECOVERY-2026-10-16.md).
 
 **Additional15October review:** repaired route rejections and late responses

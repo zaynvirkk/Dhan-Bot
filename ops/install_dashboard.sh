@@ -107,31 +107,13 @@ systemctl restart dhan-dashboard-caddy.service
 if systemctl is-enabled --quiet dhan-daily-monitor.service; then
   systemctl restart dhan-daily-monitor.service
 fi
-python3 - <<'PY'
-import base64,json,time,urllib.error,urllib.request
+"$DASH_RELEASE/.venv/bin/python" - <<'PY'
+import base64
 from pathlib import Path
+from dhan_cas_bot.dashboard.deploy import verify_local_dashboard
 password=next(line.split('Password: ',1)[1] for line in Path('/etc/sablestone-dhan-dashboard/login.txt').read_text().splitlines() if line.startswith('Password: '))
-for attempt in range(10):
-    try:
-        urllib.request.urlopen('http://127.0.0.1:8088/api/status',timeout=2)
-    except urllib.error.HTTPError as e:
-        if e.code != 401: raise
-        break
-    except urllib.error.URLError:
-        if attempt==9: raise
-        time.sleep(1)
-    else: raise SystemExit('Dashboard must require authentication')
 headers={'Authorization':'Basic '+base64.b64encode(('operator:'+password).encode()).decode()}
-for attempt in range(15):
-    try:
-        with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8088/api/status',headers=headers),timeout=5) as response:
-            snapshot=json.load(response)
-        if snapshot.get('collector', {}).get('fresh'): break
-    except (urllib.error.HTTPError, urllib.error.URLError):
-        pass
-    if attempt == 14: raise SystemExit('Dashboard collector did not publish a fresh snapshot')
-    time.sleep(1)
-assert snapshot['available'] and snapshot['writes_to_broker'] is False
+snapshot=verify_local_dashboard(headers)
 print('Authenticated local status verified; broker account current:',snapshot['account_read_ok'])
 PY
 printf 'Dashboard release installed: %s\nPrevious dashboard release: %s\n' "$DASH_SHA" "${DASH_PREVIOUS:-none}"

@@ -67,7 +67,15 @@ warmup. Broker refusal, future outages, unmatched IOC orders and absence of a
 qualifying setup remain possible; this release cannot guarantee profit or the
 absence of every undiscovered defect.
 
-The final local source-bound verification passed659 tests, including all60
+The final local source-bound verification passed662 tests, including all60
 acceptance cases, and killed all15 production guard mutations. Its source
-digest is c4310596c68bb84d73e9fe2d57c50d9639f3bf0e58a1131337c6ba77848d24b3.
+digest is a9d2dc91122376182c81fcae2456768b07e0ee8be94b963d73bf677c13a2aca8.
 Deployment and current live observations must be verified separately.
+
+The first VM installation passed94 installer cases and switched the read-side
+release, but its startup HTTP check raised an uncaught socket timeout. The
+funded process was untouched. Deployment verification now retries socket
+timeouts on both unauthenticated and authenticated reads within finite limits,
+requests the compact status response, and still rejects missing authentication
+or non-read-only/stale status. Three exact regression cases cover recovery,
+unprotected responses and exhausted retry limits.
