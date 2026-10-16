@@ -44,8 +44,9 @@ reconnection. The 15.x automatic proxy change is not introduced here.
 
 ## Continuous bounded replay
 
-During a provider-confirmed open session (and while handling a position), selected
-options, the dedicated future and Upstox input receipts are compressed off the
+Whenever subscribed feed data arrives, including bootstrap/pre-open observations
+used by the first live fit, options, the dedicated future and Upstox input receipts
+are compressed off the
 quote callback into private `state/replay/replay-YYYY-MM-DD.jsonl.gz` files.
 Each receipt includes actual receipt time, processing time, role, epoch and a
 capture-instance/sequence identity. Identical bytes are retained as separate

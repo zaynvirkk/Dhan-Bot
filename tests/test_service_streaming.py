@@ -200,6 +200,13 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             if 'isolated_future' in mode:
                 assert channels['future'].options['subscribe'][0]['InstrumentList']==[{'ExchangeSegment':'NSE_FNO','SecurityId':'300'}]
                 assert all(r['SecurityId']!='300' for batch in channels['market'].options['subscribe'] for r in batch['InstrumentList'])
+                opened_at=clock[0]
+                clock[0]=clock[0].replace(hour=3,minute=44,second=30)  # pre-open receipts can feed the first live fit
+                await channels['future'].send(full_packet(300,bid=25000,ask=25000.05))
+                await until(lambda:(tmp_path/'replay/replay-2026-09-15.jsonl.gz').exists())
+                from dhan_cas_bot.replay_journal import read_capture
+                assert list(read_capture(tmp_path/'replay/replay-2026-09-15.jsonl.gz'))[0]['role']=='future'
+                clock[0]=opened_at
                 await channels['future'].send(full_packet(300,bid=25000,ask=25000.05))
                 await until(lambda:status_file().get('future_input',{}).get('current') is True)
             # Route-positive books now explicitly carry observed liquidity;

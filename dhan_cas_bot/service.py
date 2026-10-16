@@ -221,10 +221,9 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
 
         def record_frame(kind, epoch, payload):
             nonlocal recorder_failed
-            # Retain all selected-feed receipts in the verified open session,
-            # including repeated identical bytes and flat-account periods.
-            calendar = input_worker.calendar if input_worker else None
-            if capture.health['state'] not in {'CAP_REACHED','DISK_RESERVE','QUEUE_OVERFLOW','WRITE_FAILED'} and kind in {'DHAN_FRAME', 'UPSTOX_FRAME', 'FUTURE_FRAME'} and ((calendar and calendar.is_open(now())) or engine.active is not None):
+            # Retain every selected-feed receipt, including bootstrap/pre-open
+            # observations used by the first fit and repeated identical bytes.
+            if capture.health['state'] not in {'CAP_REACHED','DISK_RESERVE','QUEUE_OVERFLOW','WRITE_FAILED'} and kind in {'DHAN_FRAME', 'UPSTOX_FRAME', 'FUTURE_FRAME'}:
                 try:
                     capture_queue.put_nowait({'role': {'DHAN_FRAME':'market','UPSTOX_FRAME':'signal','FUTURE_FRAME':'future'}[kind],
                         'epoch': epoch, 'received_ns': message_received_ns(monotime.time_ns()),
