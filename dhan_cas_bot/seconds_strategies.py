@@ -96,7 +96,7 @@ def entry_assessment(sample, books, budget, at):
     allowance=(allowance/i.tick_size).to_integral_value(rounding=ROUND_CEILING)*i.tick_size
     limit=ask.price+allowance;minimum_limit=ask.price+2*i.tick_size
     if i.upper_limit:limit=min(limit,(i.upper_limit/i.tick_size).to_integral_value(rounding=ROUND_FLOOR)*i.tick_size)
-    if limit<minimum_limit or (i.lower_limit and limit<i.lower_limit):
+    if limit<minimum_limit or (i.lower_limit and minimum_limit<i.lower_limit):
         return reject('SECONDS_ENTRY_OUTSIDE_BAND')
     try: target=D(sample.details['target_price'])
     except (KeyError,ValueError,TypeError):return reject('SECONDS_TARGET_UNAVAILABLE')

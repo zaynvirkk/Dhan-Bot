@@ -172,3 +172,14 @@ def test_order_latency_counts_when_ranking_speed_of_cash_reuse(tmp_path):
     assert D(row['estimated_profit_per_minute'])==D(row['estimated_net_profit'])/2
     assert row['scoring_minutes']=='2'
     ledger.close()
+
+
+def test_budget_fallback_cannot_step_below_instrument_lower_price_band():
+    from tests.test_seconds_strategies import book,NOW
+    from dhan_cas_bot.seconds_strategies import entry_assessment,opportunity,NAMES
+    from dhan_cas_bot.risk import worst_case_entry_cash
+    b=book(bid='99.5',ask='100')
+    b=replace(b,instrument=replace(b.instrument,lower_limit=D('100.3')))
+    target=D(108);signal=opportunity(NAMES[0],NOW,b,target,D(23000),'band')
+    budget=worst_case_entry_cash(65,D('100.1'))+FeeSchedule().sell(65*target,3)
+    assert entry_assessment(signal,{'1':b},budget,NOW).candidate is None
