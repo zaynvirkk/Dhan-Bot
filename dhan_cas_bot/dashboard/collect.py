@@ -63,9 +63,9 @@ def projection(config, previous, *, checked=None, monitor=None):
     runtime=report.get('runtime') or {}
     candidate=Path(__file__).resolve().parents[2].name
     report['release']={'dashboard_source':candidate if len(candidate)==40 and all(c in '0123456789abcdef' for c in candidate) else None,
-        'funded_source':runtime.get('source_commit'),'required_runtime_revision':6,
+        'funded_source':runtime.get('source_commit'),'required_runtime_revision':7,
         'funded_runtime_revision':runtime.get('runtime_revision'),
-        'upgrade_required':runtime.get('fresh') is True and (runtime.get('runtime_revision') or 0)<6}
+        'upgrade_required':runtime.get('fresh') is True and (runtime.get('runtime_revision') or 0)<7}
     return report
 
 
@@ -113,7 +113,7 @@ def history_signature(report):
         'account':{k:account.get(k) for k in ('available_cash','open_position_count','order_count')},
         'counts':ledger.get('counts'),'settled':ledger.get('cash_reconciliation'),
         'phase':(runtime.get('observation') or {}).get('phase'),
-        'strategies':[(r.get('strategy'),r.get('state'),r.get('reason'),r.get('evaluated_at'))
+        'strategies':[(r.get('strategy'),r.get('state'),r.get('reason'),r.get('evaluated_at') if r.get('state')=='SIGNAL' else None)
                       for r in runtime.get('strategy_evaluations',[]) if isinstance(r,dict)]},sort_keys=True)
 
 

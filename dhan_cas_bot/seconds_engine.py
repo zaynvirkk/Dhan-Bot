@@ -38,10 +38,10 @@ class SecondsEngine:
             self.evaluations[NAMES[4]]=replace(self.evaluations[NAMES[4]],state='WAITING',reason='NO_FRESH_EVENT')
         self.last_refresh=now
         if self.last_recorded is None or (now-self.last_recorded).total_seconds()>=1:
-            for name,sample in self.evaluations.items():
-                if name in parent.enabled:
-                    engine.runtime.ledger.observe(f'strategy-evaluation:{name}:{now.isoformat()}:{sample.state}',
-                                                  'STRATEGY_EVALUATION',asdict(sample))
+            receipts=[(f'strategy-evaluation:{name}:{now.isoformat()}:{sample.state}',
+                       'STRATEGY_EVALUATION',asdict(sample))
+                      for name,sample in self.evaluations.items() if name in parent.enabled]
+            if receipts:engine.runtime.ledger.observe_batch(receipts)
             self.last_recorded=now
 
     def signals(self):
@@ -74,8 +74,7 @@ class SecondsEngine:
         # Re-evaluate the full quote rule with current cash, so a known
         # unaffordable ATM contract cannot hide an eligible farther strike.
         self.refresh(budget=budget,force=True)
-        current=self.evaluations.get(signal.strategy)
-        if not current or current.state!='SIGNAL' or current.details['episode']!=signal.details['episode']:
+        if not self.projection_current(signal):
             p.last_reason='SECONDS_SIGNAL_CHANGED';return None
         result=entry_candidate(signal,engine.books,budget,engine.now())
         p.candidate_checks=[{'security_id':signal.details.get('security_id'),
@@ -86,8 +85,21 @@ class SecondsEngine:
     def valid(self, signal):
         if not self.ready():return False
         self.refresh(force=True)
+        return self.projection_current(signal)
+
+    def projection_current(self, signal):
+        """A shared event bucket is not proof an older profit forecast survives."""
+        from decimal import InvalidOperation
         sample=self.evaluations.get(signal.strategy)
-        return bool(sample and sample.state=='SIGNAL' and sample.details.get('episode')==signal.details.get('episode'))
+        if not (sample and signal.details.get('episode') and signal.details.get('security_id')
+                and sample.state=='SIGNAL' and sample.side==signal.side
+                and sample.minimum_expiry==signal.minimum_expiry
+                and sample.details.get('security_id')==signal.details.get('security_id')
+                and sample.details.get('episode')==signal.details.get('episode')):return False
+        try:
+            target=D(sample.details['target_price']);original=D(signal.details['target_price'])
+            return target.is_finite() and original.is_finite() and target>=original>0
+        except (KeyError,TypeError,ValueError,InvalidOperation):return False
 
     def exit_reason(self, payload, book, entry, now):
         if not book or not book.top_bid:return None

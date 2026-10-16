@@ -63,7 +63,13 @@ def advance_history(previous, report, now):
     sample = monitor_sample(report, now)
     last = value['events'][-1] if value['events'] else None
     elapsed = (now - datetime.fromisoformat(last['at'])).total_seconds() if last else None
-    changed = last and any(sample.get(key) != last.get(key) for key in ('state', 'authority', 'reason', 'mode', 'phase', 'feeds', 'source_current', 'strategies', 'daily_monitor', 'daily_monitor_current'))
+    def meaningful(row,key):
+        value=row.get(key)
+        if key in {'strategies','daily_monitor'} and isinstance(value,list):
+            return [{k:v for k,v in item.items() if k!='evaluated_at' or item.get('state')=='SIGNAL'}
+                    for item in value if isinstance(item,dict)]
+        return value
+    changed = last and any(meaningful(sample,key) != meaningful(last,key) for key in ('state', 'authority', 'reason', 'mode', 'phase', 'feeds', 'source_current', 'strategies', 'daily_monitor', 'daily_monitor_current'))
     # Sample each minute and on state changes (coalesced to at most every 5s).
     # Market quotes alone never turn this into an unbounded tick archive.
     if last and (elapsed < 5 or (elapsed < 60 and not changed)):
