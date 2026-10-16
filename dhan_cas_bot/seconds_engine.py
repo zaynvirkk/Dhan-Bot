@@ -16,10 +16,11 @@ class SecondsEngine:
         self.parent=parent;self.tape=SecondsTape();self.evaluations={}
         self.last_refresh=None;self.last_recorded=None
         self.last_budget=None
+        self.discovery_budget=None
         self.event=None;self.event_health={'state':'UNAVAILABLE','reason':'EVENT_FEED_UNAVAILABLE'}
 
     def reset(self):
-        self.tape.reset();self.last_refresh=None;self.evaluations={}
+        self.tape.reset();self.last_refresh=None;self.evaluations={};self.discovery_budget=None
 
     def ready(self):
         now=self.parent.engine.now();data=self.parent.inputs
@@ -53,9 +54,16 @@ class SecondsEngine:
         funds=getattr(account,'funds',None)
         budget=None
         if account is not None and account.fresh and funds is not None:
-            allocation=engine._allocation(funds)
-            budget=min(allocation.remaining,allocation.spendable_cash,allocation.bankroll*D('.95'))
-            if allocation.selected_cap_remaining is not None:budget=min(budget,allocation.selected_cap_remaining)
+            now=engine.now();revision=getattr(engine.runtime.ledger,'account_revision',None)
+            cached=self.discovery_budget
+            if (cached is not None and cached[0] is funds and cached[1]==revision
+                    and 0<=(now-cached[2]).total_seconds()<.25):
+                budget=cached[3]
+            else:
+                allocation=engine._allocation(funds)
+                budget=min(allocation.remaining,allocation.spendable_cash,allocation.bankroll*D('.95'))
+                if allocation.selected_cap_remaining is not None:budget=min(budget,allocation.selected_cap_remaining)
+                self.discovery_budget=(funds,revision,now,budget)
         self.refresh(budget=budget,force=budget is not None and budget!=self.last_budget)
         return [sample for name,sample in self.evaluations.items() if name in self.parent.enabled and sample.state=='SIGNAL']
 

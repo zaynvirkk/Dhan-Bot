@@ -156,9 +156,18 @@ class OrderManager:
     async def reconcile(self, *, expected_revision=None) -> dict[str, Any]:
         async with self.ledger.reconcile_lock:
             revision = self.ledger.account_revision if expected_revision is None else expected_revision
-            orders = await self.broker.orders()
-            trades = await self.broker.trades()
-            positions = await self.broker.positions()
+            # Independent observations share the account scheduler and the same
+            # revision fence. Do not add three network round trips serially to
+            # a five-second freshness budget. On error/cancellation, leave no
+            # orphan request running outside this reconciliation batch.
+            reads = [asyncio.create_task(read()) for read in
+                     (self.broker.orders, self.broker.trades, self.broker.positions)]
+            try:
+                orders, trades, positions = await asyncio.gather(*reads)
+            finally:
+                for task in reads:
+                    task.cancel()
+                await asyncio.gather(*reads, return_exceptions=True)
             if any(not isinstance(rows, list) for rows in (orders, trades, positions)):
                 raise ContractError("broker reconciliation response is not a list")
             intent_rows = list(self.ledger.db.execute("SELECT * FROM intents ORDER BY created_at"))

@@ -95,6 +95,8 @@ class UpstoxFeedClient:
 
 
 class DhanMarketClient:
+    transport_options = {"server_heartbeat": True}
+
     def __init__(self, access_token: str):
         if not access_token:
             raise ContractError("Dhan access token is required")

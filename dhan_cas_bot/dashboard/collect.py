@@ -63,9 +63,9 @@ def projection(config, previous, *, checked=None, monitor=None):
     runtime=report.get('runtime') or {}
     candidate=Path(__file__).resolve().parents[2].name
     report['release']={'dashboard_source':candidate if len(candidate)==40 and all(c in '0123456789abcdef' for c in candidate) else None,
-        'funded_source':runtime.get('source_commit'),'required_runtime_revision':4,
+        'funded_source':runtime.get('source_commit'),'required_runtime_revision':5,
         'funded_runtime_revision':runtime.get('runtime_revision'),
-        'upgrade_required':runtime.get('fresh') is True and (runtime.get('runtime_revision') or 0)<4}
+        'upgrade_required':runtime.get('fresh') is True and (runtime.get('runtime_revision') or 0)<5}
     return report
 
 

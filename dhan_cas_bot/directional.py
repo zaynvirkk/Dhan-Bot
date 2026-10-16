@@ -332,6 +332,7 @@ class DirectionalEngine:
             if owner==REBOUND:
                 ledger.put_metadata("rebound-exited:"+now.astimezone(IST).date().isoformat(),True)
             runtime.status.state="ARMED_WAITING_SIGNAL"
+            runtime.status.reason=owner+(":POSITION_CLOSED" if totals['entry_debit'] else ":ENTRY_CANCELLED_NO_FILL")
             return False
         if now.astimezone(IST).date() > inst.expiry:
             runtime.status.state="SETTLEMENT_PENDING"

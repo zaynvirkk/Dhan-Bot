@@ -58,6 +58,9 @@ CHECK_FIELDS = {
     'dhan_order_socket': ('websocket_connected', 'route_verified', 'close_received_code', 'close_sent_code', 'keepalive_timeout'),
 }
 REASONS = {
+    'ACCOUNT_REFRESH_REQUIRED':'Waiting for a fresh reconciled broker account before new entries.',
+    'POSITION_CLOSED':'The strategy position is closed. Monitoring for another qualifying setup.',
+    'ENTRY_CANCELLED_NO_FILL':'The strategy entry finished without a fill. No position was opened.',
     'SECONDS_PREMIUM_STOP':'The seconds strategy hit its quote-based premium stop.',
     'SECONDS_TARGET_REPRICED':'The option reached the recorded repricing reference.',
     'SECONDS_INPUT_LOST':'Fresh futures input was lost; the seconds strategy is reducing its position.',

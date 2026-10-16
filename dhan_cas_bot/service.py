@@ -51,7 +51,7 @@ IST = ZoneInfo("Asia/Kolkata")
 def write_status(state_dir: Path, runtime, **extra):
     source=Path(__file__).resolve().parents[1].name
     value = {**runtime.status.as_dict(), **extra, "observed_at": datetime.now(timezone.utc).isoformat(), "writes": runtime.broker.allow_writes,
-             "runtime_revision":4,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
+             "runtime_revision":5,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
     path = state_dir / "status.json.tmp"
     with path.open("w") as stream:
         json.dump(value, stream, sort_keys=True)
@@ -455,7 +455,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         if instrument_by_id:
             market_url = config.get("dhan_market_ws_url") or "wss://api-feed.dhan.co?" + urlencode({"version": "2", "token": token, "clientId": broker.account_id, "authType": "2"})
             subscribed=[*instrument_by_id,*([future_id] if has_seconds and future_id else [])]
-            runners.append(WebSocketRunner(market_url, {}, record_dhan, subscribe=market.subscription_messages(subscribed), on_connect=market_connect, on_disconnect=market_disconnect,on_event=transport_event("market")))
+            runners.append(WebSocketRunner(market_url, {}, record_dhan, subscribe=market.subscription_messages(subscribed), on_connect=market_connect, on_disconnect=market_disconnect,on_event=transport_event("market"),**market.transport_options))
             feed_runners["market"] = runners[-1]
         else:
             engine.market_reconnect(None)

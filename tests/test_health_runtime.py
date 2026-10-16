@@ -101,6 +101,12 @@ def test_stalled_cash_does_not_delay_position_reconciliation(tmp_path):
         task=asyncio.create_task(worker.refresh())
         try:
             await entered.wait()
+            async def position_receipt():
+                while not worker.fresh:
+                    await asyncio.sleep(0)
+            # Concurrent GETs may start cash first. Its blocked request must
+            # still allow the position receipt to complete independently.
+            await asyncio.wait_for(position_receipt(),.3)
             assert worker.fresh
             assert runtime.reconciled['positions'][0]['netQty']==65
             assert not task.done()

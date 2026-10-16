@@ -115,7 +115,7 @@ async def run(config, output, stop):
     def connect():market.protocol.on_connect();tape.reset();books.clear();seen.clear()
     def disconnect():market.protocol.on_disconnect();tape.reset();books.clear();seen.clear()
     url='wss://api-feed.dhan.co?'+urlencode({'version':'2','token':token,'clientId':config['account_id'],'authType':'2'})
-    runner=WebSocketRunner(url,{},receive,subscribe=market.subscription_messages([*instruments,future_id]),on_connect=connect,on_disconnect=disconnect)
+    runner=WebSocketRunner(url,{},receive,subscribe=market.subscription_messages([*instruments,future_id]),on_connect=connect,on_disconnect=disconnect,**market.transport_options)
     tasks=[asyncio.create_task(runner.run()),asyncio.create_task(watch_events(events,stop))]
     archive=root/('seconds-quotes-'+now.astimezone(IST).date().isoformat()+'.jsonl')
     try:

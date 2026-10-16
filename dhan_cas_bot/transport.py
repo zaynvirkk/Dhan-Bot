@@ -29,11 +29,12 @@ def message_received_monotonic_ns(fallback):
 class WebSocketRunner:
     """Bounded ordered decoding, observed health and stable-connection backoff."""
 
-    def __init__(self, url: str | Callable[[], Awaitable[str]], headers: dict[str, str], on_message: Callable[[bytes], Awaitable[None]], *, subscribe: Iterable[dict] = (), connect_messages: Iterable[dict] = (), binary: bool = False, on_connect: Callable[[], None] | None = None, on_disconnect: Callable[[], None] | None = None, on_event=None):
+    def __init__(self, url: str | Callable[[], Awaitable[str]], headers: dict[str, str], on_message: Callable[[bytes], Awaitable[None]], *, subscribe: Iterable[dict] = (), connect_messages: Iterable[dict] = (), binary: bool = False, on_connect: Callable[[], None] | None = None, on_disconnect: Callable[[], None] | None = None, on_event=None, server_heartbeat: bool = False):
         if not url:
             raise ContractError("websocket endpoint must be configured")
         self.url, self.headers, self.on_message = url, headers, on_message
         self.binary, self.subscribe = binary, list(subscribe)
+        self.server_heartbeat = server_heartbeat
         self.connect_messages = list(connect_messages)
         self.on_connect, self.on_disconnect = on_connect, on_disconnect
         self.stop = asyncio.Event()
@@ -123,6 +124,11 @@ class WebSocketRunner:
                     _ingress.reset(token)
                     _ingress_monotonic.reset(monotonic_token)
                     self.pending_times.popleft()
+                # A queued get and a synchronous decoder need not suspend.
+                # Preserve every frame, but let pongs, orders and account reads
+                # run during sustained bursts instead of draining a full queue.
+                if self.processed % 16 == 0:
+                    await asyncio.sleep(0)
         jobs = [asyncio.create_task(receive()), asyncio.create_task(process())]
         try:
             await asyncio.gather(*jobs)
@@ -150,7 +156,12 @@ class WebSocketRunner:
                 endpoint = await self.url() if callable(self.url) else self.url
                 if not endpoint:
                     raise ContractError("websocket endpoint factory returned an empty URL")
-                async with connect(endpoint, additional_headers=self.headers, ping_interval=10, ping_timeout=5, close_timeout=2, open_timeout=10, max_size=8 * 1024 * 1024, max_queue=16) as socket:
+                # Dhan market data sends its own ten-second pings; the library
+                # answers those automatically. Its five-second client deadline
+                # was cutting an otherwise receiving market stream. Keep a
+                # bounded fallback watchdog for a silent broken connection;
+                # executable-quote freshness is still enforced independently.
+                async with connect(endpoint, additional_headers=self.headers, ping_interval=20 if self.server_heartbeat else 10, ping_timeout=30 if self.server_heartbeat else 5, close_timeout=2, open_timeout=10, max_size=8 * 1024 * 1024, max_queue=16) as socket:
                     self.socket, connected_at = socket, self.clock()
                     self.record_event('CONNECTED')
                     self.last_error = ""

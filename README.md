@@ -1,5 +1,10 @@
 # SableStone Dhan CAS bot
 
+**16 October live recovery repair:** provider heartbeat handling, fair ordered
+decoding, bounded discovery-budget work, concurrent reconciled account reads,
+and explicit completed-order/recovery status. Existing funded scope and money
+limits are preserved. [Repair and validation](docs/LIVE-RECOVERY-2026-10-16.md).
+
 **Additional15October review:** repaired route rejections and late responses
 that stranded the remaining attempt, incorrect product matching in exits, and a stale bankroll
 filter in seconds discovery. Added actual-rule-to-OMS fill/exit coverage.

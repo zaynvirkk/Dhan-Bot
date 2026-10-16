@@ -24,17 +24,27 @@ def test_seconds_discovery_uses_current_reconciled_cash_instead_of_an_old_budget
     def funds(cash):return FundsSnapshot(at[0],D(cash),D(cash),D(cash),D(0),'TEST')
     account=SimpleNamespace(fresh=True,funds=funds('7805'))
     ledger=Ledger(tmp_path/'discovery.sqlite3')
+    allocations=[]
+    def allocate(f):
+        allocations.append(f.spendable_cash)
+        return Allocation.start(f.spendable_cash,f.spendable_cash)
     engine=SimpleNamespace(now=lambda:at[0],books=books,runtime=SimpleNamespace(account_refresh=account,ledger=ledger),
-        _allocation=lambda f:Allocation.start(f.spendable_cash,f.spendable_cash))
+        _allocation=allocate)
     parent=SimpleNamespace(engine=engine,inputs=SimpleNamespace(calendar=cal),enabled=(NAMES[0],))
     seconds=SecondsEngine(parent);seconds.tape=tape;seconds.last_budget=D(100)
     try:
         samples=seconds.signals()
         assert len(samples)==1
         assert samples[0].details['security_id']=='2'  # Closest affordable strike, not expensive ATM.
-        at[0]+=timedelta(seconds=.3)
+        assert seconds.signals()[0].details['security_id']=='2'
+        assert len(allocations)==1  # A packet burst must not rescan every closed trade per packet.
+        ledger.account_revision=1
+        assert seconds.signals()[0].details['security_id']=='2'
+        assert len(allocations)==2  # Monetary reconciliation invalidates the cache too.
+        at[0]+=timedelta(seconds=.01)
         account.funds=funds('100')
         assert seconds.signals()==[]
+        assert len(allocations)==3  # A new balance invalidates the discovery cache immediately.
         assert ledger.db.execute('SELECT count(*) FROM intents').fetchone()[0]==0
     finally:ledger.close()
 

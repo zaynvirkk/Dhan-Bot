@@ -207,6 +207,7 @@ class SessionEngine:
             if runtime.account_refresh is not None and not runtime.account_refresh.fresh:
                 runtime.account_refresh.request()
                 runtime.status.state = "RECOVERING"
+                runtime.status.reason = "ACCOUNT_REFRESH_REQUIRED"
                 runtime.telemetry.reason("ACCOUNT_REFRESH_REQUIRED")
                 return False
             snapshot = getattr(runtime, "reconciled", None)
