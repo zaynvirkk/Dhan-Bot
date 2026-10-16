@@ -59,7 +59,12 @@ def view_snapshot(path, now=None, *, include_history=True):
     if data.get('history_external') is True and include_history:
         history=read_json(Path(path).with_name('history.json'))
         data['history']=history if history and history.get('schema')==1 and history.get('status')=='AVAILABLE' else {'status':'UNAVAILABLE','days':[],'events':[]}
-    if not include_history:data.pop('history',None)
+    if include_history:
+        review=read_json(Path(path).with_name('learning.json'),4*1024*1024)
+        data['learning']=review if review and review.get('schema')==1 else {'status':'UNAVAILABLE','days':[],'lessons':[]}
+    else:
+        data.pop('history',None)
+        data['learning_unchanged']=True
     data.update(available=True, server_time=now.isoformat(), collector=freshness(data.get('collector_observed_at'), now, 60))
     for section, ttl in (('runtime',RUNTIME_TTL_SECONDS), ('connections',900), ('account',60), ('daily_monitor',90),('seconds_experiments',10)):
         value = data.get(section)

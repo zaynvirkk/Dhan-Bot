@@ -14,7 +14,7 @@ from .domain import ContractError
 def source_digest(root: str | Path) -> str:
     root = Path(root)
     digest = sha256()
-    files = sorted([*root.glob("dhan_cas_bot/**/*.py"), *root.glob("tests/**/*.py"), *root.glob("ops/*"), *root.glob("schemas/*"), root / "pyproject.toml", root / "requirements.lock", root / "MANIFEST.json"])
+    files = sorted([*root.glob("dhan_cas_bot/**/*.py"), *root.glob("dhan_cas_bot/dashboard/*.json"), *root.glob("dhan_cas_bot/dashboard/static/*"), *root.glob("tests/**/*.py"), *root.glob("ops/*"), *root.glob("schemas/*"), root / "pyproject.toml", root / "requirements.lock", root / "MANIFEST.json"])
     for path in files:
         if path.is_file():
             digest.update(str(path.relative_to(root)).encode())

@@ -87,3 +87,5 @@ footer{width:100%;max-width:1120px}.live-held-row strong{overflow-wrap:anywhere}
 /* Durable, dated checks stay inside the History disclosure. */
 .recorded-check {padding:12px 0;border-bottom:1px solid var(--line)}
 .recorded-check p {margin:5px 0}
+
+.session-reviews{margin-bottom:32px}.session-review{border-bottom:1px solid var(--line);padding:14px 0}.session-review>summary{display:grid;grid-template-columns:1fr 1.5fr 1.5fr;gap:16px;align-items:center;cursor:pointer;padding:8px 0}.session-review>summary:focus-visible{outline:2px solid var(--blue);outline-offset:4px}.session-review .table-wrap{margin-block:16px}.session-review td,.session-review th{white-space:normal;min-width:110px}.session-review .notice{margin:16px 0}.session-lesson{padding:18px 0;border-bottom:1px solid var(--line)}.session-lesson p{max-width:72ch;line-height:1.6;margin-top:8px}.session-lesson h3{font-size:16px;margin:0}.session-lesson .stamp{display:block}@media(max-width:650px){.session-review>summary{grid-template-columns:1fr;gap:7px}.session-reviews .section-heading{align-items:flex-start;flex-direction:column;gap:6px}}

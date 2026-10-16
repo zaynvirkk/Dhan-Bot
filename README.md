@@ -276,3 +276,9 @@ The 1 October streaming optimization changes are local pending a network-capable
 verification run. See [implementation and validation](docs/STREAMING-OPTIMIZATIONS-2026-10-04.md).
 The frontend lifecycle tests require Node.js 18+ in addition to the Python test
 environment; the VM/dashboard installers include the `nodejs` package.
+
+Session review and operational memory: [Session learning](docs/SESSION-LEARNING.md)
+explains the dedicated futures feed, bounded replay capture, durable daily review,
+charge provenance and regression discipline. The private dashboard's History view
+contains Sessions & lessons. [16 October post-mortem](docs/SESSION-REVIEW-2026-10-16.md)
+records the observed day before the subsequent upgrade; it is historical evidence.

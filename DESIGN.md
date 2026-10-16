@@ -142,3 +142,11 @@ disclosure beneath the funded roster contains five explicitly simulated engines
 with reasons and independent model outcomes. It never changes broker cash,
 funding badges or real trade counts; unavailable and stale experiments remain
 unknown. Each row expands to its rule, observations and bounded exit policy.
+
+16 October session learning: History gains compact expandable dated reviews,
+actual gross/net charge provenance, entry completion, input-loss warnings and a
+separate lesson journal. Existing Live and System views remain. No chart or
+hypothetical outcome replaces broker records. System exposes dedicated futures
+freshness and bounded replay health; hidden initial tabs still fetch one current
+snapshot instead of remaining blank. Visual verification is recorded with the
+release evidence after deployment.

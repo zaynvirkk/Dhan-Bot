@@ -41,7 +41,10 @@ class SecondsEngine:
             receipts=[(f'strategy-evaluation:{name}:{now.isoformat()}:{sample.state}',
                        'STRATEGY_EVALUATION',asdict(sample))
                       for name,sample in self.evaluations.items() if name in parent.enabled]
-            if receipts:engine.runtime.ledger.observe_batch(receipts)
+            if receipts:
+                sink=getattr(engine.runtime,'observation_sink',None)
+                if sink:sink(receipts)
+                else:engine.runtime.ledger.observe_batch(receipts)
             self.last_recorded=now
 
     def signals(self):
@@ -100,6 +103,11 @@ class SecondsEngine:
             target=D(sample.details['target_price']);original=D(signal.details['target_price'])
             return target.is_finite() and original.is_finite() and target>=original>0
         except (KeyError,TypeError,ValueError,InvalidOperation):return False
+
+    def input_diagnostics(self, now):
+        source=getattr(self.parent.engine.runtime,'future_input',None)
+        if source:return source.health(now)
+        return {'current':self.tape.future_current(now),'age_ms':(int(now.timestamp()*1e9)-self.tape.future[-1][0])/1e6 if self.tape.future else None,'maximum_age_ms':1500,'reason':'NOT_OBSERVED'}
 
     def exit_reason(self, payload, book, entry, now):
         if not book or not book.top_bid:return None

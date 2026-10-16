@@ -11,7 +11,7 @@ function at(value){if(!value)return 'No observation';const d=new Date(value);ret
 function age(s){if(s===null||s===undefined)return 'Unknown age';if(s<60)return `${s}s ago`;if(s<3600)return `${Math.floor(s/60)}m ago`;if(s<86400)return `${Math.floor(s/3600)}h ago`;return `${Math.floor(s/86400)}d ago`;}
 function pnl(id,value){const n=$(id);n.textContent=cash(value);n.classList.remove('positive','negative');if(value&&value!=='0.00')n.classList.add(value.startsWith('-')?'negative':'positive');}
 function badge(text,kind=''){return el('span',text,'badge '+kind);}
-function feedError(value){return ({DhanFeedDisconnect:'Dhan requested a disconnect',ConnectionClosedOK:'Connection closed by peer',ConnectionClosedError:'Connection closed',TimeoutError:'Connection timed out',InvalidHandshake:'Connection handshake failed',HTTPStatusError:'Provider request failed',OSError:'Network connection failed',EOFError:'Connection ended unexpectedly',ContractError:'Feed validation failed'})[value]||'Cause not reported';}
+function feedError(value){return ({DhanFeedDisconnect:'Dhan requested a disconnect',ConnectionClosedOK:'Connection closed by peer',ConnectionClosedError:'Connection closed',TimeoutError:'Connection timed out',InvalidHandshake:'Connection handshake failed',InvalidMessage:'Incomplete connection handshake',HTTPStatusError:'Provider request failed',OSError:'Network connection failed',EOFError:'Connection ended unexpectedly',ContractError:'Feed validation failed'})[value]||'Cause not reported';}
 function diagnosticFailure(c){const f=c.facts||{};let detail=feedError(c.error_type);if(c.http_status)detail+=` · HTTP ${c.http_status}`;if(f.keepalive_timeout)detail+=' · no reply to the connection keepalive';if(f.close_received_code!=null)detail+=` · provider close code ${f.close_received_code}`;if(f.close_sent_code!=null)detail+=` · client close code ${f.close_sent_code}`;return detail+'. This is the dated diagnostic result; current socket state is shown in Live connections.';}
 function details(c){const f=c.facts||{};if(c.status==='FAIL')return diagnosticFailure(c);if(c.name==='dhan_market_feed')return `${f.full_packets??'No'} full packets recorded · ${f.book_verified?'book data observed':'book data unverified'}`;if(c.name==='upstox_feed')return `${f.index_seen?'Index received':'Index unverified'} · ${f.index_iep_seen?'IEP observed':'IEP not observed'}`;if(c.name==='dhan_order_socket')return `${f.websocket_connected?'Socket connected':'Socket unverified'} · ${f.route_verified?'order route verified':'order route unverified'}`;if(c.name==='contract_metadata')return `${f.instruments??'—'} contracts · expiry ${f.expiry?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short'}).format(new Date(f.expiry)):'unknown'}`;if(c.name==='dhan_auth')return `${f.derivatives_enabled?'F&O enabled':'F&O unverified'} · data plan ${f.data_plan||'unknown'}`;if(c.name==='dhan_account')return `${Number.isInteger(f.open_positions)?`${f.open_positions} open positions`:'Open-position count unavailable'} · ${f.positions??'—'} position records · ${f.orders??'—'} orders`;if(c.name==='egress')return f.matches_expected?'Observed IP matches the configured address.':'Expected IP match unverified.';return 'No result recorded.';}
 function rows(target, rows, columns){if(!changed('table:'+target,[rows,columns.map(c=>c.title||'')]))return;const body=$(target);body.replaceChildren();for(const r of rows){const tr=el('tr');for(const c of columns){const td=el('td',undefined,c.numeric?'numeric':'');const v=c.read(r);if(v instanceof Node)td.append(v);else td.textContent=v??'—';tr.append(td);}body.append(tr);}}
@@ -22,7 +22,8 @@ function renderOrders(){const d=state.data;const a=d?.account;const ledger=d?.le
  $('order-context').textContent=kind==='broker'?(a?`${a.fresh?'Current':'Last observed'} broker snapshot · ${at(a.observed_at)}${a.orders_truncated?' · latest 100 shown':''}`:'Broker account unavailable.'):'Latest 100 persisted records. Connection checks use non-marketable limits to verify routing; they do not seek a trade fill. Recorded fees may not be final.';
 }
 function renderTimings(rt){
- if(!changed('timings',rt?.telemetry))return;
+ if(!changed('timings',[rt?.telemetry,rt?.future_input,rt?.replay_capture]))return;
+ const health=$('input-replay-health');if(health){const f=rt?.future_input,c=rt?.replay_capture;health.textContent=`Dedicated futures: ${f?f.reason.toLowerCase().replaceAll('_',' '):'not observed'}${f?.age_ms!=null?' · age '+f.age_ms+' ms':''}. Replay: ${c?c.state.toLowerCase().replaceAll('_',' '):'not observed'} · ${c?.receipts??'unknown'} receipts · ${c?.pending??'unknown'} queued. Raw captures retain 14 days; session outcomes and lessons are retained separately.`;}
  const metrics=rt?.telemetry?.latency||{};const counts=rt?.telemetry?.decision_counts||{};
  const labels={decision_ms:'Decision cycle',signal_to_decision_ms:'Latest signal → cycle',market_to_decision_ms:'Latest book → cycle',decision_to_submit_ms:'Cycle → order send',http_ack_ms:'Order HTTP response',first_fill_recorded_ms:'Send → first fill recorded',reconcile_ms:'Account reconciliation',loop_lag_ms:'Event-loop delay',book_age_ms:'Book age at entry'};
  $('timings').replaceChildren();$('entry-checks').replaceChildren();
@@ -32,7 +33,7 @@ function renderTimings(rt){
 }
 function elapsed(stamp,now){const value=(Date.parse(now)-Date.parse(stamp))/1000;return Number.isFinite(value)&&value>=-5?Math.max(0,Math.floor(value)):null;}
 function renderFeeds(rt,now){
- const feeds=rt?.feed_health||{};const names={signal:'Upstox index feed',market:'Dhan options feed',order:'Dhan order updates'};
+ const feeds=rt?.feed_health||{};const names={signal:'Upstox index feed',market:'Dhan options feed',order:'Dhan order updates',...(feeds.future?{future:'Dhan dedicated futures feed'}:{})};
  const idle=rt?.monitoring_mode==='IDLE';const fresh=rt?.fresh===true;
  const issues=[];let known=0;
  const auctionExpected=Number(rt?.observation?.reference)>0&&['CTS_CLOSE','CAS_LM_START','CAS_M_STOP'].includes(rt?.observation?.phase);
@@ -71,6 +72,7 @@ function renderFeeds(rt,now){
  return {issues,known,idle,auctionExpected,auctionClosed,disconnected:rows.filter(r=>r.status==='Disconnected').map(r=>r.name)};
 }
 function monitoringNotice(d,feeds){
+ if(d.runtime?.fresh&&d.runtime.recorder_failed)return {text:'Replay recording failed. New entries are paused; existing positions remain managed. Check System.',kind:'bad'};
  if(!d.available)return {text:'No dashboard snapshot is available. The collector may not be running.',kind:'error'};
  if(!d.collector?.fresh)return {text:'Dashboard observations are stale. Current trading status is unknown.',kind:'error'};
  if(!d.runtime?.fresh)return {text:'The bot status is stale or missing. Current trading authority cannot be confirmed.',kind:'error'};
@@ -662,15 +664,38 @@ function selectView(view,updateHash=true){
 }
 function viewFromHash(){const hash=window.location?.hash;return ['#system','#setup'].includes(hash)?'system':['#history-view','#history','#orders','#activity'].includes(hash)?'history':'live';}
 
+function renderLearning(d){
+ const review=d.learning;if(!changed('learning',review))return;
+ const target=$('learning-days'),lessons=$('learning-lessons');if(!target||!lessons)return;
+ target.replaceChildren();lessons.replaceChildren();
+ $('learning-stamp').textContent=review?.observed_at?'Updated '+at(review.observed_at):'Not available';
+ $('learning-context').textContent=review?.status==='AVAILABLE'?'Real executions grouped by exit date. Net P&L needs complete broker charges; missing charges stay unknown.'+(review.coverage==='LATEST_5000_LIFECYCLES'?' The recent ledger window is partial; older archived reviews are retained.':''):'Session reviews are unavailable. Current trading status is shown in Live.';
+ for(const day of review?.days||[]){
+  const detail=el('details',undefined,'session-review');const summary=el('summary');
+  summary.append(el('strong',new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',year:'numeric'}).format(new Date(day.date+'T12:00:00+05:30'))));
+  summary.append(el('span',!day.closed_trades?'No closed trades':day.charges_complete?cash(day.net_pnl)+' net':cash(day.gross_pnl)+' gross · charges pending',day.charges_complete?(Number(day.net_pnl)<0?'negative':'positive'):''));
+  summary.append(el('span',`${day.closed_trades} closed · ${day.filled_entries}/${day.entry_attempts} entries filled`,'subtle'));detail.append(summary);
+  if(day.health)detail.append(el('p',`${day.health.samples} diagnostic samples retained · ${day.health.transport_errors} recorded transport errors · ${day.health.recovering_samples} recovering samples. These are sampled observations, not unique missed trades.`,'subtle'));
+  if(day.input_loss_exits)detail.append(el('p',`${day.input_loss_exits} trade${day.input_loss_exits===1?'':'s'} exited after a required fresh input was lost.`,'notice warn'));
+  const wrap=el('div',undefined,'table-wrap'),table=el('table'),head=el('thead'),tr=el('tr');
+  for(const name of ['Strategy / entry','Gross','Net','Exit reason']){const th=el('th',name);th.scope='col';tr.append(th);}head.append(tr);table.append(head);const body=el('tbody');
+  for(const trade of day.trades||[]){const row=el('tr');const first=el('td');first.append(el('strong',strategyNames[trade.strategy]||trade.strategy),el('p',at(trade.entry_at),'subtle'));row.append(first,el('td',cash(trade.gross_pnl),'numeric'),el('td',trade.net_pnl===null?'Charges pending':cash(trade.net_pnl),'numeric'),el('td',({SECONDS_INPUT_LOST:'Fresh input lost',SECONDS_DIRECTION_FAILED:'Futures reversed',SECONDS_TARGET_REPRICED:'Repricing target reached',TIME_EXIT:'Time exit',NET_PROFIT_FLOOR:'Profit floor reached',NOT_RECORDED:'Not recorded'})[trade.exit_reason]||trade.exit_reason.toLowerCase().replaceAll('_',' ')));body.append(row);}
+  table.append(body);wrap.append(table);detail.append(wrap);target.append(detail);
+ }
+ if(review?.status==='AVAILABLE'&&!review.days?.length)target.append(el('p','No recorded strategy entry or closed trade is available.','empty'));
+ for(const lesson of review?.lessons||[]){const article=el('article',undefined,'session-lesson');article.append(el('h3',lesson.title),el('p',lesson.finding),el('p',lesson.action,'subtle'),el('p',lesson.date+' · '+lesson.status.toLowerCase().replaceAll('_',' '),'stamp'));lessons.append(article);}
+}
+
 function render(d){
  if(state.data?.server_time&&d.server_time&&Date.parse(d.server_time)<Date.parse(state.data.server_time))return;
  d=structuredClone(d);
+ if(d.learning_unchanged===true&&d.learning===undefined)d.learning=state.data?.learning;
  if(d.history_unchanged===true&&d.history===undefined)d.history=state.data?.history;
  for(const [key,ttl] of [['collector',60],['runtime',45],['account',60],['connections',900],['daily_monitor',90]]){const v=d[key];if(v?.observed_at){const seconds=(Date.parse(d.server_time)-Date.parse(v.observed_at))/1000;v.age_seconds=seconds>=-5?Math.max(0,Math.floor(seconds)):null;if(!Number.isFinite(seconds)||seconds>ttl||seconds< -5)v.fresh=false;}}
  if(d.runtime&&!d.collector?.fresh)d.runtime.fresh=false;
  if(d.daily_monitor&&!d.collector?.fresh)d.daily_monitor.fresh=false;
  if(d.runtime&&!d.runtime.fresh)d.runtime.authority='UNKNOWN';
- state.generation++;state.data=d;const rt=d.runtime;renderTimings(rt);renderHistory(d);renderSelection(d);renderStrategies(d);const a=d.account;const cs=d.connections;const ledger=d.ledger;$('observation').textContent=rt?.observed_at?`${((rt.strategies||[]).length>3?`${rt.strategies.length} enabled strategies`:(rt.strategies||[]).map(s=>strategyNames[s]||s).join(' / '))||(rt.observation?.expiry?'Expiry auction service':'Strategy not reported')} · ${rt.fresh?'Updated':'Last observed'} ${at(rt.observed_at)}`:'Waiting for a bot observation.';
+ state.generation++;state.data=d;const rt=d.runtime;renderTimings(rt);renderHistory(d);renderLearning(d);renderSelection(d);renderStrategies(d);const a=d.account;const cs=d.connections;const ledger=d.ledger;$('observation').textContent=rt?.observed_at?`${((rt.strategies||[]).length>3?`${rt.strategies.length} enabled strategies`:(rt.strategies||[]).map(s=>strategyNames[s]||s).join(' / '))||(rt.observation?.expiry?'Expiry auction service':'Strategy not reported')} · ${rt.fresh?'Updated':'Last observed'} ${at(rt.observed_at)}`:'Waiting for a bot observation.';
  const feedState=renderFeeds(rt,d.server_time);
  const notice=$('notice');notice.className='notice';const message=monitoringNotice(d,feedState);notice.textContent=message.text;if(message.kind)notice.classList.add(message.kind);notice.hidden=message.kind==='healthy';
  $('cash-label').textContent=a?.fresh?'Available cash':'Last observed cash';$('cash').textContent=cash(a?.available_cash);$('cash-age').textContent=a?`${age(a.age_seconds)} · ${a.fresh?'broker read':'historical observation'}`:'No broker observation';pnl('realised',a?.realised_pnl);pnl('unrealised',a?.unrealised_pnl);$('position-count').textContent=a?.open_position_count??'—';$('position-note').textContent=a?.fresh?'Current broker snapshot':a?'Last observed account':'Awaiting account data';
@@ -690,7 +715,7 @@ window.addEventListener('popstate',()=>selectView(viewFromHash(),false));
 selectView(viewFromHash(),false);
 function clock(){ $('clock').textContent=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date())+' IST'; }clock();setInterval(clock,1000);
 const monitor=new DashboardStream({source:url=>new EventSource(url+'?history=omit'),onTime:(stamp,observations)=>{if(!state.data)return;const data=structuredClone(state.data);for(const key of ['collector','runtime','account','connections','daily_monitor']){if(data[key]&&typeof observations?.[key]==='string')data[key].observed_at=observations[key];}render({...data,server_time:stamp});$('refresh-status').textContent='Live updates · '+at(stamp);},onData:data=>{render(data);$('refresh-status').textContent='Live updates · '+at(data.server_time);},refresh,signIn:()=>window.location.replace('/login')});
-if(!document.hidden)monitor.start();
+if(!document.hidden)monitor.start();else refresh();
 setInterval(()=>{monitor.tick();if(monitor.running&&(state.historyFetchedAt===null||Date.now()-state.historyFetchedAt>=60000))monitor.fallback();},1000);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)monitor.stop();else monitor.start();});
 window.addEventListener('pagehide',()=>monitor.stop());

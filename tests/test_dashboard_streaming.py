@@ -15,11 +15,11 @@ from .test_dashboard import dashboard, request, SECRET, write
 
 
 def test_shared_token_repair_revision_is_required_without_changing_authority(tmp_path, monkeypatch):
-    for revision, fresh, needs_update in ((6, True, True), (7, True, False), (None, True, True), (6, False, False)):
+    for revision, fresh, needs_update in ((7, True, True), (8, True, False), (None, True, True), (7, False, False)):
         runtime={'fresh':fresh,'runtime_revision':revision,'authority':'ENABLED','auto_live_armed':True}
         monkeypatch.setattr(collector,'local_snapshot',lambda *_:{'runtime':runtime})
         report=collector.projection({'state_dir':str(tmp_path)}, {})
-        assert report['release']['required_runtime_revision']==7
+        assert report['release']['required_runtime_revision']==8
         assert report['release']['upgrade_required'] is needs_update
         assert report['runtime']==runtime
 

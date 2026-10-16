@@ -18,7 +18,7 @@ from .test_production_lifecycles import MatchingBroker
 from .acceptance.cas.support import mandate
 
 
-@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'shared_token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames', 'native_status', 'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account', 'route_reconnect', 'exhausted_route_reconnect', 'probe_rejection_retry', 'probe_rejections_exhausted', 'probe_rejection_reconnect', 'observation_only_nonexpiry', 'observation_only_expiry', 'observation_only_expiry_closed', 'funded_directional_nonexpiry'])
+@pytest.mark.parametrize('mode', ['normal', 'cash_failure', 'partial', 'slow_account', 'day_rotation', 'token_rotation', 'shared_token_rotation', 'message_burst', 'transport_reconnect', 'invalid_frames', 'native_status', 'native_missing_status', 'native_rejected_status', 'native_unknown_status', 'native_foreign_account', 'route_reconnect', 'exhausted_route_reconnect', 'probe_rejection_retry', 'probe_rejections_exhausted', 'probe_rejection_reconnect', 'observation_only_nonexpiry', 'observation_only_expiry', 'observation_only_expiry_closed', 'funded_directional_nonexpiry', 'funded_directional_isolated_future_nonexpiry'])
 def test_background_reconciliation_through_production_session(tmp_path, monkeypatch, mode):
     async def run():
         ledger = Ledger(tmp_path/'ledger.sqlite3')
@@ -32,6 +32,7 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             def __init__(self, url, headers, on_message, **kwargs):
                 self.url, self.on_message, self.options = url, on_message, kwargs
                 self.messages = asyncio.Queue()
+                self.socket=None;self.subscriptions_ready=False
             async def run(self):
                 url = await self.url() if callable(self.url) else self.url
                 channels[url] = self
@@ -83,7 +84,8 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             assert request.method == 'GET'
             if path == '/master':
                 expiry='2026-09-16' if mode.endswith('nonexpiry') else '2026-09-15'
-                return httpx.Response(200, text=f'SEGMENT,SECURITY_ID,INSTRUMENT,UNDERLYING_SYMBOL,SM_EXPIRY_DATE,OPTION_TYPE,STRIKE_PRICE,LOT_SIZE,TICK_SIZE,SM_FREEZE_QTY\nNSE_FNO,100,OPTIDX,NIFTY,{expiry},CE,25000,65,0.05,1800\nNSE_FNO,200,OPTIDX,NIFTY,{expiry},PE,25000,65,0.05,1800\n')
+                extra='NSE_FNO,300,FUTIDX,NIFTY,2026-09-30,,,65,0.05,1800\n' if 'isolated_future' in mode else ''
+                return httpx.Response(200, text=f'SEGMENT,SECURITY_ID,INSTRUMENT,UNDERLYING_SYMBOL,SM_EXPIRY_DATE,OPTION_TYPE,STRIKE_PRICE,LOT_SIZE,TICK_SIZE,SM_FREEZE_QTY\nNSE_FNO,100,OPTIDX,NIFTY,{expiry},CE,25000,65,0.05,1800\nNSE_FNO,200,OPTIDX,NIFTY,{expiry},PE,25000,65,0.05,1800\n'+extra)
             if path == '/freeze': return httpx.Response(200, text='SYMBOL,VOL_FRZ_QTY\nNIFTY,1800\n')
             if path == '/authorize': return httpx.Response(200, json={'data':{'authorized_redirect_uri':'signal'}})
             if path == '/v2/profile': return httpx.Response(200, json={'dhanClientId':'TEST','dataPlan':'Active','activeSegment':'E, D, '})
@@ -161,6 +163,10 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             from dhan_cas_bot.strategy_inputs import StrategyInputWorker
             config['strategies']=['CAS_LAG_V1','OPEN_DRIVE_FAST']
             config['funded_strategies']=['OPEN_DRIVE_FAST'] if mode.startswith('funded_directional_') else ['CAS_LAG_V1']
+            if 'isolated_future' in mode:
+                config['strategies']=['CAS_LAG_V1','SECONDS_FUTURES_CATCHUP']
+                config['funded_strategies']=['SECONDS_FUTURES_CATCHUP']
+                config['dhan_future_ws_url']='future'
             # Exchange is open, with live books. Scanning an unfunded ordinary
             # strategy must never qualify a money route on a non-expiry day,
             # or bring CAS qualification forward before its own window.
@@ -190,7 +196,12 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
             event=frame.marketInfo.casMarketStatus['NSE_EQ']; event.status=name; event.updatedTime=frame.currentTs
             await channels['signal'].send(frame.SerializeToString())
         try:
-            await until(lambda:len(channels)==3)
+            await until(lambda:len(channels)==(4 if 'isolated_future' in mode else 3))
+            if 'isolated_future' in mode:
+                assert channels['future'].options['subscribe'][0]['InstrumentList']==[{'ExchangeSegment':'NSE_FNO','SecurityId':'300'}]
+                assert all(r['SecurityId']!='300' for batch in channels['market'].options['subscribe'] for r in batch['InstrumentList'])
+                await channels['future'].send(full_packet(300,bid=25000,ask=25000.05))
+                await until(lambda:status_file().get('future_input',{}).get('current') is True)
             # Route-positive books now explicitly carry observed liquidity;
             # zero/missing OI is covered by separate no-order regressions.
             await channels['market'].send(full_packet(100,ask=9.05,oi=650000,volume=65000)+full_packet(200,ask=9.05,oi=650000,volume=65000))

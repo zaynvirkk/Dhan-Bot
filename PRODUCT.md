@@ -25,8 +25,9 @@ Gunicorn serves the adapter behind Caddy HTTPS on the existing VM.
 
 ## Capabilities and Constraints
 
-The current strategy is CAS_LAG_V1. This task does not change signal or sizing
-rules. The dashboard reads allowlisted status and ledger fields; it does not
+The currently funded roster contains CAS_LAG_V1, TREND_PULLBACK_FAST and five
+experimental seconds strategies. The dashboard displays their actual permissions
+and outcomes. Session-learning repairs preserve the standing sizing rules. The dashboard reads allowlisted status and ledger fields; it does not
 receive broker credentials, send orders, or modify trading authority.
 Unknown and stale inputs remain visibly different from zero and healthy.
 The user requested deployment to zaynvirkk/Dhan-Bot and the existing GCP VM,
@@ -40,7 +41,7 @@ the existing VM IP and a separate dashboard password were confirmed by the user.
 The chosen hostname is dhan.34.100.255.111.sslip.io.
 The dashboard was published to GitHub and the existing VM on 30 September 2026.
 HTTPS, authenticated live data and desktop/mobile operation are verified;
-real-money trading remains an independent operator-run action.
+funded execution is enabled separately under the operator's explicit standing mandate. The dashboard remains read-only.
 
 ## Evidence on Hand
 
@@ -55,3 +56,8 @@ start. Raw credentials, payloads and account identifiers are not public UI data.
 - Diagnose failures without implying a failed request returned an empty account.
 - Keep monitoring separate from operator-run funded activation.
 - Use actual persisted observations; never synthesize performance or fills.
+
+Session learning: History retains dated broker-backed outcomes and curated
+lessons. Observed cash changes, gross profit, complete net profit, sampled
+diagnostics and unknown evidence remain distinct. The trading system can use
+previously closed results; the UI never promotes an engine or changes money policy.

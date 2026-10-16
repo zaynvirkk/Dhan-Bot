@@ -351,7 +351,9 @@ class DirectionalEngine:
             book=engine.books.get(inst.security_id)
             if self.book_current(book):
                 reason=self.seconds.exit_reason(payload,book,entry,now)
-                if reason:exit_state={'reason':reason,'due':now.isoformat()}
+                if reason:
+                    exit_state={'reason':reason,'due':now.isoformat()}
+                    if reason=='SECONDS_INPUT_LOST':exit_state['input_health']=self.seconds.input_diagnostics(now)
         entry_time=datetime.fromisoformat(payload["signal"]["evaluated_at"])+timedelta(minutes=1)
         policy=payload["signal"].get("details",{})
         target=D(policy.get("exit_target") or '2') if policy.get("exit_target",'2') is not None else None

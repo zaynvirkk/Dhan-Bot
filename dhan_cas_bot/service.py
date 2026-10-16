@@ -45,6 +45,8 @@ from .strategy_inputs import strategy_names, selected_contracts, route_window, S
 from .session_strategies import CAS, GAP, REBOUND
 from .seconds_strategies import NAMES as SECONDS_NAMES
 from .market_subscriptions import market_ids, MarketSubscriptions
+from .future_input import FutureInput
+from .replay_journal import ReplayJournal
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -52,7 +54,7 @@ IST = ZoneInfo("Asia/Kolkata")
 def write_status(state_dir: Path, runtime, **extra):
     source=Path(__file__).resolve().parents[1].name
     value = {**runtime.status.as_dict(), **extra, "observed_at": datetime.now(timezone.utc).isoformat(), "writes": runtime.broker.allow_writes,
-             "runtime_revision":7,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
+             "runtime_revision":8,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
     path = state_dir / "status.json.tmp"
     with path.open("w") as stream:
         json.dump(value, stream, sort_keys=True)
@@ -137,7 +139,14 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     seconds_event_task = None
     index_anchor = None
     market_policy = None
+    future_input = None
+    capture = ReplayJournal(state_dir/'replay')
+    capture_queue = asyncio.Queue(maxsize=4096)
+    capture_task = None
     try:
+        try:await asyncio.to_thread(capture.retain_recent,now())
+        except OSError:
+            recorder_failed=True;capture.health['state']='WRITE_FAILED'
         # Broker recovery precedes calendar, Upstox, egress admission and metadata.
         await runtime.recover()
         engine = SessionEngine(runtime, {}, now_fn=now)
@@ -212,6 +221,24 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
 
         def record_frame(kind, epoch, payload):
             nonlocal recorder_failed
+            # Retain all selected-feed receipts in the verified open session,
+            # including repeated identical bytes and flat-account periods.
+            calendar = input_worker.calendar if input_worker else None
+            if capture.health['state'] not in {'CAP_REACHED','DISK_RESERVE','QUEUE_OVERFLOW','WRITE_FAILED'} and kind in {'DHAN_FRAME', 'UPSTOX_FRAME', 'FUTURE_FRAME'} and ((calendar and calendar.is_open(now())) or engine.active is not None):
+                try:
+                    capture_queue.put_nowait({'role': {'DHAN_FRAME':'market','UPSTOX_FRAME':'signal','FUTURE_FRAME':'future'}[kind],
+                        'epoch': epoch, 'received_ns': message_received_ns(monotime.time_ns()),
+                        'processed_ns': int(now().timestamp()*1e9), 'data_b64': base64.b64encode(payload).decode()})
+                except asyncio.QueueFull:
+                    recorder_failed = True
+                    capture.health['state'] = 'QUEUE_OVERFLOW'
+            # Financial/order evidence and the legacy active-position recorder
+            # retain their prior semantics; replay adds no broker permission.
+            return record_legacy_frame(kind, epoch, payload)
+
+        def record_legacy_frame(kind, epoch, payload):
+            nonlocal recorder_failed
+            if kind == "FUTURE_FRAME":return None
             identity = f"{epoch}:{hashlib.sha256(payload).hexdigest()}"
             if kind != "ORDER_FRAME" and not (time(15,5) <= now().astimezone(IST).time() <= time(15,45)) and engine.active is None:
                 return identity
@@ -220,6 +247,14 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             except asyncio.QueueFull:
                 recorder_failed = True
             return identity
+
+        def queue_observations(items):
+            nonlocal recorder_failed
+            try:records.put_nowait(list(items))
+            except asyncio.QueueFull:
+                recorder_failed=True
+                raise ContractError('observation queue full')
+        runtime.observation_sink=queue_observations
 
         async def record_worker():
             nonlocal recorder_failed
@@ -230,7 +265,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                 try:
                     if shutil.disk_usage(state_dir).free < 512*1024*1024:
                         raise ContractError("raw recorder reserves remaining disk for orders and recovery")
-                    await asyncio.to_thread(ledger.observe_batch,batch)
+                    flattened=[row for item in batch for row in (item if isinstance(item,list) else [item])]
+                    await asyncio.to_thread(ledger.observe_batch,flattened)
                 except Exception:
                     recorder_failed = True
                 finally:
@@ -238,6 +274,20 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         records.task_done()
                 await asyncio.sleep(0)
         recorder_task = asyncio.create_task(record_worker())
+        async def capture_worker():
+            nonlocal recorder_failed
+            while True:
+                batch = [await capture_queue.get()]
+                while len(batch) < 256 and not capture_queue.empty():
+                    batch.append(capture_queue.get_nowait())
+                try:
+                    await asyncio.to_thread(capture.write, batch, now())
+                except Exception:
+                    recorder_failed = True
+                    if capture.health['state'] not in {'CAP_REACHED','DISK_RESERVE','QUEUE_OVERFLOW'}:capture.health['state'] = 'WRITE_FAILED'
+                finally:
+                    for _ in batch:capture_queue.task_done()
+        capture_task = asyncio.create_task(capture_worker())
 
         async def final_worker():
             nonlocal final_error
@@ -343,7 +393,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                 wake.set()
                 return
             for packet in batch:
-                if has_seconds and future_id and packet[0]==8 and str(int.from_bytes(packet[4:8],'little'))==future_id:
+                if has_seconds and not future_input and future_id and packet[0]==8 and str(int.from_bytes(packet[4:8],'little'))==future_id:
                     from types import SimpleNamespace
                     from .domain import Segment
                     # Market-data identity only. A future is never admitted to
@@ -460,10 +510,25 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             engine.signal_reconnect(None)
         if instrument_by_id:
             market_url = config.get("dhan_market_ws_url") or "wss://api-feed.dhan.co?" + urlencode({"version": "2", "token": token, "clientId": broker.account_id, "authType": "2"})
-            subscribed=[*instrument_by_id,*([future_id] if has_seconds and future_id else [])]
+            if has_seconds and future_id:
+                future_input = FutureInput(engine.directional.seconds.tape, future_id, lambda:market.protocol.epoch.id)
+                runtime.future_input=future_input
+                async def record_future(payload):
+                    received_ns = message_received_ns(int(now().timestamp()*1e9))
+                    record_frame('FUTURE_FRAME', market.protocol.epoch.id, payload)
+                    if market.protocol.epoch.connected and future_input.receive(payload, received_ns):
+                        usable_at['future'] = datetime.fromtimestamp(received_ns/1e9,timezone.utc).isoformat()
+                    wake.set()
+                def future_disconnect():
+                    future_input.disconnect();usable_at.pop('future',None);wake.set()
+                runners.append(WebSocketRunner(config.get('dhan_future_ws_url') or market_url, {}, record_future,
+                    subscribe=market.subscription_messages([future_id]),on_connect=future_input.connect,
+                    on_disconnect=future_disconnect,on_event=transport_event('future'),**market.transport_options))
+                feed_runners['future'] = runners[-1]
+            subscribed=list(instrument_by_id)
             if has_directional and set(enabled)<={CAS,'TREND_PULLBACK_FAST',*SECONDS_NAMES}:
                 held={active['security_id']} if active else set()
-                subscribed=sorted(held|({future_id} if has_seconds and future_id else set()))
+                subscribed=sorted(held)
                 if not subscribed:
                     # Metadata-only bootstrap for a minute-only configuration.
                     # Its price is never a signal or an executable valuation.
@@ -498,7 +563,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                     if engine.directional.inputs:
                         anchors.extend(v.spot for v in engine.directional.inputs.evaluations.values() if v.spot)
                     desired=market_ids(instrument_by_id,today,anchors=anchors,held=held,
-                        future_id=future_id if has_seconds else None,
+                        future_id=None,
                         full_expiry=today if CAS in funded and expiry_today else None)
                     if not any(a is not None for a in anchors):desired.update(market_policy.bootstrap)
                     await market_policy.sync(runner,market.protocol.epoch.id,desired,engine.books)
@@ -642,6 +707,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                              market_subscription_error=market_policy.last_error if market_policy else '',
                              books_observed=len(engine.books), clock_uncertainty_ms=uncertainty,
                              metadata_error=metadata_error, recorder_failed=recorder_failed,
+                             replay_capture={**capture.health,'pending':capture_queue.qsize()},
+                             future_input=future_input.health(now()) if future_input else None,
                              final_input="VERIFIED" if engine.final_value else "UNQUALIFIED",
                              final_source_error=final_error, telemetry=runtime.telemetry.snapshot(),
                              account_snapshot_fresh=account_refresh.fresh, feed_health=feed_health,
@@ -676,6 +743,11 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+        if capture_task:
+            try:await asyncio.wait_for(capture_queue.join(),3)
+            except asyncio.TimeoutError:pass
+            capture_task.cancel()
+            await asyncio.gather(capture_task,return_exceptions=True)
         if recorder_task:
             try:
                 await asyncio.wait_for(records.join(),3)

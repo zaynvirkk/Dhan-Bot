@@ -10,5 +10,11 @@
   "writes_in_offline_tests": false,
   "state": "SQLite WAL synchronous FULL",
   "acceptance_commands": 20,
-  "acceptance_cases": 60
+  "acceptance_cases": 60,
+  "runtime_revision": 8,
+  "session_learning": {
+    "outcomes": "broker-reconciled daily reviews",
+    "replay": "bounded compressed receipt journal",
+    "futures": "dedicated Dhan FULL WebSocket"
+  }
 }

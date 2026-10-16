@@ -118,7 +118,7 @@ def test_incomplete_handshake_retries_and_resubscribes_without_process_restart()
 
                 runner.wait_retry = retry
                 await asyncio.wait_for(runner.run(), 5)
-        assert len(retries) == 1 and retries[0][0] == "EOFError"
+        assert len(retries) == 1 and retries[0][0] == "InvalidMessage"
         assert .75 <= retries[0][1] <= 1 and retries[0][2] is False
         assert received == [b'{"method":"sub"}']
         assert epochs == ["disconnect", "connect", "disconnect"]

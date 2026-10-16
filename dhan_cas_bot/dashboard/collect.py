@@ -63,9 +63,9 @@ def projection(config, previous, *, checked=None, monitor=None):
     runtime=report.get('runtime') or {}
     candidate=Path(__file__).resolve().parents[2].name
     report['release']={'dashboard_source':candidate if len(candidate)==40 and all(c in '0123456789abcdef' for c in candidate) else None,
-        'funded_source':runtime.get('source_commit'),'required_runtime_revision':7,
+        'funded_source':runtime.get('source_commit'),'required_runtime_revision':8,
         'funded_runtime_revision':runtime.get('runtime_revision'),
-        'upgrade_required':runtime.get('fresh') is True and (runtime.get('runtime_revision') or 0)<7}
+        'upgrade_required':runtime.get('fresh') is True and (runtime.get('runtime_revision') or 0)<8}
     return report
 
 
@@ -133,7 +133,10 @@ async def collect(config, output):
     previous = read_json(output) or {}
     primary = shared_account(read_json(Path(config['state_dir'])/'account-observation.json'), utcnow())
     checked = await check_account(config) if primary is None else None
-    return write_report(output, projection(config, previous, checked=checked, monitor=read_json(Path(output).with_name('daily-monitor.json'))))
+    report=projection(config, previous, checked=checked, monitor=read_json(Path(output).with_name('daily-monitor.json')))
+    from .learning import build_learning
+    atomic_json(Path(output).with_name('learning.json'),build_learning(config,output,report,utcnow()))
+    return write_report(output, report)
 
 
 async def watch(config, output):
@@ -149,6 +152,13 @@ async def watch(config, output):
             if independent_check_due(primary,checked,utcnow()):
                 checked = await check_account(config)
             await asyncio.sleep(15)
+    async def learning():
+        from .learning import build_learning
+        while True:
+            value=await asyncio.to_thread(build_learning,config,output,read_json(output) or {},utcnow())
+            atomic_json(Path(output).with_name('learning.json'),value)
+            await asyncio.sleep(30)
+    learning_task=asyncio.create_task(learning())
     task = asyncio.create_task(verify())
     history_cache=None
     last_history_time=-float('inf')
@@ -165,8 +175,8 @@ async def watch(config, output):
             if due:last_history_time=time.monotonic();last_signature=signature
             await asyncio.sleep(1)
     finally:
-        task.cancel()
-        await asyncio.gather(task, return_exceptions=True)
+        task.cancel();learning_task.cancel()
+        await asyncio.gather(task,learning_task, return_exceptions=True)
 
 
 def main():

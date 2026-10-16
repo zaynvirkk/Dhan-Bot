@@ -194,6 +194,8 @@ def runtime_view(raw, now):
             'funded_strategies': [s for s in raw['funded_strategies'] if isinstance(s,str) and s in STRATEGY_NAMES] if isinstance(raw.get('funded_strategies'),list) else None,
             'strategy_evaluations': strategy_projection(raw.get('strategy_evaluations')),
             'input_health':input_health_projection(raw.get('input_health'),now),
+            'future_input':future_input_view(raw.get('future_input')),
+            'replay_capture':capture_view(raw.get('replay_capture')),
             'strategy_selection':selection_projection(raw.get('strategy_selection')),
             'execution_feedback':execution_feedback_projection(raw.get('execution_feedback')),
             'minute_source':choice(raw.get('minute_source'),{'UPSTOX_COMPLETED_I1_STREAM','REST_BOOTSTRAP_OR_GAP_REPAIR','NOT_OBSERVED'}),
@@ -203,8 +205,23 @@ def runtime_view(raw, now):
             'runtime_revision':integer(raw.get('runtime_revision')),
             'source_commit':raw.get('source_commit') if re.fullmatch('[0-9a-f]{40}',str(raw.get('source_commit',''))) else None,
             'recorder_pending': integer(raw.get('recorder_pending')),
+            'recorder_failed':raw.get('recorder_failed') if type(raw.get('recorder_failed')) is bool else None,
             'telemetry': telemetry_view(raw.get('telemetry')),
             'observation': observation_projection(raw.get('observation'))}
+
+
+def future_input_view(raw):
+    if not isinstance(raw,dict):return None
+    return {'connected':raw.get('connected') is True,'current':raw.get('current') is True,
+        'age_ms':money(raw.get('age_ms')),'maximum_age_ms':integer(raw.get('maximum_age_ms')),
+        'reason':choice(raw.get('reason'),{'CURRENT','FUTURES_STALE','FUTURES_DISCONNECTED','FUTURES_WARMUP','FUTURES_PACKET_REJECTED'},'UNKNOWN')}
+
+
+def capture_view(raw):
+    if not isinstance(raw,dict):return None
+    return {'state':choice(raw.get('state'),{'WAITING','RECORDING','CAP_REACHED','DISK_RESERVE','QUEUE_OVERFLOW','WRITE_FAILED'},'UNKNOWN'),
+        'observed_at':timestamp(raw.get('observed_at')),
+        **{k:integer(raw.get(k)) for k in ('receipts','compressed_bytes','pending')}}
 
 
 def input_health_projection(raw,now):
@@ -377,7 +394,7 @@ def transport_event_view(raw):
 def feed_health_view(raw):
     raw = raw if isinstance(raw, dict) else {}
     result = {}
-    for name in ('signal', 'market', 'order'):
+    for name in ('signal', 'market', 'order', 'future'):
         item = raw.get(name)
         if not isinstance(item, dict):
             continue
@@ -385,7 +402,7 @@ def feed_health_view(raw):
                         **{key: timestamp(item.get(key)) for key in ('last_received_at', 'last_processed_at', 'last_usable_at')},
                         **{key: integer(item.get(key)) for key in ('reconnects', 'pending_messages', 'queue_high_water', 'processed_messages')},
                         **{key: money(item.get(key)) for key in ('oldest_pending_ms', 'queue_delay_ms', 'processing_ms')},
-                        'last_error': choice(item.get('last_error'), {'ContractError', 'OSError', 'EOFError', 'TimeoutError', 'ConnectionClosedError', 'InvalidHandshake', 'HTTPStatusError'}),
+                        'last_error': choice(item.get('last_error'), {'ContractError', 'OSError', 'EOFError', 'TimeoutError', 'ConnectionClosedError', 'InvalidHandshake', 'InvalidMessage', 'HTTPStatusError'}),
                         'transport_events':transport_event_view(item.get('transport_events'))}
     return result
 
