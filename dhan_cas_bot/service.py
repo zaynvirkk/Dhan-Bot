@@ -44,6 +44,7 @@ from .directional import DirectionalEngine
 from .strategy_inputs import strategy_names, selected_contracts, route_window, StrategyInputWorker
 from .session_strategies import CAS, GAP, REBOUND
 from .seconds_strategies import NAMES as SECONDS_NAMES
+from .market_subscriptions import market_ids, MarketSubscriptions
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -51,7 +52,7 @@ IST = ZoneInfo("Asia/Kolkata")
 def write_status(state_dir: Path, runtime, **extra):
     source=Path(__file__).resolve().parents[1].name
     value = {**runtime.status.as_dict(), **extra, "observed_at": datetime.now(timezone.utc).isoformat(), "writes": runtime.broker.allow_writes,
-             "runtime_revision":5,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
+             "runtime_revision":6,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
     path = state_dir / "status.json.tmp"
     with path.open("w") as stream:
         json.dump(value, stream, sort_keys=True)
@@ -134,6 +135,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     strategy_task = None
     input_worker = None
     seconds_event_task = None
+    index_anchor = None
+    market_policy = None
     try:
         # Broker recovery precedes calendar, Upstox, egress admission and metadata.
         await runtime.recover()
@@ -268,7 +271,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             return endpoint
 
         async def record_upstox(payload):
-            nonlocal received_seq
+            nonlocal received_seq, index_anchor
             received_ns = message_received_ns(int(now().timestamp()*1_000_000_000))
             value = decode_binary(payload)
             epoch = upstox.protocol.epoch.id
@@ -299,6 +302,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             identity = f"{epoch}:{value.currentTs}:{hashlib.sha256(raw).hexdigest()}"
             try:
                 sample = observation(value, received_ns=received_ns, provider_ts_ms=int(value.currentTs), epoch=epoch, receiver_seq=received_seq, raw_identity=identity, ltp=engine.reference is None)
+                if engine.reference is None:index_anchor=sample.value
                 accepted = False
                 if engine.reference is None:
                     if now().astimezone(IST).time() < time(15,15):
@@ -359,6 +363,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                     continue
                 inst = instrument_by_id.get(str(int.from_bytes(packet[4:8], "little")))
                 if packet[0] != 8 or inst is None:
+                    continue
+                if market_policy is not None and inst.security_id not in market_policy.wanted:
                     continue
                 identity = hashlib.sha256(packet).digest()
                 if last_packets.get(inst.security_id) == (epoch,identity):
@@ -455,6 +461,16 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         if instrument_by_id:
             market_url = config.get("dhan_market_ws_url") or "wss://api-feed.dhan.co?" + urlencode({"version": "2", "token": token, "clientId": broker.account_id, "authType": "2"})
             subscribed=[*instrument_by_id,*([future_id] if has_seconds and future_id else [])]
+            if has_directional and set(enabled)<={CAS,'TREND_PULLBACK_FAST',*SECONDS_NAMES}:
+                held={active['security_id']} if active else set()
+                subscribed=sorted(held|({future_id} if has_seconds and future_id else set()))
+                if not subscribed:
+                    # Metadata-only bootstrap for a minute-only configuration.
+                    # Its price is never a signal or an executable valuation.
+                    ordered=sorted(instrument_by_id.values(),key=lambda i:(i.expiry,i.strike,i.security_id))
+                    midpoint=ordered[len(ordered)//2].strike if ordered else None
+                    subscribed=sorted(market_ids(instrument_by_id,today,anchors=(midpoint,),held=held))
+                market_policy=MarketSubscriptions(subscribed)
             runners.append(WebSocketRunner(market_url, {}, record_dhan, subscribe=market.subscription_messages(subscribed), on_connect=market_connect, on_disconnect=market_disconnect,on_event=transport_event("market"),**market.transport_options))
             feed_runners["market"] = runners[-1]
         else:
@@ -466,6 +482,29 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             # deterministic session replay through real localhost transports.
             runner.wall_clock = lambda: int(now().timestamp()*1_000_000_000)
         tasks = [asyncio.create_task(runner.run()) for runner in runners]
+        if market_policy is not None:
+            async def subscriptions():
+                runner=feed_runners['market']
+                while not stop.is_set():
+                    held={r['security_id'] for r in ledger.pending_intents()}
+                    current=engine.active
+                    if current:held.add(current['security_id'])
+                    probe=ledger.lifecycle_totals('route-probe')
+                    if probe['quantity']:
+                        held.update(r[0] for r in ledger.db.execute("SELECT DISTINCT security_id FROM intents WHERE lifecycle_id='route-probe'"))
+                    anchors=[index_anchor]
+                    if has_seconds and engine.directional.seconds.tape.future:
+                        anchors.append(engine.directional.seconds.tape.future[-1][1])
+                    if engine.directional.inputs:
+                        anchors.extend(v.spot for v in engine.directional.inputs.evaluations.values() if v.spot)
+                    desired=market_ids(instrument_by_id,today,anchors=anchors,held=held,
+                        future_id=future_id if has_seconds else None,
+                        full_expiry=today if CAS in funded and expiry_today else None)
+                    if not any(a is not None for a in anchors):desired.update(market_policy.bootstrap)
+                    await market_policy.sync(runner,market.protocol.epoch.id,desired,engine.books)
+                    try:await asyncio.wait_for(stop.wait(),.5)
+                    except asyncio.TimeoutError:pass
+            tasks.append(asyncio.create_task(subscriptions()))
         last_status = 0.0
         metadata_retry_at = monotime.monotonic()+30
         route_failed_epochs = {}
@@ -598,6 +637,9 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         and ((runtime.status.state == "NO_TRADE_DAY" and not has_directional)
                              or not monitoring_open))
                 write_status(state_dir, runtime, session=today.isoformat(), contract_count=len(instruments),
+                             market_subscription_count=len(market_policy.applied) if market_policy else len(instrument_by_id),
+                             market_subscription_target_count=len(market_policy.wanted) if market_policy else len(instrument_by_id),
+                             market_subscription_error=market_policy.last_error if market_policy else '',
                              books_observed=len(engine.books), clock_uncertainty_ms=uncertainty,
                              metadata_error=metadata_error, recorder_failed=recorder_failed,
                              final_input="VERIFIED" if engine.final_value else "UNQUALIFIED",

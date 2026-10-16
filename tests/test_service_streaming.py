@@ -276,6 +276,16 @@ def test_background_reconciliation_through_production_session(tmp_path, monkeypa
                 assert health['connected'] is True and health['reconnects']==0
                 counts=status_file()['telemetry']['decision_counts']
                 assert counts['MARKET_FRAME_REJECTED']==1 and counts['MARKET_BOOK_REJECTED']==1
+                empty=bytearray(full_packet(200))
+                struct.pack_into('<H',empty,1,70);empty[62:]=bytes(100)
+                await initial.send(bytes(empty))
+                await until(lambda:status_file().get('books_observed')==1)
+                assert channels['market'] is initial and len(broker.requests)==1
+                counts=status_file()['telemetry']['decision_counts']
+                assert counts['MARKET_FRAME_REJECTED']==1 and counts['MARKET_BOOK_REJECTED']==2
+                await initial.send(full_packet(200))
+                await until(lambda:status_file().get('books_observed')==2)
+
             if mode=='transport_reconnect':
                 old=channels['market']
                 await old.disconnect()

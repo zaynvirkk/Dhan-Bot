@@ -113,3 +113,20 @@ def test_bse_alias_and_overlapping_security_ids_are_exchange_scoped():
                          as_of=date(2026, 9, 29))
     assert rows[0]["symbol"] == "SENSEX50" and rows[0]["index_quote_security_id"] == "83"
     assert rows[0]["exchange_segment"] == "BSE_FNO"
+
+
+def test_live_empty_padded_snapshot_is_scoped_but_never_executable():
+    raw=bytearray(sdk_frame())
+    struct.pack_into('<H',raw,1,70)
+    raw[62:]=bytes(100)
+    # Preserve the original invalid header so the executable decoder rejects it.
+    assert list(packets(bytes(raw)))==[bytes(raw)]
+    with pytest.raises(ContractError,match='header'):
+        decode_full_binary(bytes(raw),instrument())
+    # Only a single, exact empty NSE-FNO snapshot has known boundaries.
+    for bad in (bytes(raw)+sdk_frame(),bytes(raw[:-1]),bytes(raw)+b'\x00'):
+        with pytest.raises(InvalidDhanFrame):list(packets(bad))
+    for offset in (3,4,62,100,161):
+        bad=bytearray(raw);bad[offset]=1 if offset!=3 else 1
+        if offset==4:bad[4:8]=bytes(4)
+        with pytest.raises(InvalidDhanFrame):list(packets(bytes(bad)))

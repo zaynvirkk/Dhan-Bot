@@ -49,6 +49,7 @@ class WebSocketRunner:
         self.transport_events = deque(maxlen=16)
         self.on_event = on_event
         self.event_recording_failed = False
+        self.subscriptions_ready = False
 
     def record_event(self, kind, error=None):
         event={'kind':kind,'at':datetime.fromtimestamp(self.wall_clock()/1e9,timezone.utc).isoformat(),
@@ -69,6 +70,7 @@ class WebSocketRunner:
 
     def disconnected(self):
         self.socket = None
+        self.subscriptions_ready = False
         if not self.disconnect_notified:
             self.disconnect_notified = True
             self.record_event('DISCONNECTED')
@@ -171,6 +173,7 @@ class WebSocketRunner:
                     for message in [*self.connect_messages, *self.subscribe]:
                         encoded = json.dumps(message, separators=(",", ":"))
                         await socket.send(encoded.encode() if self.binary else encoded)
+                    self.subscriptions_ready = True
                     await self.consume(socket)
             except asyncio.CancelledError:
                 raise

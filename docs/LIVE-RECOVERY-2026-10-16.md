@@ -1,81 +1,96 @@
-# 16 October live recovery repair
+# Live feed and account recovery, 16 October 2026
 
-The morning account read confirmed one real non-expiry futures-catchup round
-trip: 65 NIFTY 23,000 PE bought at106.30 and sold at108.95, gross INR172.25.
-Cash changed from7805.94 to7924.03; itemized final charges were still pending.
-Five other strategy buys and one connection check cancelled without fills.
-These are different outcomes, not eight failed trades or proof of repeatability.
+The broker recorded a real non-expiry trade this morning: 65 NIFTY 19 October
+23,000 PE bought at 106.30 and sold at 108.95, gross INR172.25. The captured
+cash increase from INR7,805.94 to INR7,924.03 is INR118.09; final itemized
+charges have not been reconciled, so this is not an audited net trade result.
 
-The first inspection found current route proof but intermittent stale account
-reconciliation, seconds inputs alternating between unavailable and warmup, and
-repeated Dhan market client keepalive timeouts. The short follow-up saw ten
-fresh account observations out of twelve. No positions or pending orders were
-reported in those checks. After-hours reconnect totals are not all current
-session outages; the recorded market keepalive failures did occur after open.
+## First deployed repair
 
-## Repairs and behavioral evidence
+Release 09db413 was installed and applied by the assistant under the operator's
+explicit live repair authorization. It passed 662 software tests including 60
+acceptance cases and 15 injected-defect checks. The installer also passed 94
+VM checks. A previously uncaught local dashboard startup socket timeout now
+retries within a bounded deadline, preserving authentication and collector
+freshness requirements.
 
-- Dhan market data answers its documented server pings automatically and uses
-  a thirty-second fallback client deadline instead of five seconds. The
-  fallback remains bounded for a silently broken connection; other sockets
-  retain their original keepalive. A real local WebSocket server receives its
-  pong, then sends a quote. This does not extend executable-quote freshness.
-  See the [provider contract](https://dhanhq.co/docs/v2/live-market-feed/).
-- Ordered frame processing yields after sixteen frames, preserving every
-  frame and its original receipt time. Previously a decoder with no suspension
-  could drain the queue before another ready task ran. The exact regression
-  failed on the original source; the repaired path services the waiting task
-  within sixteen frames and still processes all two hundred.
-- Seconds discovery no longer recomputes every closed lifecycle on every
-  packet. Its budget cache lasts at most the existing quarter-second evaluation
-  interval; a new funds object or reconciliation revision invalidates it
-  immediately. A real rule fixture still finds the affordable strike, rejects
-  it immediately after a balance reduction, and checks monetary revisions.
-  Actual submission continues to read funds and calculate allocation afresh.
-- Orders, trades and positions GETs start together under the existing shared
-  REST scheduler and revision fence. A stalled orders read cannot prevent the
-  positions request from starting. Failure or cancellation cancels and joins
-  the whole batch; incomplete results never certify an account. The stalled
-  cash test now waits for the independent position receipt rather than relying
-  on the incidental scheduling order of the first cash callback.
-- A stale account now reports ACCOUNT_REFRESH_REQUIRED rather than retaining
-  an old ENTRY_SUBMITTED reason. A finished lifecycle explicitly reports a
-  closed position or cancelled entry without fills. Recovery clears its own
-  temporary reason after a successful reconciliation; durable history remains.
-- Runtime revision5 distinguishes the repaired trader from an older process.
-  A newly deployed dashboard cannot claim that an older funded process already
-  contains these changes.
+The release gives the ordered market decoder scheduling opportunities every
+16 frames, uses a bounded 20/30-second market ping watchdog, starts independent
+account reconciliation reads together under the existing revision fence, and
+caches discovery allocation for at most 250 ms with immediate funds/revision
+invalidation. Order placement still recalculates actual affordability. Closed
+and cancelled entries cannot retain a misleading submitted status.
 
-The first five new counterexamples failed on the original production source.
-Additional cases cover cancellation cleanup, actual provider-style pongs,
-balance reductions and revision invalidation. Tests use local synthetic
-brokers; none of these receipts is a market-profit or guaranteed-fill result.
+The funded upgrade created a new order socket. Its automatic zero-fill route
+check at 10:06:46 IST succeeded and consumed today's second ordinary attempt.
+The normal two-attempt allowance and INR100 daily/INR500 lifetime probe-money
+caps were not changed. Seven existing strategies remained funded; no new
+strategy, wider entry limit or loss rule was introduced.
 
-## Deployment scope
+The initial repair did not fully solve the live feed. Another keepalive timeout
+occurred at 10:10:31 and 10:15:42 IST. The full 1,462-option stream held a full
+65-message application queue while the separate 24-option observer had current
+futures quotes. This was reported as an unresolved issue, not a completed fix.
+Runtime CPU/IO weights of 1,000 gave the funded service priority over the
+collector and observer without restarting or changing its trading policy.
 
-The operator explicitly requested this repair and production deployment.
-Preserve the seven selected funded engines, existing capital, mandate,
-profit-exit retention and probe attempt/money limits. Reconcile actual account
-obligations before the funded source switch and recover them on startup.
-Do not grant attempts, erase history, widen entry limits or force a trade.
+## Follow-up repair
 
-Before completion, verify the installed and funded sources agree, revision5
-and source-bound software verification are current, account/positions/orders
-are reconciled, and the new socket acquires genuine route proof within its
-remaining allowance. Observe usable futures history and transport health after
-warmup. Broker refusal, future outages, unmatched IOC orders and absence of a
-qualifying setup remain possible; this release cannot guarantee profit or the
-absence of every undiscovered defect.
+A read-only six-second mirror of the same full market subscription observed
+5,798 messages, including 758 single 162-byte FULL snapshots declaring length
+70. All 758 had zero bytes in the complete 100-byte depth region. No raw
+credentials or market-frame bodies were printed or committed.
 
-The final local source-bound verification passed662 tests, including all60
-acceptance cases, and killed all15 production guard mutations. Its source
-digest is a9d2dc91122376182c81fcae2456768b07e0ee8be94b963d73bf677c13a2aca8.
-Deployment and current live observations must be verified separately.
+Previously each such empty snapshot invalidated all unrelated market history.
+The framing layer now recognizes only this exact single-message, NSE-FNO,
+positive-security-ID, empty-depth shape. It passes the original bytes unchanged
+to the existing contract decoder, which rejects the invalid header and revokes
+that contract's book. It never creates an executable quote or corrects a bad
+header. Nonempty, concatenated, truncated, wrong-segment and unidentified bad
+frames retain whole-message quarantine. Provider disconnects still reconnect.
+The production-session regression verifies another contract survives, the
+invalid contract cannot trade, and a subsequent valid quote restores it.
 
-The first VM installation passed94 installer cases and switched the read-side
-release, but its startup HTTP check raised an uncaught socket timeout. The
-funded process was untouched. Deployment verification now retries socket
-timeouts on both unauthenticated and authenticated reads within finite limits,
-requests the compact status response, and still rejects missing authentication
-or non-read-only/stale status. Three exact regression cases cover recovery,
-unprotected responses and exhausted retry limits.
+For the current seven-engine configuration, subscriptions follow independent
+observed spot/futures anchors: 32 nearest contracts per anchor in the first
+three expiries, while preserving every held or pending contract and the futures
+instrument. Active CAS expiry sessions retain every same-day contract. Other
+strategy configurations retain the broad subscription behavior. Additions go
+before removals in batches of at most 100 over the existing socket. A failed
+update cannot claim coverage; reconnect replays the desired window. No frame
+coalescing, fabricated prices or freshness relaxation is used. Runtime revision
+6 and the dashboard revision requirement expose a pending funded upgrade.
+
+A focused nearest-strike window reduces market-data coverage away from its
+anchors; it does not prove that every far-strike opportunity from a full chain
+is observed. Existing selection, liquidity, affordability, signal and execution
+rules remain necessary. An unknown anchor cannot invent a tradable chain.
+
+Dhan's official [market-feed documentation](https://dhanhq.co/docs/v2/live-market-feed/)
+requires at most 100 instruments per request and describes the 162-byte FULL
+layout and server ping/pong. Its [request-code table](https://dhanhq.co/docs/v2/annexure/#feed-request-code)
+assigns 21/22 to FULL subscription/unsubscription. The empty padded snapshot is
+an observed exception, not a claim that the documented executable layout changed.
+
+## Deployment boundary
+
+The first release is funded and live. The follow-up must pass current-source
+verification, installation and live observation before it can be called live.
+A restart requires a new order-socket route check; today's two ordinary attempts
+are already used. An additional dated attempt needs an explicit operator grant,
+with the same daily/lifetime money caps. The existing funded service continues
+while that bounded exception is pending. No test count, dashboard heartbeat or
+software deployment guarantees a fill or profitable trade.
+
+The follow-up frozen source passed 669 tests, including 60 acceptance cases,
+and all 15 injected-defect checks. Digest:
+`acf8e742e7510fe7f4a0624fb1a3cfa6f9c19aee2ca0f61e0bc41df2aa7bc7a4`.
+This is software evidence; funded installation and feed stability are separate.
+
+A subsequent read-only broker check at 10:28 IST confirmed a second filled
+SECONDS_FUTURES_CATCHUP lifecycle: 65 NIFTY October 23,150 CE bought at 94.85
+at 10:18:15 and sold at 96.45 at 10:18:19, gross INR104.00. Cash was INR7,975.49,
+with no open position or pending order and 11 total orders today. Both actual
+trades total INR276.25 gross; the cash change from INR7,805.94 is INR169.55,
+not a final audited charges attribution. The full feed had reconnected five
+times, so the outstanding transport repair was not marked resolved.

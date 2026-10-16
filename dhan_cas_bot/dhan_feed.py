@@ -109,6 +109,17 @@ def decode_full_binary(payload: bytes, expected: Instrument) -> DhanPacket:
 
 
 def packets(payload: bytes):
+    # Observed empty startup snapshot: 162 bytes, FULL declares 70, and
+    # the complete 100-byte depth is zero. Its single-message boundaries
+    # identify one contract, but its header is NOT a valid executable FULL.
+    # Keep those bytes unchanged: decode_full_binary rejects the contract,
+    # revoking its old book without resetting unrelated valid market history.
+    if (len(payload)==162 and payload[0]==8
+            and int.from_bytes(payload[1:3], 'little')==70
+            and payload[3]==2 and int.from_bytes(payload[4:8], 'little')>0
+            and not any(payload[62:])):
+        yield payload
+        return
     offset = 0
     while offset < len(payload):
         if len(payload) - offset < 8:
