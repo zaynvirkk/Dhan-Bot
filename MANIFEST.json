@@ -11,7 +11,7 @@
   "state": "SQLite WAL synchronous FULL",
   "acceptance_commands": 20,
   "acceptance_cases": 60,
-  "runtime_revision": 8,
+  "runtime_revision": 9,
   "session_learning": {
     "outcomes": "broker-reconciled daily reviews",
     "replay": "bounded compressed receipt journal",

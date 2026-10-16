@@ -221,8 +221,9 @@ function renderSelection(d){
   const winner=sel.selected===row.strategy;
   item.append(el('p',`${winner?'Selected · ':''}${names(row.strategy)} · ${row.side||'Side unknown'}`,'connection-name'));
   const measured=row.estimated_net_profit!=null;
-  item.append(el('p',`${row.quantity??'—'} units · entry limit ${cash(row.limit)} · friction reserve ${cash(row.friction_cash)}`,'connection-detail'));
-  item.append(el('p',measured?`Conditional net ${cash(row.estimated_net_profit)} · fill-adjusted ${cash(row.estimated_profit_per_minute)}/minute · observed hold ${Number(row.holding_minutes).toFixed(1)} minutes · ${row.filled_closed} filled closed trades across ${row.sessions} session(s).`:
+  item.append(el('p',`${row.quantity??'—'} units · entry limit ${cash(row.limit)} · spread allowance ${cash(row.friction_cash)}`,'connection-detail'));
+  if(row.cost_basis==='PRIOR_FILLED_ORDERS')item.append(el('p',`Cost estimate uses prior filled orders: ${row.estimated_buy_orders??'—'} buy / ${row.estimated_sell_orders??'—'} sell. Extra spread cost ${cash(row.incremental_friction_cash)}; emergency cash reserves remain separate.`,'connection-detail'));
+  item.append(el('p',measured?`Estimated net ${cash(row.estimated_net_profit)} · fill-adjusted ${cash(row.estimated_profit_per_minute)} per active minute · ${Number(row.scoring_minutes??row.holding_minutes).toFixed(1)} minutes from order to exit · ${row.filled_closed} filled closed trades across ${row.sessions} session(s).`:
    'Profit estimate unavailable. Execution quality is an experimental fallback, not evidence of an edge.','connection-detail'));
   item.append(el('p',`Observed entry fill rate ${percent(row.entry_fill_rate)} · average quantity completion ${percent(row.mean_entry_fill_fraction)} · return standard error ${percent(row.return_standard_error,2)}.`,'connection-detail'));
   list.append(item);

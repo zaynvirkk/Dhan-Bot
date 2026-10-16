@@ -35,11 +35,11 @@ def test_seconds_discovery_uses_current_reconciled_cash_instead_of_an_old_budget
     try:
         samples=seconds.signals()
         assert len(samples)==1
-        assert samples[0].details['security_id']=='2'  # Closest affordable strike, not expensive ATM.
-        assert seconds.signals()[0].details['security_id']=='2'
+        assert samples[0].details['security_id']=='3'  # Same forecast gain, lower costs than the first affordable strike.
+        assert seconds.signals()[0].details['security_id']=='3'
         assert len(allocations)==1  # A packet burst must not rescan every closed trade per packet.
         ledger.account_revision=1
-        assert seconds.signals()[0].details['security_id']=='2'
+        assert seconds.signals()[0].details['security_id']=='3'
         assert len(allocations)==2  # Monetary reconciliation invalidates the cache too.
         at[0]+=timedelta(seconds=.01)
         account.funds=funds('100')

@@ -249,11 +249,14 @@ def selection_projection(raw):
     rows=[]
     for row in raw.get('candidates',[])[:256] if isinstance(raw.get('candidates'),list) else []:
         if not isinstance(row,dict) or row.get('strategy') not in STRATEGY_NAMES:continue
-        numeric={k:(money(row.get(k)) if k in ('limit','friction_cash','estimated_net_profit','estimated_profit_per_minute')
+        numeric={k:(money(row.get(k)) if k in ('limit','friction_cash','incremental_friction_cash','estimated_net_profit','estimated_profit_per_minute')
                     else str(Decimal(str(row[k]))) if money(row.get(k)) is not None else None) for k in
-                 ('limit','friction_cash','estimated_net_profit','estimated_profit_per_minute','holding_minutes','return_standard_error','entry_fill_rate','mean_entry_fill_fraction')}
+                 ('limit','friction_cash','incremental_friction_cash','estimated_net_profit','estimated_profit_per_minute','holding_minutes','scoring_minutes','return_standard_error','entry_fill_rate','mean_entry_fill_fraction')}
         rows.append({**numeric,'strategy':row['strategy'],'side':choice(row.get('side'),{'CE','PE'}),
                      'quantity':integer(row.get('quantity')),'filled_closed':integer(row.get('filled_closed')),
+                     'cost_basis':choice(row.get('cost_basis'),{'PRIOR_FILLED_ORDERS','CONSERVATIVE_FALLBACK'}),
+                     'estimated_buy_orders':integer(row.get('estimated_buy_orders')),
+                     'estimated_sell_orders':integer(row.get('estimated_sell_orders')),
                      'sessions':integer(row.get('sessions')),
                      'closed_entry_opportunities':integer(row.get('closed_entry_opportunities')),
                      'filled_entry_opportunities':integer(row.get('filled_entry_opportunities'))})

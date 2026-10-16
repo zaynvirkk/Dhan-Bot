@@ -6,7 +6,7 @@ fill, no quote queue is assumed, and missing event publication data stays unknow
 from collections import deque
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal as D, ROUND_CEILING
+from decimal import Decimal as D, ROUND_CEILING, ROUND_FLOOR
 from hashlib import sha256
 from statistics import median
 from bisect import bisect_right
@@ -89,22 +89,40 @@ def entry_assessment(sample, books, budget, at):
     if spread>D('.01'):return reject('SECONDS_SPREAD_TOO_WIDE',spread_ratio=str(spread))
     if min(bid.quantity,ask.quantity)<q*2:
         return reject('SECONDS_DEPTH_TOO_THIN',bid_quantity=bid.quantity,ask_quantity=ask.quantity,required_depth=q*2)
-    limit=ask.price+2*i.tick_size
-    if (i.lower_limit and limit<i.lower_limit) or (i.upper_limit and limit>i.upper_limit):
+    # IOC may cross at most one currently quoted spread (and at least the
+    # existing two-tick allowance). Never chase beyond the same cost/budget
+    # gates below. This is a price ceiling, not an assumed execution price.
+    allowance=max(2*i.tick_size,ask.price-bid.price)
+    allowance=(allowance/i.tick_size).to_integral_value(rounding=ROUND_CEILING)*i.tick_size
+    limit=ask.price+allowance;minimum_limit=ask.price+2*i.tick_size
+    if i.upper_limit:limit=min(limit,(i.upper_limit/i.tick_size).to_integral_value(rounding=ROUND_FLOOR)*i.tick_size)
+    if limit<minimum_limit or (i.lower_limit and limit<i.lower_limit):
         return reject('SECONDS_ENTRY_OUTSIDE_BAND')
     try: target=D(sample.details['target_price'])
     except (KeyError,ValueError,TypeError):return reject('SECONDS_TARGET_UNAVAILABLE')
     if not target.is_finite() or target<=0:return reject('SECONDS_TARGET_UNAVAILABLE')
-    fees=FeeSchedule();debit=worst_case_entry_cash(q,limit)
+    fees=FeeSchedule()
     exit_fees=fees.sell(q*target,3)
-    net=q*target-exit_fees-debit
-    minimum=max(D(50),fees.buy(q*limit,1)+exit_fees)
-    facts={'entry_cash':str(debit),'exit_fee_reserve':str(exit_fees),'cash_budget':str(budget),
-           'net_at_target':str(net),'minimum_net_edge':str(minimum)}
-    if not budget.is_finite() or budget<=0 or debit+exit_fees>budget:
-        return reject('SECONDS_UNAFFORDABLE',**facts)
-    if net<minimum:return reject('SECONDS_NET_EDGE_TOO_SMALL',**facts)
-    return EntryAssessment((i,q,limit,b),'READY',facts)
+    def assess(price):
+        debit=worst_case_entry_cash(q,price);net=q*target-exit_fees-debit
+        minimum=max(D(50),fees.buy(q*price,1)+exit_fees)
+        facts={'entry_cash':str(debit),'exit_fee_reserve':str(exit_fees),'cash_budget':str(budget),
+            'entry_limit_policy':'SPREAD_BOUNDED_IOC','limit_price':str(price),
+            'net_at_target':str(net),'minimum_net_edge':str(minimum)}
+        if not budget.is_finite() or budget<=0 or debit+exit_fees>budget:return 'SECONDS_UNAFFORDABLE',facts
+        if net<minimum:return 'SECONDS_NET_EDGE_TOO_SMALL',facts
+        return 'READY',facts
+    # The wider ceiling must never exclude a still-affordable original limit.
+    # Cash and edge decrease monotonically with price; search tick positions.
+    reason,facts=assess(minimum_limit)
+    if reason!='READY':return reject(reason,**facts)
+    lo=0;hi=int((limit-minimum_limit)/i.tick_size);best=minimum_limit
+    while lo<=hi:
+        step=(lo+hi)//2;price=minimum_limit+step*i.tick_size
+        why,detail=assess(price)
+        if why=='READY':best=price;facts=detail;lo=step+1
+        else:hi=step-1
+    return EntryAssessment((i,q,best,b),'READY',facts)
 
 
 def entry_candidate(sample, books, budget, at):
@@ -234,7 +252,6 @@ class SecondsTape:
             if max(recent)>hi+future*D('.0001') and future<hi and recent[-1]<recent[-2]:breakout_side=-1
             elif min(recent)<lo-future*D('.0001') and future>lo and recent[-1]>recent[-2]:breakout_side=1
         def emit(name,b,target,extra=None):
-            if result[name].state=='SIGNAL':return
             # One event bucket prevents firing hundreds of copies of a tick.
             episode=sha256(f'{self.epoch}:{name}:{b.instrument.security_id}:{stamp//30_000_000_000}'.encode()).hexdigest()[:24]
             sample=opportunity(name,at,b,target,future,episode)
@@ -242,11 +259,21 @@ class SecondsTape:
             sample=replace(sample,exit_at=min(sample.exit_at,calendar.closes-timedelta(seconds=30)))
             assessment=entry_assessment(sample,books,budget if budget is not None else D('1000000000'),at)
             if assessment.candidate is None:
+                if result[name].state=='SIGNAL':return
                 state='UNKNOWN' if assessment.reason=='OPTIONS_FEED_UNAVAILABLE' else 'NO_SIGNAL'
                 result[name]=replace(result[name],state=state,reason=assessment.reason,
                                      details={**assessment.details,'raw_setup_detected':True})
                 return
-            result[name]=sample
+            previous=result[name]
+            sample=replace(sample,details={**sample.details,
+                'contract_selection':'MAX_QUALIFIED_NET_HEADROOM',
+                'qualified_net_headroom':assessment.details['net_at_target'],
+                'entry_limit_policy':assessment.details['entry_limit_policy']})
+            # Compare only qualified same-engine opportunities using current
+            # quotes. Exact ties retain nearest strike's deterministic order.
+            if (previous.state!='SIGNAL' or
+                    D(sample.details['qualified_net_headroom'])>D(previous.details['qualified_net_headroom'])):
+                result[name]=sample
         for b in eligible:
             rows=list(self.options[b.instrument.security_id]);side=1 if b.instrument.option_type.value=='CE' else -1
             beta=self.beta(b.instrument.security_id,stamp)

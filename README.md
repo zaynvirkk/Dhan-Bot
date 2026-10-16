@@ -1,5 +1,10 @@
 # SableStone Dhan CAS bot
 
+16 October live-strategy review: [strategy economics](docs/STRATEGY-ECONOMICS-2026-10-16.md)
+documents contract comparison, spread-bounded IOC pricing, filled-order cost
+feedback, net-profit protection and historical-information fixes. These use live
+receipts to repair execution estimates; they do not establish repeatable alpha.
+
 **16 October live recovery repair:** provider heartbeat handling, fair ordered
 decoding, bounded discovery-budget work, concurrent reconciled account reads,
 explicit completed-order/recovery status and bounded deployment startup checks. Existing funded scope and money

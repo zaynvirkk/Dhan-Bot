@@ -374,7 +374,10 @@ class DirectionalEngine:
                     # Finite depth, adverse two-tick allowance and conservative
                     # exit fees; never use LTP or multiply the top bid by all units.
                     proceeds=sum((q*max(inst.tick_size,p-2*inst.tick_size) for q,p in slices),D(0))
-                    fees=FeeSchedule().sell(proceeds,3*ceil(qty/inst.freeze_qty))
+                    # Cash reserves cover failed/retried exits separately.
+                    # A zero-fill IOC incurs no executed-order brokerage.
+                    # Completed partial sales are already in sale_credit.
+                    fees=FeeSchedule().sell(proceeds,ceil(qty/inst.freeze_qty))
                     net=totals['sale_credit']+proceeds-fees-totals['entry_debit']
                     cost=max(D(0),totals['entry_debit']-entry*units)+fees
                     guard_key='profit-exit:'+active['lifecycle_id']
