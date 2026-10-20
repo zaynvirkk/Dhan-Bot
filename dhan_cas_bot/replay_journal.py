@@ -1,12 +1,46 @@
 """Private compressed receipt journal. No pruning, deduplication or trade writes."""
 import gzip
+import asyncio
 import json
 import os
 import shutil
 from pathlib import Path
-from datetime import date
+from datetime import date, time
 from uuid import uuid4
 from zoneinfo import ZoneInfo
+
+
+def capture_market(now, *, has_directional, has_position):
+    """CAS-only flat capture matches the existing reference/recovery window.
+
+    Minute/seconds engines still retain their bootstrap and pre-open history.
+    This only scopes raw recording; it never gates account/position management.
+    """
+    if now.tzinfo is None:
+        raise ValueError('capture clock must be timezone aware')
+    return (has_directional or has_position
+            or time(15,5) <= now.astimezone(ZoneInfo('Asia/Kolkata')).time() <= time(15,45))
+
+
+async def queued_capture_batch(queue, *, maximum_rows=256, maximum_wait=.020):
+    """Coalesce sparse arrivals without changing their original receipt clocks."""
+    if maximum_rows <= 0 or not 0 < maximum_wait <= 1:
+        raise ValueError('invalid bounded capture batch')
+    rows = [await queue.get()]
+    loop = asyncio.get_running_loop()
+    deadline = loop.time()+maximum_wait
+    while len(rows) < maximum_rows:
+        try:
+            rows.append(queue.get_nowait())
+        except asyncio.QueueEmpty:
+            remaining = deadline-loop.time()
+            if remaining <= 0:
+                break
+            try:
+                rows.append(await asyncio.wait_for(queue.get(),remaining))
+            except asyncio.TimeoutError:
+                break
+    return rows
 
 
 def read_capture(path):

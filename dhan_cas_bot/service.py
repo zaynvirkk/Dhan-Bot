@@ -46,7 +46,7 @@ from .session_strategies import CAS, GAP, REBOUND
 from .seconds_strategies import NAMES as SECONDS_NAMES
 from .market_subscriptions import market_ids, MarketSubscriptions
 from .future_input import FutureInput
-from .replay_journal import ReplayJournal
+from .replay_journal import ReplayJournal, capture_market, queued_capture_batch
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -223,7 +223,10 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             nonlocal recorder_failed
             # Retain every selected-feed receipt, including bootstrap/pre-open
             # observations used by the first fit and repeated identical bytes.
-            if capture.health['state'] not in {'CAP_REACHED','DISK_RESERVE','QUEUE_OVERFLOW','WRITE_FAILED'} and kind in {'DHAN_FRAME', 'UPSTOX_FRAME', 'FUTURE_FRAME'}:
+            if (capture.health['state'] not in {'CAP_REACHED','DISK_RESERVE','QUEUE_OVERFLOW','WRITE_FAILED'}
+                    and kind in {'DHAN_FRAME', 'UPSTOX_FRAME', 'FUTURE_FRAME'}
+                    and (capture_market(now(),has_directional=has_directional,has_position=False)
+                         or engine.active is not None)):
                 try:
                     capture_queue.put_nowait({'role': {'DHAN_FRAME':'market','UPSTOX_FRAME':'signal','FUTURE_FRAME':'future'}[kind],
                         'epoch': epoch, 'received_ns': message_received_ns(monotime.time_ns()),
@@ -276,9 +279,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         async def capture_worker():
             nonlocal recorder_failed
             while True:
-                batch = [await capture_queue.get()]
-                while len(batch) < 256 and not capture_queue.empty():
-                    batch.append(capture_queue.get_nowait())
+                batch = await queued_capture_batch(capture_queue)
                 try:
                     await asyncio.to_thread(capture.write, batch, now())
                 except Exception:
