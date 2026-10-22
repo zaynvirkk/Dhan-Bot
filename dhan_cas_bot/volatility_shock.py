@@ -54,8 +54,7 @@ def flatten_at(calendar):
 
 
 def evaluate_completed_shock(now, calendar, spot, future, *, bar_at, source='DHAN_INTRADAY_PER_MINUTE', config=ShockConfig()):
-    details={'rule_version':config.revision,'bar_at':bar_at.isoformat(),
-             'source_received_at':now.isoformat(),'source':source}
+    details={'rule_version':config.revision,'decision_minute':bar_at.isoformat(),'source':source}
     conditions=[]
     def result(state,reason,side=None):
         return Evaluation(SHOCK,state,reason,bar_at,side,
@@ -77,6 +76,7 @@ def evaluate_completed_shock(now, calendar, spot, future, *, bar_at, source='DHA
             for x in (rows[t].open,rows[t].close,rows[t].high,rows[t].low)) or rows[t].low>min(rows[t].open,rows[t].close)
             or rows[t].high<max(rows[t].open,rows[t].close) for t in times):
             return result('INPUT_UNAVAILABLE','SHOCK_INVALID_BAR')
+    details.update(bar_at=bar_at.isoformat(),source_received_at=now.isoformat())
     r5=spot[bar_at].close/spot[bar_at-timedelta(minutes=5)].close-1
     direction=1 if r5>0 else -1
     baseline=[abs(spot[t].close/spot[t-timedelta(minutes=5)].close-1)

@@ -44,6 +44,13 @@ def test_completed_shock_is_causal_and_no_option_history_is_required():
     assert evaluate_completed_shock(t+timedelta(seconds=2),calendar(),spot,fut,bar_at=t)==s
 
 
+def test_closed_session_never_claims_a_completed_bar_that_was_not_observed():
+    now=at(clock='05:00');cal=replace(calendar(),checked_at=now)
+    result=evaluate_completed_shock(now,cal,{}, {},bar_at=now)
+    assert result.state=='WAITING' and result.reason=='EXCHANGE_CLOSED'
+    assert 'bar_at' not in result.details and 'source_received_at' not in result.details
+
+
 @pytest.mark.parametrize('fault',['gap','future_gap','zero_baseline','zero_volume','late','calendar','forming'])
 def test_unusable_inputs_never_manufacture_signal(fault):
     t,s,f=tapes();now=t+timedelta(seconds=2);cal=calendar()
