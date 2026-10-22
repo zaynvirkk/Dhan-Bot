@@ -247,9 +247,12 @@ def select_shock_candidate(signal,instruments,books,cash,now,calendar):
 def shock_exit(entry_cash,net_profit,held_minutes,previous,invalidated,*,deadline=False):
     old=previous or {};peak=D(old.get('peak_net_profit','0'))
     if net_profit is not None:peak=max(peak,net_profit)
+    low=D(old['minimum_net_profit']) if old.get('minimum_net_profit') is not None else None
+    if net_profit is not None:low=net_profit if low is None else min(low,net_profit)
     armed=bool(old.get('trailing_armed')) or peak>=entry_cash*D('.8')
     floor=max(D(old.get('floor','0')),max(peak*D('.4'),peak-entry_cash*D('.45'))) if armed else D(0)
     state={'version':EXIT,'peak_net_profit':str(peak),'floor':str(floor),'trailing_armed':armed,
+           'minimum_net_profit':str(low) if low is not None else None,
            'net_liquidation_profit':str(net_profit) if net_profit is not None else None}
     reason=old.get('triggered_reason')
     if reason is None:

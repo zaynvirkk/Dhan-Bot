@@ -160,6 +160,9 @@ def test_exit_ratchet_persists_and_no_generic_double_target():
     assert shock_exit(D(1000),None,121,{'peak_net_profit':'300'},False)[1]=='SHOCK_MAX_EXPOSURE'
     assert shock_exit(D(1000),D(50),46,None,False)[1]=='SHOCK_NO_MOMENTUM'
     assert shock_exit(D(1000),D(-10),2,None,True)[1]=='SHOCK_UNDERLYING_INVALIDATED'
+    loss,_=shock_exit(D(1000),D(-200),2,None,False)
+    recovered,_=shock_exit(D(1000),D(100),3,loss,False)
+    assert recovered['minimum_net_profit']=='-200' and recovered['peak_net_profit']=='100'
 
 
 def test_cutoff_is_contract_and_effective_date_specific():

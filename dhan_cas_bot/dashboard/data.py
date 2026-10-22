@@ -671,7 +671,7 @@ def active_trade_views(db):
             if strategy=='VOLATILITY_SHOCK_V1':
                 saved=db.execute('SELECT value FROM metadata WHERE key=?',('shock-exit:'+row['lifecycle_id'],)).fetchone()
                 observed=json.loads(saved['value']) if saved else {}
-                shock={**{k:money(observed.get(k)) for k in ('entry_cash','actual_average_entry','peak_net_profit','floor','net_liquidation_profit')},
+                shock={**{k:money(observed.get(k)) for k in ('entry_cash','actual_average_entry','peak_net_profit','minimum_net_profit','floor','net_liquidation_profit')},
                     'observed_at':timestamp(observed.get('observed_at')),'first_fill_at':timestamp(observed.get('first_fill_at')),
                     'trailing_armed':observed.get('trailing_armed') is True,'quote_executable':observed.get('quote_executable') is True}
             result.append({'strategy':strategy,'security_id':label(row['security_id']),

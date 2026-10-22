@@ -176,7 +176,7 @@ class ShockEngine:
                      quote_executable=net is not None)
         # Persist new high water, triggers, and at most one unchanged telemetry
         # sample per second rather than rewriting SQLite on every book frame.
-        if old is None or any(guard.get(k)!=old.get(k) for k in ('peak_net_profit','floor','triggered_reason','held_quantity')) or (now-datetime.fromisoformat(old['observed_at'])).total_seconds()>=1:
+        if old is None or any(guard.get(k)!=old.get(k) for k in ('peak_net_profit','minimum_net_profit','floor','triggered_reason','held_quantity')) or (now-datetime.fromisoformat(old['observed_at'])).total_seconds()>=1:
             ledger.put_metadata(key,guard)
         r.status.state='POSITION_OPEN';r.status.reason=SHOCK+':'+(reason or 'HOLDING')
         if not reason:return False
