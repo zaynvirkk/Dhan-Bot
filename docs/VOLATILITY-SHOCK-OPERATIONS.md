@@ -40,8 +40,9 @@ predicted income is credited. Software checks exercise synthetic executions.
 ## Existing positions and exit ownership
 
 `SHOCK_EXIT_V1` operates on actual average fills/paid cash and conservatively
-priced finite bid ladders, never LTP. Premium stop is a 40% entry-cash loss;
-two post-entry closes back inside the original range or opposite five-minute
+priced finite bid ladders, never LTP. Only depth reachable by the actual existing IOC exit limit can establish an
+executable liquidation profit or ratchet peak; deeper bids remain unavailable.
+Premium stop is a 40% entry-cash loss; two post-entry closes back inside the original range or opposite five-minute
 return >=0.20% invalidate. At +80% executable cash profit, persistent trailing
 floor is max(40% of profit peak, peak minus 45% of entry cash), ratcheted upward.
 There is no fixed 2x take-profit. A 45-minute no-momentum exit applies unless

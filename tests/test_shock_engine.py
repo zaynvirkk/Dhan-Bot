@@ -114,3 +114,20 @@ def test_live_future_reversal_prevents_dispatch(tmp_path):
         e.runtime.future_input.tape.future=[(0,D(22000))]
         assert not await e.cycle() and not b.requests
     asyncio.run(run())
+
+
+def test_profit_peak_requires_full_depth_reachable_by_the_actual_exit_limit(tmp_path):
+    async def run():
+        e,b,l,c,i=setup(tmp_path)
+        assert await e.cycle();await e.cycle()
+        active=e.active
+        c[0]+=timedelta(seconds=1)
+        # There is plenty of displayed depth, but most cannot be reached by
+        # the existing two-tick IOC sale limit. It cannot arm a profit floor.
+        e.on_book(replace(e.books['s'],received_ns=int(c[0].timestamp()*1e9),
+            bids=(Level(D(40),65),Level(D(38),650)),asks=(Level(D('40.05'),650),)))
+        await e.cycle()
+        guard=l.metadata('shock-exit:'+active['lifecycle_id'])
+        assert guard['quote_executable'] is False and guard['net_liquidation_profit'] is None
+        assert D(guard['peak_net_profit'])==0 and guard['trailing_armed'] is False
+    asyncio.run(run())

@@ -160,10 +160,14 @@ class ShockEngine:
                     invalid|=direction*(spot[t].close/spot[t-timedelta(minutes=5)].close-1)<=D('-.002')
         net=None;book=e.books.get(inst.security_id)
         if d.book_current(book) and book.top_bid:
-            from .exits import executable_sale_units
-            slices=executable_sale_units(book,quantity)
+            from .exits import executable_sale_units, sell_limit
+            exit_limit=sell_limit(book)
+            # Match the price reach of the actual existing OMS exit. Deeper
+            # displayed bids cannot establish a fully liquidatable cash peak.
+            reachable=replace(book,bids=tuple(l for l in book.bids if l.price>=exit_limit))
+            slices=executable_sale_units(reachable,quantity)
             if sum(q for q,p in slices)==quantity:
-                proceeds=sum((q*max(inst.tick_size,p-2*inst.tick_size) for q,p in slices),D(0))
+                proceeds=sum((q*max(exit_limit,p-2*inst.tick_size) for q,p in slices),D(0))
                 net=totals['sale_credit']+proceeds-FeeSchedule().sell(proceeds,ceil(quantity/inst.freeze_qty))-entry_cash
         key='shock-exit:'+active['lifecycle_id'];old=ledger.metadata(key)
         guard,reason=shock_exit(entry_cash,net,minutes,old,invalid,deadline=now>=datetime.fromisoformat(payload['exit_at']))
