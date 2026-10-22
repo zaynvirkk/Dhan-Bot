@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 import json
 from pathlib import Path
@@ -367,7 +367,9 @@ def shock_candidate_projection(raw):
     result=[]
     for row in raw[:60] if isinstance(raw,list) else []:
         if not isinstance(row,dict):continue
-        result.append({'security_id':label(row.get('security_id')),'expiry':timestamp(row.get('expiry')),
+        try:expiry=date.fromisoformat(row['expiry']).isoformat()
+        except (KeyError,TypeError,ValueError):expiry=None
+        result.append({'security_id':label(row.get('security_id')),'expiry':expiry,
             'reason':choice(row.get('reason'),STRATEGY_REASONS|{'READY','OPTION_LIMIT_OUTSIDE_BAND'},'UNKNOWN'),
             **{k:money(row.get(k)) for k in ('strike','budget','limit','entry_cash','exit_fee_reserve','scenario_multiple')},
             'quantity':integer(row.get('quantity')),'scenario_only':True})

@@ -136,7 +136,8 @@ const conditionNames={rule:'Entry rule',gap_size:'Opening gap',gap_fill:'Gap ret
 Object.assign(conditionNames,{shock_size:'Five-minute move',shock_abnormal:'Move versus prior baseline',extension:'Distance beyond range',future_direction:'Futures confirmation',volume_ratio:'Futures participation'});
 Object.assign(strategyReasons,{SHOCK_CONFIRMED:'The completed shock, range breakout and futures confirmation all passed.',SHOCK_RULE_NOT_MET:'The completed minute does not meet all shock conditions.',SHOCK_WARMUP:'Building at least 35 contiguous completed minutes.',SHOCK_NONCONTIGUOUS_BARS:'A completed minute is missing. Waiting for verified history repair.',SHOCK_COMPLETED_BAR_UNAVAILABLE:'The latest completed bar is missing or its 30-second entry window has passed.',SHOCK_BASELINE_UNAVAILABLE:'The prior five-minute baseline is unavailable or zero.',SHOCK_VOLUME_UNAVAILABLE:'Usable per-minute futures volume is unavailable.',SHOCK_COOLDOWN:'Waiting 15 minutes after the prior position closed.',FUTURES_FEED_UNAVAILABLE:'Waiting for a fresh, confirming futures quote.',SHOCK_RECONNECT_INVALIDATED:'A reconnect invalidated this entry episode.'});
 function pct(value){return value==null?'Unavailable':`${(Number(value)*100).toFixed(2)}%`;}
-function conditionDetail(c){
+function conditionDetail(c,row){
+ if(row?.strategy==='VOLATILITY_SHOCK_V1'&&c.key==='persistence')return 'Both newly completed closes must remain beyond the prior range and its 0.02% buffer.';
  if(c.key==='shock_size'||c.key==='future_direction')return `${pct(c.value)}; requires at least ${pct(c.minimum)}.`;
  if(c.key==='shock_abnormal'||c.key==='volume_ratio')return `${c.value==null?'Unavailable':Number(c.value).toFixed(2)+'×'}; requires ${Number(c.minimum).toFixed(2)}× the prior baseline.`;
  if(c.key==='extension')return `${pct(c.value)} beyond the preceding range; maximum ${pct(c.maximum)}.`;
@@ -182,7 +183,7 @@ function conditionList(row,current){
  const invalid=!current||['STRATEGY_INPUTS_STALE','STRATEGY_INPUT_UNAVAILABLE','INPUTS_NOT_RECEIVED'].includes(row.reason);
  for(const original of row.conditions||[]){
   const c=invalid?{...original,state:'UNKNOWN'}:original,li=el('li'),body=el('div');
-  body.append(el('strong',conditionNames[c.key]||'Condition'),el('p',conditionDetail(c)));
+  body.append(el('strong',conditionNames[c.key]||'Condition'),el('p',conditionDetail(c,row)));
   const label=c.state==='PASS'?'Passed':c.state==='FAIL'?'Not met':'Unavailable';
   li.append(body,badge(label,c.state==='PASS'?'good':c.state==='FAIL'?'':'warn'));list.append(li);
  }
@@ -465,6 +466,7 @@ function timeOnly(value){const d=new Date(value);return !value||Number.isNaN(d.g
 function strategyLabel(name){return ({TREND_PULLBACK_FAST:'Trend pullback',CAS_LAG_V1:'Expiry auction',ORDINARY_PUBLISHED_PCR_TRAIL:'PCR trend',SECONDS_FUTURES_CATCHUP:'Futures catch-up',SECONDS_FAILED_BREAKOUT:'Failed breakout',SECONDS_FLOW_CONTINUATION:'Flow continuation',SECONDS_STRIKE_CATCHUP:'Strike catch-up',SECONDS_EVENT_IMPULSE:'Event impulse'})[name]||strategyNames[name]||name.replaceAll('_',' ').toLowerCase();}
 function renderSeconds(d){
  const lab=d.seconds_experiments,live=lab?.fresh===true&&lab.status==='AVAILABLE';
+ $('seconds-panel').hidden=(d.runtime?.strategies||[]).join(',')==='VOLATILITY_SHOCK_V1'&&!live;
  const marketClosed=live&&d.runtime?.fresh===true&&d.runtime.state==='WAITING_EXCHANGE_SESSION';
  $('seconds-summary').textContent=live?`${lab.evaluations?.length??0} experiments · simulated`:lab?'Updates unavailable':'Not started';
  const failure={SESSION_TOKEN_UNAVAILABLE:'The cached market-data session is unavailable.',STARTING_CASH_UNAVAILABLE:'A fresh broker-cash snapshot is needed to start the model.',PAPER_HISTORY_UNAVAILABLE:'The saved simulation history needs repair; balances have not been reset.',CONTRACT_METADATA_UNAVAILABLE:'The official contract catalogue could not be loaded.',MARKET_ANCHOR_UNAVAILABLE:'A current index price or futures contract is unavailable.',OBSERVER_FAILED:'The experiment worker needs inspection.'};
@@ -527,6 +529,11 @@ function liveStrategyState(name,row,d){
  }
  if(!row)return {label:'Loading',reason:'Waiting for this strategy’s first evaluation.'};
  if(row.reason==='EXCHANGE_CLOSED')return {label:'Market closed',reason:'Checks resume during a verified exchange session.'};
+ if(name==='VOLATILITY_SHOCK_V1'){
+  if(['UNKNOWN','INPUT_UNAVAILABLE'].includes(row.state))return {label:'Data needed',reason:conditionSummary(row),kind:'warn'};
+  if(row.state==='SIGNAL')return {label:'Signal',reason:strategyReasons[row.execution_blocking_reason]||row.execution_blocking_reason?.replaceAll('_',' ').toLowerCase()||'Checking current books, cash and the continuation scenario.',kind:'good'};
+  return {label:row.state==='WAITING'?'Waiting':'No entry',reason:conditionSummary(row),check:row};
+ }
  if(row.state==='UNKNOWN')return {label:'Data needed',reason:conditionSummary(row),kind:'warn'};
  if(row.state==='NOT_APPLICABLE')return {label:'Not today',reason:conditionSummary(row)};
  if(row.state==='SIGNAL')return {label:'Signal',reason:row.execution_blocking_reason?'Signal found; an execution check is blocking entry.':'Signal found; the trader is checking price, cash and liquidity.',kind:'good'};
@@ -567,6 +574,8 @@ function renderLive(d){
    const info=el('div');info.append(el('strong',position.symbol||'Open broker position'),el('p',`${position.quantity??'Unknown'} units · average buy ${cash(position.average_price)}`,'subtle'));
    const value=el('div');value.append(el('span',a?.fresh?'Unrealised P&L':'Last unrealised P&L','metric-label'),el('strong',cash(position.unrealised),position.unrealised==null||position.unrealised==='0.00'?'':position.unrealised.startsWith('-')?'negative':'positive'));
    line.append(info,value);$('live-held').append(line);
+   const shock=d.ledger?.active_trades?.find(t=>t.strategy==='VOLATILITY_SHOCK_V1')?.shock;
+   if(shock)info.append(el('p',`Recorded executable profit ${cash(shock.net_liquidation_profit)} · peak ${cash(shock.peak_net_profit)}${shock.trailing_armed?` · profit floor ${cash(shock.floor)}`:' · trailing not yet armed'}. ${at(shock.observed_at)}${shock.quote_executable?'':' · current full liquidation quote unavailable'}.`,'subtle'));
   }
  }
  const closed=closedTradeData(d),today=closed.trades.filter(t=>istDay(t.exit_at)===istDay(d.server_time)).length;
@@ -650,6 +659,20 @@ function renderLive(d){
     body.append(el('p','Needs a 30-minute move of at least 0.25%, a pullback against it, then three-close and futures confirmation.'));
     body.append(el('p','Experimental: the retained simulations had only one filled trade per period.'));
     if(check?.details)body.append(el('p',`Recorded trend ${signedPercent(check.details.trend_30m)}; pullback ${signedPercent(check.details.pullback_10m)}. Other confirmation values were not supplied in this snapshot.`));
+   }else if(name==='VOLATILITY_SHOCK_V1'){
+    body.append(el('p','shock_v1 · only funded entry strategy. CAS and the earlier strategies are paused. New setups use completed minutes from 09:50–14:45 IST, subject to the actual exchange session and contract cutoff.'));
+    if(row?.bar_at)body.append(el('p',`Completed minute ${at(row.bar_at)} · source observed ${at(row.source_received_at)}.`));
+    if(row?.details?.spot_5m!=null)body.append(el('p',`NIFTY five-minute move ${signedPercent(row.details.spot_5m)} · prior median ${signedPercent(row.details.prior_abs_r5)} · futures ${signedPercent(row.details.future_5m_return)} · futures volume ${Number(row.details.volume_ratio).toFixed(2)}× baseline.`));
+    if(row?.details?.pre_break_high!=null)body.append(el('p',`Previous range ${points(Number(row.details.pre_break_low).toFixed(2))}–${points(Number(row.details.pre_break_high).toFixed(2))} · breakout boundary ${points(Number(row.details.breakout_boundary).toFixed(2))}.`));
+    if(row?.conditions?.length)body.append(conditionList(row,rt.fresh));
+    const selected=rt.strategy_selection;
+    if(selected?.selected===name)body.append(el('p',`Last selection ${at(selected.evaluated_at)} · planned entry cash ${cash(selected.entry_cash)} / ${cash(selected.budget)} budget. Favorable scenario ${Number(selected.scenario_multiple).toFixed(2)}×; this is not expected profit.`));
+    if(row?.shock_candidates?.length){
+     const candidates=el('details',undefined,'decision-inputs');candidates.append(el('summary',`${row.shock_candidates.length} contracts checked at ${at(row.candidate_assessed_at)}`));
+     for(const c of row.shock_candidates)candidates.append(el('p',`NIFTY ${points(c.strike)} · ${c.expiry||'expiry unavailable'}: ${c.reason.replaceAll('_',' ').toLowerCase()}${c.quantity?` · ${c.quantity} units · limit ${cash(c.limit)} · entry ${cash(c.entry_cash)} · exit reserve ${cash(c.exit_fee_reserve)} · scenario ${Number(c.scenario_multiple).toFixed(2)}×`:''}`));
+     body.append(candidates);
+    }
+    body.append(el('p','SHOCK_EXIT_V1 · 40% entry-cash loss trigger; trailing arms at +80% executable net profit; no fixed take-profit. Underlying invalidation, 45-minute no-momentum and 120-minute/session limits also apply. Sale prices are not guaranteed.'));
    }else if(name==='CAS_LAG_V1')body.append(el('p','On eligible expiry sessions, compares official auction value with executable option prices. Price, depth, cash and broker checks must pass.'));
    else if(row?.entry_rule)body.append(el('p',row.entry_rule));
    if(check?.evaluated_at)body.append(el('p',`Checked ${at(check.evaluated_at)}.`));

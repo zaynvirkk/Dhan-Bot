@@ -10,11 +10,12 @@ from dhan_cas_bot.volatility_shock import SHOCK
 def test_shock_fields_are_visible_without_private_payloads():
     raw=json_safe(asdict(signal()));raw['details']['token']='PRIVATE'
     raw['shock_candidates']=[{'security_id':'123','reason':'SHOCK_SPREAD_TOO_WIDE',
-        'budget':'7772.25','token':'PRIVATE','raw_payload':'PRIVATE'}]
+        'budget':'7772.25','expiry':'2026-10-27','token':'PRIVATE','raw_payload':'PRIVATE'}]
     row=strategy_projection([raw])[0]
     assert row['exit_policy']=='SHOCK_EXIT_V1' and len(row['conditions'])==6
     assert row['details']['spot_5m'] and row['bar_at'] and row['source_received_at']
     assert row['shock_candidates'][0]['reason']=='SHOCK_SPREAD_TOO_WIDE'
+    assert row['shock_candidates'][0]['expiry']=='2026-10-27'
     assert 'PRIVATE' not in json.dumps(row)
 
 
@@ -33,3 +34,15 @@ def test_shock_has_actual_fill_risk_projection_and_no_generic_double(tmp_path):
         assert row['strategy']==SHOCK and row['shock']['entry_cash']
         assert not row['target_known'] and row['net_protection'] is None
     asyncio.run(run())
+
+
+def test_actual_frontend_does_not_call_missing_shock_inputs_a_failed_signal():
+    from pathlib import Path
+    import subprocess
+    code=Path('dhan_cas_bot/dashboard/static/app.js').read_text()
+    function=code.split('function liveStrategyState(',1)[1].split('function renderLive(',1)[0]
+    js="function conditionSummary(r){return r.reason;}\nfunction liveStrategyState("+function
+    js+="\nconsole.log(JSON.stringify(liveStrategyState('VOLATILITY_SHOCK_V1',{state:'INPUT_UNAVAILABLE',reason:'SHOCK_NONCONTIGUOUS_BARS'},{runtime:{fresh:true,funded_strategies:['VOLATILITY_SHOCK_V1'],state:'ARMED_WAITING_SIGNAL'}})));"
+    result=subprocess.run(['node','-e',js],capture_output=True,text=True,check=True)
+    row=json.loads(result.stdout)
+    assert row['label']=='Data needed' and row['reason']=='SHOCK_NONCONTIGUOUS_BARS'
