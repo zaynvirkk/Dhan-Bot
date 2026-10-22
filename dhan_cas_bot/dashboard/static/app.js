@@ -130,10 +130,16 @@ function renderHistory(d){
  $('history-empty').textContent=day?'The daily summary is retained; no detail samples for this date remain in the bounded history.':'No samples are available for this date. Missing history is not a zero-trade result.';
 }
 const strategyNames={CAS_LAG_V1:'Expiry auction',GAP_FADE_DOUBLE:'Morning gap-fade',NIFTY_SELLOFF_REBOUND_1510:'Overnight rebound'};
+strategyNames.VOLATILITY_SHOCK_V1='Volatility shock';
 const strategyReasons={CALENDAR_UNAVAILABLE:'The exchange calendar is unavailable.',EXCHANGE_CLOSED:'The exchange is closed.',CONTRACT_CALENDAR_UNAVAILABLE:'Current contract dates are unavailable.',EXPIRY_SESSION_OUTSIDE_RESEARCH_SCOPE:'NIFTY expires today; gap-fade covers non-expiry sessions.',OUTSIDE_STRATEGY_WINDOW:'Waiting for the next scheduled check.',SPECIAL_SESSION_OUTSIDE_RESEARCH_SCOPE:'This is a special session outside the tested schedule.',NEXT_SESSION_EXIT_UNAVAILABLE:'The next session does not support the planned exit.',SELLOFF_THRESHOLD_MET:'The index decline crossed the 0.75% trigger.',SELLOFF_BELOW_THRESHOLD:'The index decline has not reached 0.75%.',GAP_FADE_CONFIRMED:'Gap, retracement, persistence and futures direction agree.',GAP_FADE_CONDITIONS_NOT_MET:'The gap-fade conditions do not all agree.',COMPLETED_INPUT_MISSING_OR_INVALID:'A required completed minute is missing or invalid.',NOT_CONFIGURED:'This engine is not enabled in the service configuration.',STRATEGY_INPUTS_STALE:'The minute inputs are stale.',STRATEGY_INPUT_UNAVAILABLE:'A market-data request failed.',INPUTS_NOT_RECEIVED:'Waiting for the first input check.'};
 const conditionNames={rule:'Entry rule',gap_size:'Opening gap',gap_fill:'Gap retracement',persistence:'Price persistence',futures_direction:'Futures confirmation',selloff:'Decline from open'};
+Object.assign(conditionNames,{shock_size:'Five-minute move',shock_abnormal:'Move versus prior baseline',extension:'Distance beyond range',future_direction:'Futures confirmation',volume_ratio:'Futures participation'});
+Object.assign(strategyReasons,{SHOCK_CONFIRMED:'The completed shock, range breakout and futures confirmation all passed.',SHOCK_RULE_NOT_MET:'The completed minute does not meet all shock conditions.',SHOCK_WARMUP:'Building at least 35 contiguous completed minutes.',SHOCK_NONCONTIGUOUS_BARS:'A completed minute is missing. Waiting for verified history repair.',SHOCK_COMPLETED_BAR_UNAVAILABLE:'The latest completed bar is missing or its 30-second entry window has passed.',SHOCK_BASELINE_UNAVAILABLE:'The prior five-minute baseline is unavailable or zero.',SHOCK_VOLUME_UNAVAILABLE:'Usable per-minute futures volume is unavailable.',SHOCK_COOLDOWN:'Waiting 15 minutes after the prior position closed.',FUTURES_FEED_UNAVAILABLE:'Waiting for a fresh, confirming futures quote.',SHOCK_RECONNECT_INVALIDATED:'A reconnect invalidated this entry episode.'});
 function pct(value){return value==null?'Unavailable':`${(Number(value)*100).toFixed(2)}%`;}
 function conditionDetail(c){
+ if(c.key==='shock_size'||c.key==='future_direction')return `${pct(c.value)}; requires at least ${pct(c.minimum)}.`;
+ if(c.key==='shock_abnormal'||c.key==='volume_ratio')return `${c.value==null?'Unavailable':Number(c.value).toFixed(2)+'×'}; requires ${Number(c.minimum).toFixed(2)}× the prior baseline.`;
+ if(c.key==='extension')return `${pct(c.value)} beyond the preceding range; maximum ${pct(c.maximum)}.`;
  const direction=c.expected==='RISING'?'rising':c.expected==='FALLING'?'falling':null;
  if(c.key==='persistence')return c.state==='UNKNOWN'?'Three completed closes or the gap direction are unavailable.':`Last three closes ${c.state==='PASS'?'are':'are not all'} ${direction||'in the required direction'}.`;
  if(c.key==='futures_direction')return `${pct(c.value)} over five minutes; needs ${direction||'a confirmed gap direction'}.`;
@@ -186,6 +192,11 @@ function renderSelection(d){
  const rt=d.runtime,sel=rt?.strategy_selection;
  $('selection-stamp').textContent=sel?.evaluated_at?`Last comparison ${at(sel.evaluated_at)}`:'No executable comparison recorded';
  const names=s=>strategyNames[s]||s.replaceAll('_',' ').toLowerCase();
+ if((rt?.strategies||[]).includes('VOLATILITY_SHOCK_V1')){
+  $('selection-reason').textContent=sel?.selected==='VOLATILITY_SHOCK_V1'?`Selected Volatility shock using a favorable continuation scenario, not a profit forecast. Planned entry cash ${cash(sel.entry_cash)} from ${cash(sel.budget)} available; scenario proceeds ${Number(sel.scenario_multiple).toFixed(2)}× entry cash.`:'Only Volatility shock can open a position. CAS and the earlier strategies are paused. The bot waits for a completed shock and an affordable liquid contract.';
+  $('selection-flow').textContent='Completed index and futures minutes drive the signal. Fresh option books determine entry price and quantity. Broker fills and final charges determine actual profit or loss.';
+  $('selection-history').replaceChildren();$('selection-candidates').replaceChildren();return;
+ }
  const closed=rt?.state==='WAITING_EXCHANGE_SESSION';
  const recorded=sel?.evaluated_at&&sel?.candidates?.length>0;
  let reason=closed?'The exchange session is closed.'+(recorded?' The last comparison is retained below.':''):
@@ -288,7 +299,16 @@ function renderStrategies(d){
    info.append(inputs);
   }
   if(row.ranking_available)info.append(el('p',`${row.filled_closed} filled closed trades · mean return after estimated costs ${pct(row.mean_estimated_net_return)}.`,'connection-detail'));
-  else if(row.family)info.append(el('p','Selection score unavailable: fewer than three filled closed trades.','connection-detail'));
+  else if(row.family&&row.strategy!=='VOLATILITY_SHOCK_V1')info.append(el('p','Selection score unavailable: fewer than three filled closed trades.','connection-detail'));
+  if(row.strategy==='VOLATILITY_SHOCK_V1'){
+   if(row.bar_at)info.append(el('p',`Completed minute ${at(row.bar_at)} · observed ${at(row.source_received_at)}.`,'connection-detail'));
+   if(row.last_execution_reason)info.append(el('p',strategyReasons[row.last_execution_reason]||row.last_execution_reason.replaceAll('_',' ').toLowerCase(),'connection-detail'));
+   if(row.shock_candidates?.length){
+    const list=el('details',undefined,'decision-inputs');list.append(el('summary',`${row.shock_candidates.length} contracts checked at ${at(row.candidate_assessed_at)} · scenario values only`));
+    for(const c of row.shock_candidates)list.append(el('p',`NIFTY ${points(c.strike)} · ${c.reason.replaceAll('_',' ').toLowerCase()}${c.quantity?` · ${c.quantity} units · entry ${cash(c.entry_cash)} · exit reserve ${cash(c.exit_fee_reserve)} · scenario ${Number(c.scenario_multiple).toFixed(2)}×`:''}`,'connection-detail'));
+    info.append(list);
+   }
+  }
   if(row.next_check_at)info.append(el('p',`Next scheduled check: ${at(row.next_check_at)}.`, 'connection-detail'));
   const signal=row.lastSignal;
   if(signal){
@@ -427,6 +447,10 @@ function renderDecision(d){
  $('last-entry').textContent=entry?`${at(entry.occurred_at)} · ${strategyNames[entry.strategy]||(entry.strategy?entry.strategy.replaceAll('_',' ').toLowerCase():'Strategy not reported')} · NIFTY ${points(entry.strike)} ${entry.option_type||''}. Selected ${entry.quantity??'unknown'} units at a limit of ${cash(entry.limit)}.${entry.reference!=null?` Reference ${points(entry.reference)}; ${entry.confirmations??'unknown'} confirmations.`:''}`:d.ledger?.available?'No entry decision has been recorded.':'The decision ledger is unavailable.';
  $('positions-table').hidden=!a?.positions?.length;$('positions-section').hidden=Array.isArray(a?.positions)&&a.positions.length===0&&a.fresh===true;
  const exits=(d.ledger?.active_trades||[]).filter(t=>t.quantity>0).map(t=>{
+  if(t.strategy==='VOLATILITY_SHOCK_V1'){
+   const s=t.shock;
+   return `Volatility shock: 40% entry-cash loss trigger; no fixed profit target. ${s?`Recorded executable profit ${cash(s.net_liquidation_profit)}, peak ${cash(s.peak_net_profit)}${s.trailing_armed?`, trailing floor ${cash(s.floor)}`:'; trailing arms at +80%'}. Observation ${at(s.observed_at)}${s.quote_executable?'':' · no fully executable quote at that observation'}. `:''}Maximum 120 minutes, flatten by ${at(t.exit_due)}. ${t.exit_trigger?'Exit latched: '+t.exit_trigger.replaceAll('_',' ').toLowerCase()+'.':''} These are best-effort triggers, not guaranteed sale prices.`;
+  }
   const stop=t.stop_fraction!=null?`${Math.round((1-Number(t.stop_fraction))*100)}% below ${t.trailing?'the highest completed minute close':'the entry premium'}`:'Stop policy unavailable';
   const target=t.target_known?(t.target_multiple==null?'No fixed profit target':`Profit target: ${t.target_multiple}× entry`):'Profit target unavailable';
   const protect=t.net_protection?` Net-profit protection retains ${Math.round(Number(t.net_protection.retain)*100)}% of observed peak liquidation profit after estimated costs. Recorded profit floor: ${cash(t.net_protection.floor)}. A gap or failed fill can still realise less.`:'';

@@ -111,6 +111,8 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
     enabled = strategy_names(config)
     has_directional = any(name != CAS for name in enabled)
     has_seconds = any(name in SECONDS_NAMES for name in enabled)
+    from .session_strategies import SHOCK
+    needs_future = has_seconds or SHOCK in enabled
     started_before_session = not has_directional and now().astimezone(IST).time() < time(15,5)
     state_dir = Path(config["state_dir"])
     mandate = load_mandate(state_dir / "mandate.json")
@@ -352,6 +354,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             identity = f"{epoch}:{value.currentTs}:{hashlib.sha256(raw).hexdigest()}"
             try:
                 sample = observation(value, received_ns=received_ns, provider_ts_ms=int(value.currentTs), epoch=epoch, receiver_seq=received_seq, raw_identity=identity, ltp=engine.reference is None)
+                if SHOCK in enabled:engine.shock_spot=(sample.value,received_ns)
                 if engine.reference is None:index_anchor=sample.value
                 accepted = False
                 if engine.reference is None:
@@ -417,7 +420,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                 if market_policy is not None and inst.security_id not in market_policy.wanted:
                     continue
                 identity = hashlib.sha256(packet).digest()
-                if last_packets.get(inst.security_id) == (epoch,identity):
+                if last_packets.get(inst.security_id) == (epoch,identity) and SHOCK not in enabled:
                     continue
                 try:
                     decoded = decode_full_binary(packet, inst)
@@ -469,17 +472,19 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         def signal_disconnect():
             upstox.protocol.on_disconnect()
             if has_directional:input_worker.stream_reset()
+            if SHOCK in enabled:engine.directional.shock.invalidate();engine.shock_spot=None
             engine.signal_reconnect(None)
             wake.set()
         def market_connect():
             usable_at.pop("market", None)
             market.protocol.on_connect()
             engine.market_reconnect(market.protocol.epoch.id)
-            if has_seconds:engine.directional.seconds.reset()
+            if needs_future:engine.directional.seconds.reset()
         def market_disconnect():
             market.protocol.on_disconnect()
             engine.market_reconnect(None)
-            if has_seconds:engine.directional.seconds.reset()
+            if needs_future:engine.directional.seconds.reset()
+            if SHOCK in enabled:engine.directional.shock.invalidate()
             wake.set()
         def order_connect():
             nonlocal order_connected_at
@@ -510,7 +515,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
             engine.signal_reconnect(None)
         if instrument_by_id:
             market_url = config.get("dhan_market_ws_url") or "wss://api-feed.dhan.co?" + urlencode({"version": "2", "token": token, "clientId": broker.account_id, "authType": "2"})
-            if has_seconds and future_id:
+            if needs_future and future_id:
                 future_input = FutureInput(engine.directional.seconds.tape, future_id, lambda:market.protocol.epoch.id)
                 runtime.future_input=future_input
                 async def record_future(payload):
@@ -521,12 +526,13 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                     wake.set()
                 def future_disconnect():
                     future_input.disconnect();usable_at.pop('future',None);wake.set()
+                    if SHOCK in enabled:engine.directional.shock.invalidate()
                 runners.append(WebSocketRunner(config.get('dhan_future_ws_url') or market_url, {}, record_future,
                     subscribe=market.subscription_messages([future_id]),on_connect=future_input.connect,
                     on_disconnect=future_disconnect,on_event=transport_event('future'),**market.transport_options))
                 feed_runners['future'] = runners[-1]
             subscribed=list(instrument_by_id)
-            if has_directional and set(enabled)<={CAS,'TREND_PULLBACK_FAST',*SECONDS_NAMES}:
+            if has_directional and set(enabled)<={CAS,SHOCK,'TREND_PULLBACK_FAST',*SECONDS_NAMES}:
                 held={active['security_id']} if active else set()
                 subscribed=sorted(held)
                 if not subscribed:
@@ -564,6 +570,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                         anchors.extend(v.spot for v in engine.directional.inputs.evaluations.values() if v.spot)
                     desired=market_ids(instrument_by_id,today,anchors=anchors,held=held,
                         future_id=None,
+                        shock=SHOCK in enabled,
                         full_expiry=today if CAS in funded and expiry_today else None)
                     if not any(a is not None for a in anchors):desired.update(market_policy.bootstrap)
                     await market_policy.sync(runner,market.protocol.epoch.id,desired,engine.books)
@@ -576,6 +583,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
         while not stop.is_set():
             # Clear at the start; feed/order arrivals during any await survive.
             wake.clear()
+            runtime.status.auto_live_armed = bool(broker.allow_writes and not ledger.metadata('disarmed',False))
             current = now().astimezone(IST)
             for task in [*tasks, account_task, clock_task, *([strategy_task] if strategy_task else []),*([seconds_event_task] if seconds_event_task else [])]:
                 if task.done():

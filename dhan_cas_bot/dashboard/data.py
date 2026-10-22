@@ -45,6 +45,19 @@ STRATEGY_REASONS.update({'SECONDS_SETUP_DETECTED','SECONDS_WARMUP','SECONDS_RULE
     'SECONDS_SIGNAL_EXPIRED','SECONDS_OPTION_IDENTITY_MISMATCH','SECONDS_SPREAD_TOO_WIDE',
     'SECONDS_DEPTH_TOO_THIN','SECONDS_ENTRY_OUTSIDE_BAND','SECONDS_TARGET_UNAVAILABLE',
     'SECONDS_UNAFFORDABLE','SECONDS_NET_EDGE_TOO_SMALL'})
+SHOCK_REASONS={'SHOCK_CONFIRMED','SHOCK_RULE_NOT_MET','SHOCK_COMPLETED_BAR_UNAVAILABLE',
+    'SHOCK_WARMUP','SHOCK_NONCONTIGUOUS_BARS','SHOCK_INVALID_BAR','SHOCK_BASELINE_UNAVAILABLE',
+    'SHOCK_VOLUME_UNAVAILABLE','SHOCK_COOLDOWN','SHOCK_BAR_CONFLICT','SHOCK_RECONNECT_INVALIDATED',
+    'SHOCK_INVALID_BOOK','SHOCK_SPREAD_TOO_WIDE','SHOCK_EXPIRY_CUTOFF','SHOCK_IV_UNAVAILABLE',
+    'SHOCK_SCENARIO_BELOW_FLOOR'}
+STRATEGY_REASONS.update(SHOCK_REASONS)
+SHOCK_EXITS={'SHOCK_UNDERLYING_INVALIDATED','SHOCK_PREMIUM_STOP','SHOCK_PROFIT_FLOOR',
+    'SHOCK_NO_MOMENTUM','SHOCK_MAX_EXPOSURE'}
+REASONS_SHOCK={'SHOCK_UNDERLYING_INVALIDATED':'The underlying move reversed through its recorded invalidation rule.',
+    'SHOCK_PREMIUM_STOP':'Executable liquidation reached the 40% entry-cash loss trigger.',
+    'SHOCK_PROFIT_FLOOR':'Executable profit fell below the saved shock profit floor.',
+    'SHOCK_NO_MOMENTUM':'The position passed 45 minutes without the required observed gain.',
+    'SHOCK_MAX_EXPOSURE':'The position reached its maximum holding time or session exit deadline.'}
 ORDER_STATES = {'PENDING_SEND', 'SEND_UNKNOWN', 'SENT', 'TRANSIT', 'PENDING', 'CLOSED',
                 'TRIGGERED', 'REJECTED', 'CANCELLED', 'PART_TRADED', 'TRADED', 'FILLED',
                 'EXPIRED', 'ABORTED'}
@@ -92,6 +105,9 @@ REASONS = {
     'EXIT_LATCHED_WAITING_EXCHANGE_SESSION': 'An exit is due. Waiting for a verified open exchange session.',
     'EXIT_LATCHED_WAITING_CURRENT_BOOK': 'An exit is due. Waiting for a current option book.',
 }
+
+
+REASONS.update(REASONS_SHOCK)
 
 
 def utcnow():
@@ -261,8 +277,10 @@ def selection_projection(raw):
                      'closed_entry_opportunities':integer(row.get('closed_entry_opportunities')),
                      'filled_entry_opportunities':integer(row.get('filled_entry_opportunities'))})
     return {'evaluated_at':timestamp(raw.get('evaluated_at')),
-            'mode':choice(raw.get('mode'),{'WAITING','MEASURED_CASH_PER_MINUTE','EXPERIMENTAL_EXECUTION_QUALITY','QUALIFIED_AUCTION'},'WAITING'),
-            'reason':choice(raw.get('reason'),{'SELECTED','CONFLICTING_UNRANKED_SIGNALS','NO_POSITIVE_ESTIMATED_EDGE','NO_EXECUTABLE_SIGNAL'},'NO_EXECUTABLE_SIGNAL'),
+            'mode':choice(raw.get('mode'),{'WAITING','MEASURED_CASH_PER_MINUTE','EXPERIMENTAL_EXECUTION_QUALITY','QUALIFIED_AUCTION','DECLARED_CONTINUATION_SCENARIO'},'WAITING'),
+            'reason':choice(raw.get('reason'),{'SELECTED','CONFLICTING_UNRANKED_SIGNALS','NO_POSITIVE_ESTIMATED_EDGE','NO_EXECUTABLE_SIGNAL','SCENARIO_ONLY_NOT_EXPECTED_RETURN'},'NO_EXECUTABLE_SIGNAL'),
+            'scenario_multiple':money(raw.get('scenario_multiple')),
+            'entry_cash':money(raw.get('entry_cash')),'budget':money(raw.get('budget')),
             'selected':choice(raw.get('selected'),STRATEGY_NAMES),'candidates':rows}
 
 
@@ -282,8 +300,9 @@ def execution_feedback_projection(raw):
 
 def condition_projection(raw):
     result=[]
-    allowed={'gap_size','gap_fill','persistence','futures_direction','selloff'}
-    for row in raw[:5] if isinstance(raw,list) else []:
+    allowed={'gap_size','gap_fill','persistence','futures_direction','selloff',
+             'shock_size','shock_abnormal','extension','future_direction','volume_ratio'}
+    for row in raw[:10] if isinstance(raw,list) else []:
         if not isinstance(row,dict) or row.get('key') not in allowed:
             continue
         clean={'key':row['key'],'state':choice(row.get('state'),{'PASS','FAIL','UNKNOWN'},'UNKNOWN'),
@@ -312,7 +331,8 @@ def strategy_projection(raw):
                     'warmup_seconds','future_move_2s','response_beta','target_price','impulse_threshold',
                     'eligible_contracts','fitted_contracts','breakout_direction','flow_candidates','curvature_candidates',
                     'spread_ratio','bid_quantity','ask_quantity','required_depth','entry_cash','exit_fee_reserve',
-                    'cash_budget','net_at_target','minimum_net_edge'):
+                    'cash_budget','net_at_target','minimum_net_edge','spot_5m','prior_abs_r5',
+                    'pre_break_high','pre_break_low','breakout_boundary','extension','baseline_comparisons','volume_windows'):
             value=(row.get('details') or {}).get(key) if isinstance(row.get('details'), dict) else None
             if money(value) is not None:
                 details[key]=money(value) if key=='target_price' else str(Decimal(str(value)))
@@ -322,20 +342,35 @@ def strategy_projection(raw):
         result.append({'strategy':row['strategy'],
             'family':spec[0] if spec else 'GAP_FADE' if row['strategy']=='GAP_FADE_DOUBLE' else row['strategy'],
             'scope':spec[2] if spec else 'ORDINARY' if row['strategy']=='GAP_FADE_DOUBLE' else 'ANY',
-            'exit_policy':spec[1] if spec else 'SECONDS_V1' if row['strategy'] in SECONDS_RULES else 'DOUBLE',
-            'entry_rule':RULES.get(spec[0]) if spec else SECONDS_RULES.get(row['strategy']),
+            'exit_policy':'SHOCK_EXIT_V1' if row['strategy']=='VOLATILITY_SHOCK_V1' else spec[1] if spec else 'SECONDS_V1' if row['strategy'] in SECONDS_RULES else 'DOUBLE',
+            'entry_rule':'Completed 5-minute shock, persistent range breakout, futures direction and volume; live-book affordability and scenario ranking.' if row['strategy']=='VOLATILITY_SHOCK_V1' else RULES.get(spec[0]) if spec else SECONDS_RULES.get(row['strategy']),
             'filled_closed':integer(row.get('filled_closed')),
             'ranking_available':row.get('ranking_available') if type(row.get('ranking_available')) is bool else False,
             'mean_estimated_net_return':str(Decimal(str(row['mean_estimated_net_return']))) if money(row.get('mean_estimated_net_return')) is not None else None,
             'enabled':row.get('enabled') if type(row.get('enabled')) is bool else None,
             'funded_enabled':row.get('funded_enabled') if type(row.get('funded_enabled')) is bool else None,
-            'state':choice(row.get('state'), {'UNKNOWN','WAITING','SIGNAL','NO_SIGNAL','NOT_APPLICABLE','DISABLED'},'UNKNOWN'),
+            'state':choice(row.get('state'), {'UNKNOWN','INPUT_UNAVAILABLE','WAITING','SIGNAL','NO_SIGNAL','NOT_APPLICABLE','DISABLED'},'UNKNOWN'),
             'reason':choice(str(row.get('reason','')).split(':')[0],STRATEGY_REASONS,'UNKNOWN'),
             'evaluated_at':timestamp(row.get('evaluated_at')), 'side':choice(row.get('side'), {'CE','PE'}),
             'spot':money(row.get('spot')), 'exit_at':timestamp(row.get('exit_at')), 'details':details,
             'conditions':condition_projection(row.get('conditions')), 'next_check_at':timestamp(row.get('next_check_at')),
+            'bar_at':timestamp((row.get('details') or {}).get('bar_at')),
+            'source_received_at':timestamp((row.get('details') or {}).get('source_received_at')),
+            'shock_candidates':shock_candidate_projection(row.get('shock_candidates')),
+            'candidate_assessed_at':timestamp(row.get('candidate_assessed_at')),
             'last_execution_reason':choice(str(row.get('last_execution_reason','')).split(':')[0],STRATEGY_REASONS),
             'execution_blocking_reason':choice(str(row.get('execution_blocking_reason','')).split(':')[0],STRATEGY_REASONS)})
+    return result
+
+
+def shock_candidate_projection(raw):
+    result=[]
+    for row in raw[:60] if isinstance(raw,list) else []:
+        if not isinstance(row,dict):continue
+        result.append({'security_id':label(row.get('security_id')),'expiry':timestamp(row.get('expiry')),
+            'reason':choice(row.get('reason'),STRATEGY_REASONS|{'READY','OPTION_LIMIT_OUTSIDE_BAND'},'UNKNOWN'),
+            **{k:money(row.get(k)) for k in ('strike','budget','limit','entry_cash','exit_fee_reserve','scenario_multiple')},
+            'quantity':integer(row.get('quantity')),'scenario_only':True})
     return result
 
 
@@ -543,7 +578,7 @@ def last_signal_views(db):
     result=[]
     seen=set()
     for record in db.execute("SELECT key,value FROM metadata WHERE key LIKE 'directional-signal:%' AND key NOT LIKE '%:assessment' AND key NOT LIKE '%:consumed' ORDER BY key DESC LIMIT 512"):
-        match=re.fullmatch(r'directional-signal:(\d{4}-\d{2}-\d{2}):([A-Z0-9_]{1,96})',record['key'])
+        match=re.fullmatch(r'directional-signal:(\d{4}-\d{2}-\d{2}):([A-Z0-9_]{1,96})(?::[a-zA-Z0-9_-]{1,96})?',record['key'])
         if not match or match[2] not in STRATEGY_NAMES or match[2] in seen or len(record['value'])>100_000:
             continue
         try:
@@ -630,13 +665,20 @@ def active_trade_views(db):
                 net_protection={'version':'NET_PROFIT_RATCHET_V1','retain':money(protection.get('retain')),
                     'peak':money(guard.get('peak')),'floor':money(guard.get('floor')),
                     'triggered':guard.get('triggered') is True}
+            shock=None
+            if strategy=='VOLATILITY_SHOCK_V1':
+                saved=db.execute('SELECT value FROM metadata WHERE key=?',('shock-exit:'+row['lifecycle_id'],)).fetchone()
+                observed=json.loads(saved['value']) if saved else {}
+                shock={**{k:money(observed.get(k)) for k in ('entry_cash','actual_average_entry','peak_net_profit','floor','net_liquidation_profit')},
+                    'observed_at':timestamp(observed.get('observed_at')),'first_fill_at':timestamp(observed.get('first_fill_at')),
+                    'trailing_armed':observed.get('trailing_armed') is True,'quote_executable':observed.get('quote_executable') is True}
             result.append({'strategy':strategy,'security_id':label(row['security_id']),
                 'quantity':integer(quantity),'entry_price':money(entry),
                 'trailing':policy.get('exit_trail') is True,'stop_fraction':money(policy.get('exit_stop')),
                 'target_known':'exit_target' in policy,'target_multiple':money(policy.get('exit_target')),
                 'exit_due':timestamp(payload.get('exit_at')),
-                'exit_trigger':choice(trigger.get('reason'),{'TIME_EXIT','PREMIUM_TARGET','TRAILING_STOP','PREMIUM_STOP','NET_PROFIT_FLOOR'}),
-                'trigger_due':timestamp(trigger.get('due')),'net_protection':net_protection})
+                'exit_trigger':choice(trigger.get('reason'),{'TIME_EXIT','PREMIUM_TARGET','TRAILING_STOP','PREMIUM_STOP','NET_PROFIT_FLOOR'}|SHOCK_EXITS),
+                'trigger_due':timestamp(trigger.get('due')),'net_protection':net_protection,'shock':shock})
         except (ValueError,TypeError,KeyError,AttributeError,InvalidOperation):continue
     return result
 

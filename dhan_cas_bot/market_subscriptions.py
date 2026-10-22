@@ -6,11 +6,17 @@ from decimal import Decimal
 from .feeds import dhan_subscription, chunked
 
 
-def market_ids(catalogue, day, *, anchors=(), held=(), future_id=None, full_expiry=None):
+def market_ids(catalogue, day, *, anchors=(), held=(), future_id=None, full_expiry=None, shock=False):
     result=set(held)
     if future_id:result.add(future_id)
     anchors={a for a in anchors if isinstance(a,Decimal) and a.is_finite() and a>0}
     rows=[i for i in catalogue.values() if i.expiry>=day]
+    if shock:
+        from .volatility_shock import shock_universe
+        for anchor in anchors:
+            for side in ('CE','PE'):
+                result.update(i.security_id for i in shock_universe(rows,side,anchor,day))
+        return result
     if full_expiry is not None:result.update(i.security_id for i in rows if i.expiry==full_expiry)
     for expiry in sorted({i.expiry for i in rows})[:3]:
         eligible=[i for i in rows if i.expiry==expiry]

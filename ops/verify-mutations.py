@@ -26,6 +26,8 @@ CASES=(
     ("order_writer_noop", "broker.py", 'return await self._request("POST", "/orders", json=request)', 'return {"orderId":"no-op", "orderStatus":"PENDING"}', "tests/test_connected_service.py::test_connected_service_qualifies_route_freezes_reference_buys_and_exits"),
     ("entry_gate_never_opens", "runtime.py", 'return bool(self.mandate.live_order_authority', 'return bool(False and self.mandate.live_order_authority', "tests/test_production_lifecycles.py::test_up_down_up_executes_real_buy_sell_lifecycles_and_compounds"),
     ("recovery_rotation", "service.py", 'if not ledger.order_lock.locked():', 'if runtime.status.state != "RECOVERING" and not ledger.order_lock.locked():', "tests/test_connected_service.py::test_reconciliation_outage_does_not_prevent_token_rotation_with_exposure"),
+    ("shock_dispatch_disabled", "shock_engine.py", 'await r.orders.submit(intent,reserved_cash=reserve_cash(chosen.entry_cash+chosen.exit_reserve),pre_dispatch=current)', 'pass  # injected no-op shock writer', "tests/test_shock_engine.py::test_shock_sends_real_oms_request_now_without_cas_or_option_candles_and_closes"),
+    ("shock_peak_reset", "volatility_shock.py", "old=previous or {};peak=D(old.get('peak_net_profit','0'))", "old=previous or {};peak=D(0)", "tests/test_volatility_shock.py::test_exit_ratchet_persists_and_no_generic_double_target"),
 )
 
 

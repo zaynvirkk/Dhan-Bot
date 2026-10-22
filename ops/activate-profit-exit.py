@@ -82,7 +82,7 @@ def main():
                 if old is None:extra_added=key
             # New policy starts from future fresh quotes. Do not replay the old
             # peak into an immediate sale against the operator's latest intent.
-            if active:
+            if active and json.loads(active['payload']).get('strategy')!='VOLATILITY_SHOCK_V1':
                 payload=json.loads(active['payload'])
                 policy={'version':'NET_PROFIT_RATCHET_V1','retain':str(retain)}
                 if payload.get('profit_exit') and payload['profit_exit']!=policy:
@@ -118,6 +118,8 @@ def main():
             if lock is not None:os.close(lock)
             stop_bound.unlink(missing_ok=True)
         print(json.dumps({'applied':True,'source':ROOT.name,'profit_exit_policy':'NET_PROFIT_RATCHET_V1',
+            'owner_specific_exit':'SHOCK_EXIT_V1' if args.scan_only==['VOLATILITY_SHOCK_V1'] else None,
+            'allocation_policy':'SHOCK_FULL_CASH_V1' if args.scan_only==['VOLATILITY_SHOCK_V1'] else None,
             'scanned_strategies':args.scan_only if args.scan_only is not None else config['strategies'],
             'retention':str(retain),'existing_position_migrated_forward_only':migrated is not None,
             'funded_strategies':args.funded_only if args.funded_only is not None else config.get('funded_strategies',config['strategies']),

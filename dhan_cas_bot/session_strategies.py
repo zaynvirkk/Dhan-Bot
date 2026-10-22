@@ -15,9 +15,10 @@ IST = ZoneInfo("Asia/Kolkata")
 CAS = "CAS_LAG_V1"
 GAP = "GAP_FADE_DOUBLE"
 REBOUND = "NIFTY_SELLOFF_REBOUND_1510"
+SHOCK = "VOLATILITY_SHOCK_V1"
 from .expanded_strategies import NAMES as EXPANDED_NAMES
 from .seconds_strategies import NAMES as SECONDS_NAMES
-STRATEGIES = tuple(dict.fromkeys((GAP, REBOUND, CAS, *EXPANDED_NAMES, *SECONDS_NAMES)))
+STRATEGIES = tuple(dict.fromkeys((GAP, REBOUND, CAS, SHOCK, *EXPANDED_NAMES, *SECONDS_NAMES)))
 D = Decimal
 
 

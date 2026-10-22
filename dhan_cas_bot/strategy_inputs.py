@@ -12,7 +12,7 @@ import httpx
 from .directional import Inputs
 from .domain import ContractError
 from .instruments import is_nifty_option, load_dhan_master, parse_date
-from .session_strategies import CAS, GAP, REBOUND, STRATEGIES, IST, Calendar, Evaluation, evaluate, parse_bars, parse_session
+from .session_strategies import CAS, GAP, REBOUND, SHOCK, STRATEGIES, IST, Calendar, Evaluation, evaluate, parse_bars, parse_session
 from .seconds_strategies import NAMES as SECONDS_NAMES
 
 
@@ -180,6 +180,8 @@ class StrategyInputWorker:
         self.aux_started=None
         self.aux_error=''
         self.input_health={}
+        self.spot_bars={}
+        self.future_bars={}
 
 
     def on_stream(self,frame,epoch,received):
@@ -191,9 +193,15 @@ class StrategyInputWorker:
         """Use one completed-bar boundary, actual receipt time for admission."""
         moment=self.engine.now()
         return {strategy:evaluate(strategy,moment,self.calendar,spot,future,expiries,bar_at=bar_at)
-                if strategy in (GAP,REBOUND) else self.expanded(strategy,moment,self.calendar,spot,future,expiries,
+                if strategy in (GAP,REBOUND) else self.shock(moment,spot,future,bar_at)
+                if strategy==SHOCK else self.expanded(strategy,moment,self.calendar,spot,future,expiries,
                     features=features,bar_at=bar_at)
                 for strategy in self.directional.enabled if strategy not in SECONDS_NAMES}
+
+    def shock(self,moment,spot,future,bar_at):
+        from .volatility_shock import evaluate_completed_shock
+        return evaluate_completed_shock(moment,self.calendar,spot,future,bar_at=bar_at,
+            source=self.minutes.spot_source+' + DHAN_INTRADAY_PER_MINUTE_FUTURE')
 
     @staticmethod
     def expanded(*args,**kwargs):
@@ -201,7 +209,8 @@ class StrategyInputWorker:
         return expanded(*args,**kwargs)
 
     def publish(self,evaluations):
-        self.directional.update(Inputs(self.calendar,evaluations,dict(self.option_bars),self.engine.now()))
+        self.directional.update(Inputs(self.calendar,evaluations,dict(self.option_bars),self.engine.now(),
+            spot_bars=dict(self.spot_bars),future_bars=dict(self.future_bars)))
         self.wake.set()
 
     def wanted_options(self,spot,bar_at,expiries):
@@ -360,8 +369,21 @@ class StrategyInputWorker:
                     except Exception as exc:errors[name]=type(exc).__name__;return {}
                 spot,future=await asyncio.gather(read('spot','13','IDX_I','INDEX',self.calendar.previous_opens),
                     read('future',self.future_id,'NSE_FNO','FUTIDX',self.calendar.opens,True))
+                self.spot_bars,self.future_bars=spot,future
+                if SHOCK in self.directional.enabled:
+                    from .volatility_shock import ShockFeatureSnapshot
+                    from .domain import digest
+                    snapshot=ShockFeatureSnapshot(bar_at,self.engine.now(),
+                        self.minutes.spot_source+' + DHAN_INTRADAY_PER_MINUTE_FUTURE',
+                        tuple(b for t,b in sorted(spot.items()) if bar_at-timedelta(minutes=35)<=t<=bar_at),
+                        tuple(b for t,b in sorted(future.items()) if self.calendar.opens<t<=bar_at))
+                    observed=asdict(snapshot)
+                    observed.update(spot_security_id='13',future_security_id=self.future_id)
+                    identity=digest({k:v for k,v in observed.items() if k!='received_at'})
+                    self.engine.runtime.ledger.observe('shock-input:'+identity,'SHOCK_INPUT',observed)
                 self.publish(self.evaluations(bar_at,spot,future,expiries,self.available_features(expiries)))
-                wanted=self.wanted_options(spot,bar_at,expiries)
+                # Shock selection fits live books, not old option candles.
+                wanted=[] if set(self.directional.enabled)=={SHOCK} else self.wanted_options(spot,bar_at,expiries)
                 ready,failed=await self.warm_options(wanted)
                 self.start_auxiliary(now,expiries,families)
                 # Yield to the optional collector; never await its HTTP batch.

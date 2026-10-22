@@ -3,7 +3,7 @@
 Entry hypotheses remain unqualified for profitability. Configuration selects
 engines; it does not bypass route, account, release or operator gates.
 """
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_CEILING
 import json
@@ -12,7 +12,7 @@ import uuid
 from .domain import Intent, json_safe
 from .engine import restore_instrument
 from .risk import FeeSchedule, reserve_cash, worst_case_entry_cash
-from .session_strategies import CAS, GAP, REBOUND, STRATEGIES, IST, Calendar, Evaluation
+from .session_strategies import CAS, GAP, REBOUND, SHOCK, STRATEGIES, IST, Calendar, Evaluation
 from .seconds_strategies import NAMES as SECONDS_NAMES, RULES as SECONDS_RULES
 
 D = Decimal
@@ -25,6 +25,8 @@ class Inputs:
     option_bars: dict
     received_at: datetime
     error: str = ""
+    spot_bars: dict = field(default_factory=dict)
+    future_bars: dict = field(default_factory=dict)
 
 
 class DirectionalEngine:
@@ -36,6 +38,8 @@ class DirectionalEngine:
         self.enabled = tuple(s for s in STRATEGIES if s != CAS and s in enabled)
         from .seconds_engine import SecondsEngine
         self.seconds = SecondsEngine(self)
+        from .shock_engine import ShockEngine
+        self.shock = ShockEngine(self)
         self.inputs = None
         self.signals = {}
         self.last_reason = "INPUTS_NOT_RECEIVED"
@@ -54,6 +58,8 @@ class DirectionalEngine:
             if strategy in SECONDS_NAMES:
                 continue  # Minute/cached samples cannot manufacture tick signals.
             sample = inputs.evaluations.get(strategy)
+            if strategy == SHOCK:
+                sample = self.shock.update(sample)
             if not sample or sample.state != "SIGNAL":
                 continue
             key = self.signal_key(sample)
@@ -69,13 +75,13 @@ class DirectionalEngine:
 
     @staticmethod
     def signal_key(sample):
-        if sample.strategy in SECONDS_NAMES:
+        if sample.strategy in (*SECONDS_NAMES, SHOCK):
             return f"directional-signal:{sample.evaluated_at.astimezone(IST).date()}:{sample.strategy}:{sample.details['episode']}"
         return f"directional-signal:{sample.evaluated_at.astimezone(IST).date()}:{sample.strategy}"
 
     @staticmethod
     def family_key(sample):
-        if sample.strategy in SECONDS_NAMES:
+        if sample.strategy in (*SECONDS_NAMES, SHOCK):
             return f"directional-family:{sample.evaluated_at.astimezone(IST).date()}:{sample.strategy}:{sample.details['episode']}:consumed"
         from .expanded_strategies import SPECS
         family=SPECS.get(sample.strategy,(sample.strategy,))[0]
@@ -184,6 +190,10 @@ class DirectionalEngine:
     async def enter_locked(self, snapshot):
         engine, runtime = self.engine, self.engine.runtime
         ledger, now = runtime.ledger, engine.now()
+        if SHOCK in self.enabled:
+            # Sole-owner scenario selection never borrows the legacy arbiter's
+            # measured-return fallback or per-day delayed entry convention.
+            return await self.shock.enter_locked(snapshot)
         if self.selection_blocked or engine.active or snapshot["unresolved"] or ledger.pending_intents() or not (self.input_ready() or self.seconds.ready()):
             return False
         if any(int(r.get("netQty",r.get("netQuantity",0))) for r in snapshot["positions"]):
@@ -331,6 +341,8 @@ class DirectionalEngine:
                 db.execute("UPDATE lifecycles SET state='CLOSED' WHERE lifecycle_id=?",(active["lifecycle_id"],))
             if owner==REBOUND:
                 ledger.put_metadata("rebound-exited:"+now.astimezone(IST).date().isoformat(),True)
+            if owner==SHOCK and totals['entry_debit']:
+                ledger.put_metadata('shock-last-closed',now.isoformat())
             runtime.status.state="ARMED_WAITING_SIGNAL"
             runtime.status.reason=owner+(":POSITION_CLOSED" if totals['entry_debit'] else ":ENTRY_CANCELLED_NO_FILL")
             return False
@@ -338,6 +350,8 @@ class DirectionalEngine:
             runtime.status.state="SETTLEMENT_PENDING"
             runtime.status.reason="EXPIRED_POSITION_AWAITING_BROKER_CLEARING"
             return False
+        if owner==SHOCK:
+            return await self.shock.manage(active,snapshot,inst,totals,qty)
         key="directional-exit:"+active["lifecycle_id"]
         exit_state=ledger.metadata(key)
         exit_at=datetime.fromisoformat(payload["exit_at"])
@@ -426,6 +440,12 @@ class DirectionalEngine:
             sample=self.seconds.evaluations.get(strategy) if is_seconds else self.inputs.evaluations.get(strategy) if self.inputs else None
             row=json_safe(asdict(sample)) if sample else {"strategy":strategy,"state":"UNKNOWN","reason":"INPUTS_NOT_RECEIVED"}
             row["enabled"]=strategy in self.enabled
+            if strategy==SHOCK:
+                row.update(family=SHOCK,exit_policy='SHOCK_EXIT_V1',scope='REGULAR_SESSION',
+                    entry_rule='A completed 5-minute shock of at least 0.30%, two closes beyond the preceding range, futures direction and abnormal futures volume. Scenario ranking is not expected profit.')
+                row['last_execution_reason']=self.shock.last_reason
+                row['shock_candidates']=self.shock.last_checks
+                row['shock_selection']=self.selection if self.selection.get('selected')==SHOCK else None
             row['funded_enabled']=strategy in self.engine.runtime.enabled_strategies
             if strategy not in self.enabled:
                 row.update(state="DISABLED",reason="NOT_CONFIGURED")
@@ -438,12 +458,17 @@ class DirectionalEngine:
             assessment=self.engine.runtime.ledger.metadata(key+':assessment',{})
             row['last_execution_reason']=consumed.get('reason') or assessment.get('reason')
             row['execution_blocking_reason']=consumed.get('blocking_reason') or assessment.get('reason')
+            if strategy==SHOCK:
+                row['last_execution_reason']=self.shock.last_reason
+                row['execution_blocking_reason']=self.shock.last_reason if self.shock.last_reason!='READY' else None
+                row['candidate_assessed_at']=self.shock.assessed_at
             from .expanded_strategies import SPECS
             spec=SPECS.get(strategy)
             row['family']=spec[0] if spec else 'GAP_FADE' if strategy==GAP else 'NIFTY_SELLOFF_REBOUND'
             if is_seconds:row['family']=strategy;row['entry_rule']=SECONDS_RULES[strategy]
             row['exit_policy']=spec[1] if spec else 'DOUBLE'
             if is_seconds:row['exit_policy']='SECONDS_V1'
+            if strategy==SHOCK:row.update(family=SHOCK,exit_policy='SHOCK_EXIT_V1',scope='REGULAR_SESSION')
             row['scope']=spec[2] if spec else 'ORDINARY' if strategy==GAP else 'ANY'
             score=self.ranking.get(strategy,{})
             row['filled_closed']=score.get('filled_closed',0)

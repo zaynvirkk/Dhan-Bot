@@ -25,9 +25,11 @@ Gunicorn serves the adapter behind Caddy HTTPS on the existing VM.
 
 ## Capabilities and Constraints
 
-The currently funded roster contains CAS_LAG_V1, TREND_PULLBACK_FAST and five
-experimental seconds strategies. The dashboard displays their actual permissions
-and outcomes. Session-learning repairs preserve the standing sizing rules. The dashboard reads allowlisted status and ledger fields; it does not
+The operator selected VOLATILITY_SHOCK_V1 as the sole funded entry strategy on
+23 October 2026. Effective runtime permissions remain the source of truth;
+CAS and prior strategies retain their execution history. The dashboard shows
+completed-minute shock inputs, candidate rejection reasons, explicitly hypothetical
+scenario values, and actual execution/exit/charge outcomes. The dashboard reads allowlisted status and ledger fields; it does not
 receive broker credentials, send orders, or modify trading authority.
 Unknown and stale inputs remain visibly different from zero and healthy.
 The user requested deployment to zaynvirkk/Dhan-Bot and the existing GCP VM,
