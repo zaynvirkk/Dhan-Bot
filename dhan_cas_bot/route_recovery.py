@@ -64,6 +64,15 @@ async def recover_owned_route(ledger,broker,*,expected_account,apply=False,now_f
         ledger.incident(prefix+':failure','ROUTE_RESET_FAILED',request_failure_receipt(exc))
         raise
     acknowledged=now()
+    # Preserve unexpected *successful HTTP* payloads too. Otherwise a schema or
+    # wording change would discard the only cancellation receipt on failure.
+    if isinstance(response,dict):
+        saved={k:str(response.get(k,''))[:1024] for k in ('status','message')}
+        for key,value in saved.items():
+            for secret in (expected_account,getattr(broker,'access_token','')):
+                if secret:value=value.replace(secret,'[REDACTED]')
+            saved[key]=value
+        ledger.incident(prefix+':response','ROUTE_RESET_RESPONSE',saved)
     if (not isinstance(response,dict) or response.get('status')!='SUCCESS'
             or ' '.join(str(response.get('message','')).lower().strip().rstrip('.').split())!=CONFIRMATION):
         ledger.incident(prefix+':unconfirmed','ROUTE_RESET_UNCONFIRMED',{'explicit_confirmation':False})
