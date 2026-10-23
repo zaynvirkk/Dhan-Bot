@@ -41,7 +41,8 @@ def test_actual_frontend_does_not_call_missing_shock_inputs_a_failed_signal():
     import subprocess
     code=Path('dhan_cas_bot/dashboard/static/app.js').read_text()
     function=code.split('function liveStrategyState(',1)[1].split('function renderLive(',1)[0]
-    js="function conditionSummary(r){return r.reason;}\nfunction liveStrategyState("+function
+    helper='function exchangeIsClosed('+code.split('function exchangeIsClosed(',1)[1].split('\n',1)[0]
+    js=helper+"\nfunction conditionSummary(r){return r.reason;}\nfunction liveStrategyState("+function
     js+="\nconsole.log(JSON.stringify(liveStrategyState('VOLATILITY_SHOCK_V1',{state:'INPUT_UNAVAILABLE',reason:'SHOCK_NONCONTIGUOUS_BARS'},{runtime:{fresh:true,funded_strategies:['VOLATILITY_SHOCK_V1'],state:'ARMED_WAITING_SIGNAL'}})));"
     result=subprocess.run(['node','-e',js],capture_output=True,text=True,check=True)
     row=json.loads(result.stdout)

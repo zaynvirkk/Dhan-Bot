@@ -605,3 +605,18 @@ setImmediate(()=>{
  assert.equal(ids['live-connections'].children[1].children[1].textContent,'Connected');
  console.log('Historical disconnect cause persists without falsely demoting a recovered connection');
 });
+
+setImmediate(()=>{
+ browser.recoveryFixture={server_time:'2026-10-23T07:00:00Z',runtime:{fresh:true,authority:'ENABLED',state:'RECOVERING',reason:'ROUTE_OUTCOME_UNKNOWN',
+  exchange_session_open:true,strategies:['VOLATILITY_SHOCK_V1'],funded_strategies:['VOLATILITY_SHOCK_V1'],software_verified:true,
+  account_snapshot_fresh:true,current_account_funded:true,broker_route_verified:false},ledger:{available:true,route_check:{state:'SEND_UNKNOWN',reason:'HTTP_OUTCOME_UNKNOWN'}}};
+ vm.runInContext('renderLive(recoveryFixture)',browser);
+ assert.match(ids['live-decision-title'].textContent,/order check.*unresolved/i);
+ assert.match(ids['live-decision-reason'].textContent,/unknown.*no.*retry/i);
+ assert.doesNotMatch(ids['live-decision-reason'].textContent,/market.*closed/i);
+ browser.recoveryFixture.runtime.state='WAITING_EXCHANGE_SESSION';
+ assert.notEqual(vm.runInContext("liveStrategyState('VOLATILITY_SHOCK_V1',null,recoveryFixture).label",browser),'Market closed');
+ browser.recoveryFixture.runtime.exchange_session_open=false;
+ assert.equal(vm.runInContext("liveStrategyState('VOLATILITY_SHOCK_V1',null,recoveryFixture).label",browser),'Market closed');
+ console.log('Unknown route outcome and verified exchange session are distinct');
+});

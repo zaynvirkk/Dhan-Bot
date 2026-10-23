@@ -51,10 +51,30 @@ from .replay_journal import ReplayJournal, capture_market, queued_capture_batch
 IST = ZoneInfo("Asia/Kolkata")
 
 
+def refresh_idle_session_state(runtime, *, account_admitted, metadata_error, funded,
+                               has_funded_directional, expiry_today, active):
+    """Report actual session/recovery state; this never grants entry authority."""
+    if active is not None:return
+    pending=runtime.ledger.pending_intents()
+    if any(r['lifecycle_id']=='route-probe' and r['state']=='SEND_UNKNOWN' for r in pending):
+        runtime.status.state='RECOVERING'
+        runtime.status.reason='ROUTE_OUTCOME_UNKNOWN'
+        return
+    if pending:return
+    if not account_admitted:
+        if metadata_error:runtime.status.state='ENTRY_HALTED'
+        elif not funded:runtime.status.state='DISARMED'
+        elif not has_funded_directional and not expiry_today:runtime.status.state='NO_TRADE_DAY'
+        else:runtime.status.state='WAITING_EXCHANGE_SESSION'
+    elif runtime.status.state in {'WAITING_EXCHANGE_SESSION','NO_TRADE_DAY','ARMED_WAITING_SESSION'}:
+        runtime.status.state='ARMED_WAITING_SIGNAL' if runtime.status.auto_live_armed else 'DISARMED'
+        runtime.status.reason='' if runtime.status.auto_live_armed else 'operator_disarmed_new_entries'
+
+
 def write_status(state_dir: Path, runtime, **extra):
     source=Path(__file__).resolve().parents[1].name
     value = {**runtime.status.as_dict(), **extra, "observed_at": datetime.now(timezone.utc).isoformat(), "writes": runtime.broker.allow_writes,
-             "runtime_revision":9,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
+             "runtime_revision":10,"source_commit":source if len(source)==40 and all(c in '0123456789abcdef' for c in source) else None}
     path = state_dir / "status.json.tmp"
     with path.open("w") as stream:
         json.dump(value, stream, sort_keys=True)
@@ -661,15 +681,9 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                     finally:
                         runtime.telemetry.sample("decision_ms", (runtime.telemetry.clock()-decision_at)*1000)
                 runtime.status.auto_live_armed = armed
-                if not account_admitted and engine.active is None:
-                    if metadata_error:
-                        runtime.status.state = "ENTRY_HALTED"
-                    elif not funded:
-                        runtime.status.state = "DISARMED"
-                    elif not has_funded_directional and not expiry_today:
-                        runtime.status.state = "NO_TRADE_DAY"
-                    else:
-                        runtime.status.state = "WAITING_EXCHANGE_SESSION"
+                refresh_idle_session_state(runtime,account_admitted=account_admitted,
+                    metadata_error=metadata_error,funded=funded,
+                    has_funded_directional=has_funded_directional,expiry_today=expiry_today,active=engine.active)
             except Exception as exc:
                 runtime.status.reason = f"RECOVERY_REQUIRED:{type(exc).__name__}"
                 runtime.status.state = "RECOVERING"
@@ -715,6 +729,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                              market_subscription_error=market_policy.last_error if market_policy else '',
                              books_observed=len(engine.books), clock_uncertainty_ms=uncertainty,
                              metadata_error=metadata_error, recorder_failed=recorder_failed,
+                             exchange_session_open=calendar.is_open(now()) if calendar and calendar.fresh(now()) else None,
                              replay_capture={**capture.health,'pending':capture_queue.qsize()},
                              future_input=future_input.health(now()) if future_input else None,
                              final_input="VERIFIED" if engine.final_value else "UNQUALIFIED",

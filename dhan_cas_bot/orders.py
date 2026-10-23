@@ -140,7 +140,8 @@ class OrderManager:
             try:
                 response = await self.broker.submit_order(request)
             except BaseException as exc:
-                self.ledger.record_attempt(attempt_id, intent.intent_id, "UNKNOWN", {"error": type(exc).__name__})
+                from .broker import request_failure_receipt
+                self.ledger.record_attempt(attempt_id, intent.intent_id, "UNKNOWN", request_failure_receipt(exc))
                 raise
             finally:
                 account_changed(self.ledger)

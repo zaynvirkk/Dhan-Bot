@@ -108,6 +108,7 @@ REASONS = {
 
 
 REASONS.update(REASONS_SHOCK)
+REASONS['ROUTE_OUTCOME_UNKNOWN']='The route-check request has no confirmed broker outcome. New entries are blocked while reconciliation continues.'
 
 
 def utcnow():
@@ -188,7 +189,7 @@ def runtime_view(raw, now):
             authority = 'ENABLED' if raw['auto_live_armed'] else 'DISABLED'
     flags = {k: raw.get(k) if type(raw.get(k)) is bool else None for k in
              ('software_verified', 'current_account_funded', 'broker_route_verified',
-              'official_cas_signal_seen', 'final_value_source_verified', 'auto_live_armed', 'writes', 'account_snapshot_fresh')}
+              'official_cas_signal_seen', 'final_value_source_verified', 'auto_live_armed', 'writes', 'account_snapshot_fresh','exchange_session_open')}
     parts = str(raw.get('reason', '')).split(':')
     prefix = parts[0]
     reason=REASONS.get(parts[-1]) if prefix in STRATEGY_NAMES and len(parts)>1 else None
@@ -753,11 +754,21 @@ def recorded_session_bounds(db,now):
 def route_check_view(db, now):
     from zoneinfo import ZoneInfo
     ist=ZoneInfo('Asia/Kolkata')
-    row=db.execute("SELECT i.created_at,o.state,o.payload FROM intents i JOIN orders o ON o.intent_id=i.intent_id WHERE i.lifecycle_id='route-probe' ORDER BY i.created_at DESC LIMIT 1").fetchone()
+    row=db.execute("SELECT i.intent_id,i.created_at,i.state AS intent_state,o.state,o.payload FROM intents i LEFT JOIN orders o ON o.intent_id=i.intent_id WHERE i.lifecycle_id='route-probe' ORDER BY i.created_at DESC LIMIT 1").fetchone()
     if not row:return None
     at=timestamp(row['created_at'])
     if not at or datetime.fromisoformat(at)>now or datetime.fromisoformat(at).astimezone(ist).date()!=now.astimezone(ist).date():return None
-    reason=None
+    reason=None;error={}
+    if row['state'] is None and row['intent_state']=='SEND_UNKNOWN':
+        saved=db.execute('SELECT response FROM attempts WHERE intent_id=? ORDER BY sent_at DESC LIMIT 1',(row['intent_id'],)).fetchone()
+        try:raw=json.loads(saved['response']) if saved and len(saved['response'])<10000 else {}
+        except (ValueError,TypeError):raw={}
+        if not isinstance(raw,dict):raw={}
+        reason='HTTP_OUTCOME_UNKNOWN' if raw.get('error')=='HTTPStatusError' else 'OUTCOME_UNKNOWN'
+        status=integer(raw.get('http_status'))
+        error={'http_status':status if status is not None and 100<=status<=599 else None,
+            'broker_error_code':raw.get('broker_error_code') if isinstance(raw.get('broker_error_code'),str) and re.fullmatch(r'[A-Za-z0-9_-]{1,48}',raw['broker_error_code']) else None,
+            'broker_reason':choice(raw.get('broker_reason'),{'INVALID_IP','ACCESS_TOKEN','RATE_LIMIT','PRICE_BAND','OPEN_INTEREST','INVALID_INPUT'})}
     if row['state']=='REJECTED':
         reason='BROKER_REJECTED'
         try:
@@ -765,7 +776,7 @@ def route_check_view(db, now):
             text=str(raw.get('omsErrorDescription','')).lower()
             if 'open interest' in text and ('below' in text or 'limit' in text):reason='LOW_OPEN_INTEREST'
         except (ValueError,TypeError,AttributeError):pass
-    return {'state':choice(row['state'],ORDER_STATES,'UNKNOWN'),'reason':reason,'occurred_at':at}
+    return {'state':choice(row['state'] or row['intent_state'],ORDER_STATES,'UNKNOWN'),'reason':reason,'occurred_at':at,**error}
 
 
 def ledger_view(path, *, strategies=(), now=None):

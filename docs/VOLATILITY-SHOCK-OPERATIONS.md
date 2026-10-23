@@ -81,3 +81,22 @@ reconnect invalidation, live-future reversal, authority, existing OMS requests,
 zero fills, stop sales, disabled-owner recovery and dashboard data isolation.
 Existing CP cases and mutations remain required. No forced live order is used
 to demonstrate installation; a naturally absent setup remains a valid outcome.
+
+## Repairing source while an owned route request is unknown
+
+`ops/activate-profit-exit.py --recover-owned-route --apply` is a source-only
+repair path. It requires unchanged complete configuration and attempt allowance,
+no broker orders or positions, no active lifecycle, and exactly one owned BUY
+route probe whose attempted send remains unknown with no recorded order or fill.
+The stopped-writer cutover fingerprints the intent, reservation, attempts,
+probe metadata and counters and checks they remain identical before restart.
+It submits no order and resolves no obligation. The default cutover still rejects
+pending obligations. Broker recovery and all ordinary entry guards remain active;
+this path cannot make an unknown request safe to retry.
+
+The dashboard reports exchange session state separately from trader recovery.
+A current account read or connected socket is not route qualification. Unknown
+HTTP route sends appear even when the broker returned no order identity. Future
+HTTP failures retain only an allowlisted HTTP status/provider error code/reason;
+headers, tokens, URLs and arbitrary response messages are not logged. Old failures
+that saved only an exception class cannot acquire a reconstructed response later.

@@ -6,9 +6,34 @@ from typing import Any
 import os
 import json
 import time
+import re
 
 from .domain import ContractError, FundsSnapshot
 from .read_scheduler import account_reads, data_reads
+
+
+def request_failure_receipt(exc):
+    """Retain useful HTTP facts without headers, URLs or arbitrary secret text.
+
+    This is diagnostic evidence, never permission to retry an unknown POST.
+    """
+    receipt={'error':type(exc).__name__}
+    response=getattr(exc,'response',None)
+    if response is None:return receipt
+    receipt['http_status']=response.status_code
+    try:payload=response.json()
+    except (ValueError,TypeError):return receipt
+    if not isinstance(payload,dict):return receipt
+    for original,key in (('errorCode','broker_error_code'),('errorType','broker_error_type')):
+        value=payload.get(original)
+        if isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9_-]{1,48}',value):receipt[key]=value
+    text=str(payload.get('errorMessage','')).lower()
+    for phrase,reason in (('invalid ip','INVALID_IP'),('static ip','INVALID_IP'),
+            ('access token','ACCESS_TOKEN'),('rate limit','RATE_LIMIT'),
+            ('price band','PRICE_BAND'),('open interest','OPEN_INTEREST'),
+            ('invalid input','INVALID_INPUT')):
+        if phrase in text:receipt['broker_reason']=reason;break
+    return receipt
 
 
 class DhanBroker:

@@ -1,7 +1,44 @@
 """Narrow validation for an explicitly authorised managed-position upgrade."""
 import json,re,tomllib
+from hashlib import sha256
 from decimal import Decimal
 from .session_strategies import STRATEGIES,CAS
+
+
+def owned_route_digest(ledger):
+    """Fingerprint the unresolved obligation and its accounting; never resolve it."""
+    intents=[dict(row) for row in ledger.pending_intents()]
+    evidence={'intents':intents,'attempts':[],'orders':[],'fills':[],
+              'route_probe':ledger.metadata('route_probe'),
+              'extra_attempts':[dict(row) for row in ledger.db.execute(
+                  "SELECT * FROM metadata WHERE key LIKE 'probe.extra_attempt:%' ORDER BY key")],
+              'counters':[dict(row) for row in ledger.db.execute(
+                  "SELECT * FROM counters WHERE name LIKE 'probe.%' ORDER BY name")]}
+    for row in intents:
+        for table,key in (('attempts','attempt_id'),('orders','order_id'),('fills','trade_id')):
+            evidence[table].extend(dict(r) for r in ledger.db.execute(
+                f'SELECT * FROM {table} WHERE intent_id=? ORDER BY {key}',(row['intent_id'],)))
+    return sha256(json.dumps(evidence,sort_keys=True).encode()).hexdigest()
+
+
+def require_owned_route_recovery(ledger,positions,orders):
+    """Allow source repairs while a sole unknown probe stays entry-blocking."""
+    if any(int(p.get('netQty',p.get('netQuantity',0))) for p in positions) or orders:
+        raise ValueError('broker exposure prevents route recovery upgrade')
+    if ledger.db.execute("SELECT 1 FROM lifecycles WHERE state!='CLOSED' LIMIT 1").fetchone():
+        raise ValueError('active lifecycle prevents route recovery upgrade')
+    pending=ledger.pending_intents()
+    if len(pending)!=1:raise ValueError('exactly one unknown owned probe required')
+    row=pending[0]
+    if (row['lifecycle_id'],row['side'],row['state'])!=('route-probe','BUY','SEND_UNKNOWN'):
+        raise ValueError('unrecognized pending obligation')
+    for table in ('fills','orders'):
+        if ledger.db.execute(f'SELECT 1 FROM {table} WHERE intent_id=? LIMIT 1',(row['intent_id'],)).fetchone():
+            raise ValueError('known broker obligation requires normal reconciliation')
+    attempts=list(ledger.db.execute('SELECT response_state FROM attempts WHERE intent_id=?',(row['intent_id'],)))
+    if not attempts or any(a['response_state']!='UNKNOWN' for a in attempts):
+        raise ValueError('unknown completed request evidence required')
+    return owned_route_digest(ledger)
 
 
 def amend_config(text,retain):

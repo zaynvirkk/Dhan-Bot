@@ -9,13 +9,13 @@ ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from dhan_cas_bot.config import load_config,load_mandate
 from dhan_cas_bot.broker import DhanBroker
 from dhan_cas_bot.ledger import Ledger
-from dhan_cas_bot.profit_activation import amend_config,require_managed
+from dhan_cas_bot.profit_activation import amend_config,require_managed,require_owned_route_recovery,owned_route_digest
 from dhan_cas_bot.funded_activation import amend_funded,amend_roster
 from dhan_cas_bot.release import run_verification,current_verification
 from dhan_cas_bot.dashboard.data import read_json
 
 
-async def account(config,ledger):
+async def account(config,ledger,recover_owned_route=False):
     record=read_json(Path(config['state_dir'])/'dhan_token.json')
     if not record or record.get('account')!=config['account_id']:raise ValueError('matching cached session required')
     broker=DhanBroker(config['account_id'],record['token'],allow_writes=False)
@@ -26,7 +26,8 @@ async def account(config,ledger):
         active=rows[0] if rows else None
         totals=ledger.lifecycle_totals(active['lifecycle_id']) if active else None
         pending=bool(ledger.pending_intents()) or any(o.get('orderStatus') not in {'TRADED','CANCELLED','REJECTED','EXPIRED'} for o in orders)
-        require_managed(active,totals,positions,pending)
+        if recover_owned_route:require_owned_route_recovery(ledger,positions,orders)
+        else:require_managed(active,totals,positions,pending)
         return active
     finally:await broker.close()
 
@@ -36,6 +37,7 @@ def main():
     parser.add_argument('--funded-only',nargs='*',default=None,help='Explicit subset permitted to submit new entries; scans remain configured.')
     parser.add_argument('--scan-only',nargs='+',default=None,help='Replace scanned roster; requires an explicit --funded-only subset, including an empty subset.')
     parser.add_argument('--extra-route-attempt-on',default=None,help='Explicit operator grant of one extra route attempt on the named current IST date. Cash caps and normal limits stay unchanged.')
+    parser.add_argument('--recover-owned-route',action='store_true',help='Repair software with one unresolved owned probe preserved. No configuration, permission or retry allowance changes.')
     args=parser.parse_args();retain=Decimal(args.retain)
     if args.extra_route_attempt_on:
         from dhan_cas_bot.session_strategies import IST
@@ -49,6 +51,10 @@ def main():
     updated=amend_config(original.decode(),retain).encode()
     if args.scan_only is not None:updated=amend_roster(updated.decode(),args.scan_only,args.funded_only).encode()
     elif args.funded_only is not None:updated=amend_funded(updated.decode(),args.funded_only).encode()
+    if args.recover_owned_route:
+        import tomllib
+        if args.extra_route_attempt_on or tomllib.loads(updated.decode())!=tomllib.loads(original.decode()):
+            raise ValueError('route recovery upgrade must preserve the complete configuration and attempt allowance')
     with tempfile.TemporaryDirectory(prefix='dhan-profit-activation-') as temporary:
         print('Verifying the complete release while the existing trader continues managing its position.',flush=True)
         verified=run_verification(ROOT,temporary)
@@ -56,7 +62,7 @@ def main():
         ledger=Ledger.__new__(Ledger);ledger._lock=threading.RLock()
         ledger.db=sqlite3.connect('file:'+str(state/'ledger.sqlite3')+'?mode=ro',uri=True)
         ledger.db.row_factory=sqlite3.Row;ledger.db.execute('PRAGMA query_only=ON')
-        try:asyncio.run(account(config,ledger))
+        try:asyncio.run(account(config,ledger,args.recover_owned_route))
         finally:ledger.close()
         if not args.apply:print(json.dumps({'applied':False,'checks_passed':True}));return
         override=Path('/etc/systemd/system/dhan-cas.service.d/95-session-strategies.conf');marker=state/'software_verified.json'
@@ -73,7 +79,8 @@ def main():
             stopped=True;upgrade.systemctl('stop','dhan-cas.service')
             lock=os.open(state/'writer.lock',os.O_CREAT|os.O_RDWR,0o600);fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
             if path.read_bytes()!=original:raise ValueError('concurrent configuration change')
-            ledger=Ledger(state/'ledger.sqlite3');active=asyncio.run(account(config,ledger))
+            ledger=Ledger(state/'ledger.sqlite3');active=asyncio.run(account(config,ledger,args.recover_owned_route))
+            recovery_digest=owned_route_digest(ledger) if args.recover_owned_route else None
             if args.extra_route_attempt_on:
                 from dhan_cas_bot.route import grant_extra_attempt
                 key='probe.extra_attempt:'+args.extra_route_attempt_on
@@ -97,6 +104,8 @@ def main():
             upgrade.atomic(override,upgrade.service_override(ROOT,path).encode(),0o644,(0,0))
             upgrade.atomic(marker,(Path(temporary)/'software_verified.json').read_bytes(),0o600,owner)
             if not current_verification(ROOT,state):raise ValueError('release verification mismatch')
+            if recovery_digest is not None and owned_route_digest(ledger)!=recovery_digest:
+                raise ValueError('unresolved route obligation changed during repair')
             ledger.close();ledger=None;os.close(lock);lock=None
             stop_bound.unlink();upgrade.systemctl('daemon-reload');upgrade.systemctl('start','dhan-cas.service')
             upgrade.systemctl('is-active','--quiet','dhan-cas.service')
@@ -125,6 +134,7 @@ def main():
             'funded_strategies':args.funded_only if args.funded_only is not None else config.get('funded_strategies',config['strategies']),
             'mandate_and_probe_caps_unchanged':args.extra_route_attempt_on is None,
             'normal_probe_limit_and_cash_caps_unchanged':True,'extra_route_attempt_date':args.extra_route_attempt_on,
+            'unknown_route_preserved':args.recover_owned_route,
             'broker_orders_submitted_by_upgrade':0}),flush=True)
 
 
