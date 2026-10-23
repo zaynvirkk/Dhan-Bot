@@ -3,12 +3,26 @@ from __future__ import annotations
 from hashlib import sha256
 from pathlib import Path
 import json
+import re
 import subprocess
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
 
 from .domain import ContractError
+
+
+def verification_failure(message,stage,process,report=None):
+    """Keep a useful failure identity without child output or parameter values."""
+    failed=[]
+    if report is not None and report.exists():
+        for case in ET.parse(report).iter('testcase'):
+            if list(case):
+                name=case.get('classname','')+'::'+case.get('name','').split('[',1)[0]
+                if re.fullmatch(r'[A-Za-z0-9_.:]{1,240}',name):failed.append(name)
+    error=ContractError(message)
+    error.verification_failure={'stage':stage,'exit_code':process.returncode,'failed_cases':failed}
+    raise error
 
 
 def source_digest(root: str | Path) -> str:
@@ -34,7 +48,7 @@ def run_verification(root: str | Path, state_dir: str | Path) -> dict:
             cwd=root, capture_output=True, text=True,
         )
         if process.returncode or not report.exists():
-            raise ContractError("offline verification failed; run python -m pytest -q tests for details")
+            verification_failure("offline verification failed; run python -m pytest -q tests for details",'pytest',process,report)
         cases = list(ET.parse(report).iter("testcase"))
         cp_cases = [case for case in cases if ".acceptance.cas." in case.get("classname", "")]
         if len(cp_cases) < 60 or any(list(case) for case in cases):
@@ -44,7 +58,7 @@ def run_verification(root: str | Path, state_dir: str | Path) -> dict:
             raise ContractError("connected production-path acceptance cases are missing")
     mutations=subprocess.run([sys.executable,str(root/"ops/verify-mutations.py")],cwd=root,capture_output=True,text=True)
     if mutations.returncode:
-        raise ContractError("production guard mutation verification failed")
+        verification_failure("production guard mutation verification failed",'mutations',mutations)
     if before != source_digest(root):
         raise ContractError("source changed during verification")
     return write_verification(root, state_dir, case_count=len(cp_cases), total_count=len(cases), mutations=json.loads(mutations.stdout)["mutations_killed"])

@@ -24,14 +24,26 @@ def request_failure_receipt(exc):
     try:payload=response.json()
     except (ValueError,TypeError):return receipt
     if not isinstance(payload,dict):return receipt
-    for original,key in (('errorCode','broker_error_code'),('errorType','broker_error_type')):
+    for original,key in (('errorCode','broker_error_code'),('errorType','broker_error_type'),
+            ('internalErrorCode','broker_internal_error_code')):
         value=payload.get(original)
         if isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9_-]{1,48}',value):receipt[key]=value
-    text=str(payload.get('errorMessage','')).lower()
+    message=str(payload.get('errorMessage') or payload.get('internalErrorMessage') or '')[:4096]
+    request=getattr(exc,'request',None)
+    if message and request is not None:
+        secrets=[request.headers.get(name,'') for name in ('access-token','client-id','authorization','app_secret','app_id')]
+        secrets.extend(value for key,value in request.url.params.multi_items()
+            if any(word in key.lower() for word in ('token','pin','secret','totp','password')))
+        for value in sorted(set(secrets)-{''},key=len,reverse=True):message=message.replace(value,'[REDACTED]')
+        message=re.sub(r'https?://\S+','[URL]',message)
+        message=re.sub(r'\beyJ[A-Za-z0-9_.=-]+','[REDACTED]',message)
+        message=re.sub(r'(?i)(pin|totp|password|secret|access.?token)\s*[=:]\s*[\"\']?[^\s,;\"\']+',r'\1=[REDACTED]',message)
+        receipt['broker_message']=' '.join(message.split())[:512]
+    text=message.lower()
     for phrase,reason in (('invalid ip','INVALID_IP'),('static ip','INVALID_IP'),
             ('access token','ACCESS_TOKEN'),('rate limit','RATE_LIMIT'),
             ('price band','PRICE_BAND'),('open interest','OPEN_INTEREST'),
-            ('invalid input','INVALID_INPUT')):
+            ('invalid input','INVALID_INPUT'),('mandatory fields','MISSING_REQUIRED_FIELDS')):
         if phrase in text:receipt['broker_reason']=reason;break
     return receipt
 
@@ -48,6 +60,10 @@ class DhanBroker:
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         import httpx
+        data_read = method == 'POST' and (path.startswith(('/charts/','/optionchain'))
+            or path in {'/margincalculator','/margincalculator/multi'})
+        if method not in {'GET','HEAD'} and not data_read:
+            self._require_writes()
         headers = {"access-token": self.access_token, "client-id":self.account_id, "Content-Type": "application/json"}
         if self.client is None:
             self.client = httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=3.0), follow_redirects=False)
@@ -69,9 +85,17 @@ class DhanBroker:
             await self.client.aclose()
             self.client = None
 
-    async def submit_order(self, request: dict[str, Any]) -> dict[str, Any]:
+    def _require_writes(self):
         if not self.allow_writes:
             raise ContractError("Dhan writes are disabled")
+
+    async def exit_all_positions(self):
+        """Operator recovery only: Dhan cancels all open orders/positions."""
+        self._require_writes()
+        return await self._request('DELETE','/positions')
+
+    async def submit_order(self, request: dict[str, Any]) -> dict[str, Any]:
+        self._require_writes()
         if request.get("dhanClientId") != self.account_id:
             raise ContractError("order account mismatch")
         return await self._request("POST", "/orders", json=request)

@@ -28,6 +28,9 @@ CASES=(
     ("recovery_rotation", "service.py", 'if not ledger.order_lock.locked():', 'if runtime.status.state != "RECOVERING" and not ledger.order_lock.locked():', "tests/test_connected_service.py::test_reconciliation_outage_does_not_prevent_token_rotation_with_exposure"),
     ("shock_dispatch_disabled", "shock_engine.py", 'await r.orders.submit(intent,reserved_cash=reserve_cash(chosen.entry_cash+chosen.exit_reserve),pre_dispatch=current)', 'pass  # injected no-op shock writer', "tests/test_shock_engine.py::test_shock_sends_real_oms_request_now_without_cas_or_option_candles_and_closes"),
     ("shock_peak_reset", "volatility_shock.py", "old=previous or {};peak=D(old.get('peak_net_profit','0'))", "old=previous or {};peak=D(0)", "tests/test_volatility_shock.py::test_exit_ratchet_persists_and_no_generic_double_target"),
+    ("route_reset_without_confirmation", "route_recovery.py", "response.get('status')!='SUCCESS'", "False", "tests/test_route_account_recovery.py::test_unknown_or_incomplete_cancel_all_receipt_cannot_release_unknown[result0]"),
+    ("route_reset_changed_cash", "route_recovery.py", "if any(r['started_at']<acknowledged or r['cash']!=before['cash'] for r in after):", "if False:", "tests/test_route_account_recovery.py::test_new_post_cancel_broker_activity_cannot_release_unknown[cash]"),
+    ("route_reset_late_order", "ledger.py", 'changed=db.execute("UPDATE intents SET state=\'SENT\' WHERE intent_id=? AND state=\'RECOVERY_CLOSED\'",(intent_id,)).rowcount', 'changed=0', "tests/test_route_account_recovery.py::test_late_broker_evidence_reopens_recovery_closed_obligation[order]"),
 )
 
 

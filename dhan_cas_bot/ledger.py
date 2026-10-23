@@ -101,6 +101,7 @@ class Ledger:
             if old and old['state']==state and old['payload']==encoded:
                 return
             db.execute("INSERT OR REPLACE INTO orders(order_id,intent_id,broker_account,state,payload) VALUES(?,?,?,?,?)", (order_id, intent_id, account, state, encoded))
+            self._reopen_recovery_closed(db,intent_id,'LATE_BROKER_ORDER')
 
     def record_fill_once(self, fill: Fill, intent_id: str, payload: Any) -> bool:
         with self.transaction() as db:
@@ -121,12 +122,20 @@ class Ledger:
             quantity = db.execute("SELECT COALESCE(SUM(quantity),0) FROM fills WHERE intent_id=?", (intent_id,)).fetchone()[0]
             if intent is None or fill.security_id != intent["security_id"] or quantity + fill.quantity > intent["quantity"]:
                 raise ContractError("fill exceeds or mismatches intent")
+            self._reopen_recovery_closed(db,intent_id,'LATE_BROKER_FILL')
             cursor = db.execute("INSERT OR IGNORE INTO fills(trade_id,order_id,intent_id,security_id,quantity,price,fees,occurred_at,payload) VALUES(?,?,?,?,?,?,?,?,?)", (identity, fill.order_id, intent_id, fill.security_id, fill.quantity, str(fill.price), str(fill.fees), fill.occurred_at.isoformat(), json.dumps(json_safe(payload), sort_keys=True, default=str)))
             return cursor.rowcount == 1
 
     def set_intent_state(self, intent_id: str, state: str) -> None:
         with self.transaction() as db:
             db.execute("UPDATE intents SET state=? WHERE intent_id=? AND state!=?", (state, intent_id, state))
+
+    @staticmethod
+    def _reopen_recovery_closed(db,intent_id,reason):
+        changed=db.execute("UPDATE intents SET state='SENT' WHERE intent_id=? AND state='RECOVERY_CLOSED'",(intent_id,)).rowcount
+        if changed:
+            db.execute('INSERT OR REPLACE INTO incidents VALUES(?,?,?,?)',
+                ('route-reset:'+intent_id+':reopened',reason,json.dumps({'intent_id':intent_id}),now()))
 
     def record_order_charges(self, order_id, intent_id, fees, *, complete, payload):
         """A matched historical order receipt supplements, never duplicates fills."""
@@ -155,7 +164,15 @@ class Ledger:
             db.execute("INSERT OR REPLACE INTO incidents(incident_id,kind,payload,created_at) VALUES(?,?,?,?)", (incident_id, kind, json.dumps(json_safe(payload), sort_keys=True, default=str), now()))
 
     def pending_intents(self) -> list[sqlite3.Row]:
-        return list(self.db.execute("SELECT * FROM intents WHERE state NOT IN ('FILLED','CANCELLED','REJECTED','EXPIRED','ABORTED') ORDER BY created_at"))
+        rows=self.db.execute("SELECT * FROM intents WHERE state NOT IN ('FILLED','CANCELLED','REJECTED','EXPIRED','ABORTED') ORDER BY created_at")
+        return [row for row in rows if not self.recovery_closed_valid(row)]
+
+    def recovery_closed_valid(self,row):
+        if (row['state'],row['lifecycle_id'],row['side'])!=('RECOVERY_CLOSED','route-probe','BUY'):return False
+        receipt=self.db.execute("SELECT 1 FROM incidents WHERE incident_id=? AND kind='BROKER_ACCOUNT_RESET_CONFIRMED'",
+            ('route-reset:'+row['intent_id']+':complete',)).fetchone()
+        if not receipt:return False
+        return not any(self.db.execute(f'SELECT 1 FROM {table} WHERE intent_id=? LIMIT 1',(row['intent_id'],)).fetchone() for table in ('orders','fills'))
 
     def observe(self, identity: str, kind: str, payload: Any) -> None:
         with self.transaction() as db:
@@ -189,7 +206,7 @@ class Ledger:
             if has_order_charges:
                 reported_fees=max(reported_fees,sum((Decimal(r['fees']) for r in self.db.execute('SELECT fees FROM order_charges WHERE intent_id=?',(intent['intent_id'],))),Decimal(0)))
             cost = max(reported_fees, ceil_paise((fees.buy if intent["side"] == "BUY" else fees.sell)(turnover, 1))) if qty else Decimal("0")
-            terminal = intent["state"] in {"FILLED", "CANCELLED", "REJECTED", "EXPIRED", "ABORTED"}
+            terminal = intent["state"] in {"FILLED", "CANCELLED", "REJECTED", "EXPIRED", "ABORTED"} or self.recovery_closed_valid(intent)
             unresolved |= not terminal
             if intent["side"] == "BUY":
                 buys += turnover + cost

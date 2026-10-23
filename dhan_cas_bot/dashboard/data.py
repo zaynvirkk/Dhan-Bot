@@ -60,7 +60,7 @@ REASONS_SHOCK={'SHOCK_UNDERLYING_INVALIDATED':'The underlying move reversed thro
     'SHOCK_MAX_EXPOSURE':'The position reached its maximum holding time or session exit deadline.'}
 ORDER_STATES = {'PENDING_SEND', 'SEND_UNKNOWN', 'SENT', 'TRANSIT', 'PENDING', 'CLOSED',
                 'TRIGGERED', 'REJECTED', 'CANCELLED', 'PART_TRADED', 'TRADED', 'FILLED',
-                'EXPIRED', 'ABORTED'}
+                'EXPIRED', 'ABORTED', 'RECOVERY_CLOSED'}
 CHECK_FIELDS = {
     'dhan_auth': ('account_matches', 'derivatives_enabled', 'data_plan'),
     'dhan_account': ('orders', 'positions', 'open_positions', 'trades', 'whitelist_resolved'),
@@ -759,6 +759,10 @@ def route_check_view(db, now):
     at=timestamp(row['created_at'])
     if not at or datetime.fromisoformat(at)>now or datetime.fromisoformat(at).astimezone(ist).date()!=now.astimezone(ist).date():return None
     reason=None;error={}
+    if row['state'] is None and row['intent_state']=='RECOVERY_CLOSED':
+        proof=db.execute("SELECT 1 FROM incidents WHERE incident_id=? AND kind='BROKER_ACCOUNT_RESET_CONFIRMED'",
+            ('route-reset:'+row['intent_id']+':complete',)).fetchone()
+        reason='BROKER_RESET_CONFIRMED' if proof else 'RECOVERY_NOT_CONFIRMED'
     if row['state'] is None and row['intent_state']=='SEND_UNKNOWN':
         saved=db.execute('SELECT response FROM attempts WHERE intent_id=? ORDER BY sent_at DESC LIMIT 1',(row['intent_id'],)).fetchone()
         try:raw=json.loads(saved['response']) if saved and len(saved['response'])<10000 else {}
@@ -769,6 +773,10 @@ def route_check_view(db, now):
         error={'http_status':status if status is not None and 100<=status<=599 else None,
             'broker_error_code':raw.get('broker_error_code') if isinstance(raw.get('broker_error_code'),str) and re.fullmatch(r'[A-Za-z0-9_-]{1,48}',raw['broker_error_code']) else None,
             'broker_reason':choice(raw.get('broker_reason'),{'INVALID_IP','ACCESS_TOKEN','RATE_LIMIT','PRICE_BAND','OPEN_INTEREST','INVALID_INPUT'})}
+        for key in ('broker_internal_error_code','broker_message'):
+            value=raw.get(key)
+            if isinstance(value,str) and len(value)<=512 and not re.search(r'eyJ[A-Za-z0-9_.=-]{20,}',value):
+                error[key]=' '.join(value.split())
     if row['state']=='REJECTED':
         reason='BROKER_REJECTED'
         try:

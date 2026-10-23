@@ -100,3 +100,32 @@ HTTP route sends appear even when the broker returned no order identity. Future
 HTTP failures retain only an allowlisted HTTP status/provider error code/reason;
 headers, tokens, URLs and arbitrary response messages are not logged. Old failures
 that saved only an exception class cannot acquire a reconstructed response later.
+
+## Positive broker account recovery for a lost HTTP route reply
+
+The operator-only `ops/recover-unknown-route.py` defaults to read-only preflight.
+`--apply` requires the current fully verified immutable release, the existing
+matching funded mandate, correct static egress, a stopped trader and writer lock,
+and exactly one current-day owned BUY route probe with a completed HTTP error
+and no recorded broker order/fill. All current broker positions, orders and
+trades must be empty and cash positive/fresh before dispatch. No extra probe
+allowance, new strategy signal, token rotation or risk-cap change is granted.
+
+The command durably records its attempt before the documented `DELETE /positions`
+operation. It requires `SUCCESS` and Dhan's explicit confirmation that all orders
+and positions were exited, then two fresh flat broker reads with unchanged cash.
+An error, timeout, partial/ambiguous confirmation, changed cash/activity or
+interrupted earlier recovery keeps the original obligation unresolved; the
+command never automatically retries a reset.
+
+On successful broker evidence, the original intent becomes `RECOVERY_CLOSED` with
+an immutable incident containing the confirmation and before/after receipts.
+Its original HTTP attempt remains UNKNOWN, its reserved-cash field and all probe
+counters remain unchanged, and no original broker order ID/status/fill/P&L is
+invented. The operational reservation is released only by the confirmed recovery
+state plus its receipt. Any later broker order or fill reopens the obligation.
+A bare recovery-state label without the receipt is still unresolved. Restart
+retains normal account/source/route/market/strategy gates; any next route check
+must fit the existing daily/lifetime attempt and cash allowance.
+
+Primary contract: https://dhanhq.co/docs/v2/portfolio/#exit-all-positions

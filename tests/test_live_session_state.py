@@ -64,6 +64,17 @@ def test_timeout_and_non_json_error_do_not_fabricate_rejection():
     assert not receipt.get('definitively_rejected',False)
 
 
+def test_gateway_error_schema_retains_inner_cause_with_credentials_redacted():
+    request=httpx.Request('POST','https://fixture/orders',headers={'access-token':'TOPSECRET','client-id':'1234567890'})
+    response=httpx.Response(400,request=request,json={'errorCode':'BAD_REQUEST_ERROR',
+        'internalErrorCode':'RS-9005','internalErrorMessage':'todo mandatory fields; token TOPSECRET account 1234567890'})
+    try:response.raise_for_status()
+    except httpx.HTTPStatusError as exc:receipt=request_failure_receipt(exc)
+    assert receipt['broker_internal_error_code']=='RS-9005'
+    assert 'mandatory fields' in receipt['broker_message']
+    assert 'TOPSECRET' not in json.dumps(receipt) and '1234567890' not in json.dumps(receipt)
+
+
 def test_real_http_adapter_and_oms_keep_error_receipt_without_retry(tmp_path):
     import asyncio
     from decimal import Decimal as D

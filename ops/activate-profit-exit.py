@@ -141,5 +141,7 @@ def main():
 if __name__=='__main__':
     try:main()
     except Exception as exc:
-        print(json.dumps({'applied':False,'error_type':type(exc).__name__}),file=sys.stderr)
+        report={'applied':False,'error_type':type(exc).__name__}
+        if getattr(exc,'verification_failure',None):report['verification_failure']=exc.verification_failure
+        print(json.dumps(report),file=sys.stderr)
         raise SystemExit(1)

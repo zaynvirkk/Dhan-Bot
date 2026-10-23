@@ -611,6 +611,8 @@ function renderLive(d){
  if(!rt?.fresh){title='Live status unavailable';reason='The last snapshot is historical. Check System for the connection status.';}
  else if(rt.reason==='ROUTE_OUTCOME_UNKNOWN'||d.ledger?.route_check?.state==='SEND_UNKNOWN'){
   title='Order check unresolved';reason='Dhan’s response to the route check is unknown. No entry or retry is allowed until the request is reconciled. The strategy is still being monitored.';
+  const check=d.ledger?.route_check;
+  if(check?.broker_message)reason=`Dhan reported ${check.broker_internal_error_code||check.broker_error_code||check.http_status||'an error'}: ${check.broker_message}. `+reason;
  }else if(['POSITION_OPEN','ENTRY_PENDING','EXIT_PENDING','SETTLEMENT_PENDING','RECOVERING'].includes(rt.state)){
   title=({POSITION_OPEN:'Managing your position',ENTRY_PENDING:'Entry order sent',EXIT_PENDING:'Exit order sent',SETTLEMENT_PENDING:'Waiting for settlement',RECOVERING:'Checking the account'})[rt.state];
   reason=rt.state==='POSITION_OPEN'?'Live position and exit information are shown below.':'Waiting for broker confirmation before another decision.';
