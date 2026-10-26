@@ -1,5 +1,6 @@
 from datetime import datetime,timedelta,timezone
 import hashlib,json,sqlite3
+import pytest
 from copy import deepcopy
 from dhan_cas_bot.ledger import SCHEMA
 from dhan_cas_bot.dashboard.operations import day_summary, advance_incidents, fault_candidates
@@ -85,3 +86,10 @@ def test_missing_funded_evaluation_and_silent_connected_book_are_flagged():
  report['runtime']['feed_health']['market']['last_usable_at']=(NOW-timedelta(seconds=60)).isoformat()
  codes={r['code'] for r in fault_candidates(report,NOW)}
  assert {'STRATEGY_CHECK_STALE','OPTIONS_STALE'}<=codes
+
+
+@pytest.mark.parametrize('reported_open',[None,False])
+def test_missing_calendar_cannot_masquerade_as_a_normal_closed_market(reported_open):
+ report=healthy(False);report['runtime']['exchange_session_open']=reported_open
+ report['runtime']['strategy_evaluations'][0].update(state='INPUT_UNAVAILABLE',reason='CALENDAR_UNAVAILABLE')
+ assert 'MARKET_SESSION_UNKNOWN' in {r['code'] for r in fault_candidates(report,NOW)}

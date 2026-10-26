@@ -24,6 +24,7 @@ MESSAGES={
  'STRATEGY_INPUT_UNAVAILABLE':'A funded strategy cannot evaluate its required inputs.',
  'STRATEGY_CHECK_STALE':'A funded strategy stopped producing current evaluations.',
  'SESSION_STATE_MISMATCH':'The strategy reports a closed exchange while the verified session is open.',
+ 'MARKET_SESSION_UNKNOWN':'The exchange calendar is unavailable; market-open status cannot be confirmed.',
  'READY_NOT_DISPATCHED':'A ready contract assessment has no recorded final dispatch outcome.',
  'MONITOR_UNAVAILABLE':'The operational monitor is unavailable and needs investigation.',
  'DAY_AUDIT_UNAVAILABLE':'The monitor cannot reconstruct the complete recorded trading day.',
@@ -95,6 +96,8 @@ def fault_candidates(report,now):
  required=rt.get('exchange_session_open') is True or held
  funded=rt.get('authority')=='ENABLED' and bool(rt.get('funded_strategies'))
  def add(code,immediate=False):found.append({'code':code,'severity':'CRITICAL','immediate':immediate})
+ if (funded or held) and (rt.get('exchange_session_open') is None or any(r.get('reason')=='CALENDAR_UNAVAILABLE' for r in rt.get('strategy_evaluations') or [])):
+  add('MARKET_SESSION_UNKNOWN')
  if not rt.get('fresh'):add('TRADER_STALE')
  if ((report.get('ledger') or {}).get('route_check') or {}).get('state')=='SEND_UNKNOWN':add('ROUTE_OUTCOME_UNKNOWN',True)
  if rt.get('recorder_failed') is True:add('REPLAY_FAILED',True)
