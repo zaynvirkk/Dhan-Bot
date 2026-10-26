@@ -649,3 +649,21 @@ setImmediate(()=>{
  assert.doesNotMatch(ids['live-decision-reason'].textContent,/09:55/);
  console.log('Shock scenario rejection survives restart and normal closed-session route reset');
 });
+
+setImmediate(()=>{
+ browser.operational={server_time:'2026-10-26T14:30:00Z',runtime:{fresh:true,strategies:[]},operations:{status:'AVAILABLE',observed_at:'2026-10-26T14:30:00Z',incidents:[],
+  session:{status:'AVAILABLE',date:'2026-10-26',completed_checks:296,signal_minutes:5,episodes:1,entry_attempts:0,filled_entries:0},
+  repair_runner:{checked_at:'2026-10-26T14:29:30Z',state:'NO_OPEN_INCIDENTS'}}};
+ vm.runInContext('renderLive(operational)',browser);
+ assert.match(ids['live-check-total'].textContent,/Full day.*296.*5 signal minutes in 1 episode.*0 entry orders/);
+ assert.match(ids['operations-status'].textContent,/no open faults/);
+ assert.match(ids['repair-status'].textContent,/no AI repair needed/);
+ browser.operational.operations.incidents=[{state:'OPEN',message:'Options stopped.',first_seen:'2026-10-26T14:28:00Z'}];
+ vm.runInContext('renderLive(operational)',browser);
+ assert.match(ids['operations-status'].textContent,/1 open fault.*Options stopped/);
+ browser.operational.server_time='2026-10-26T14:35:00Z';
+ vm.runInContext('renderLive(operational)',browser);
+ assert.match(ids['operations-status'].textContent,/unknown/);
+ assert.match(ids['repair-status'].textContent,/not checking in/);
+ console.log('Complete-day counters, active faults, stale monitor and absent repair runner are distinct');
+});

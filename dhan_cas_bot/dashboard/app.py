@@ -66,6 +66,8 @@ def view_snapshot(path, now=None, *, include_history=True):
         data.pop('history',None)
         data['learning_unchanged']=True
     data.update(available=True, server_time=now.isoformat(), collector=freshness(data.get('collector_observed_at'), now, 60))
+    operations=data.get('operations')
+    if isinstance(operations,dict):operations.update(freshness(operations.get('observed_at'),now,20))
     for section, ttl in (('runtime',RUNTIME_TTL_SECONDS), ('connections',900), ('account',60), ('daily_monitor',90),('seconds_experiments',10)):
         value = data.get(section)
         if not isinstance(value, dict):

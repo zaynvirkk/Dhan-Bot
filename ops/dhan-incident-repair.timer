@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Dhan incidents without spending AI calls on healthy waiting
+
+[Timer]
+OnBootSec=45
+OnUnitInactiveSec=60
+AccuracySec=5
+Unit=dhan-incident-repair.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Investigate confirmed Dhan operational incidents
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/virk/Projects/Financial/dhan-cas-bot
+ExecStart=/home/virk/Projects/Financial/dhan-cas-bot/.venv/bin/python /home/virk/Projects/Financial/dhan-cas-bot/ops/incident-repair.py --run-agent
+Environment=PATH=/home/virk/.local/bin:/usr/local/bin:/usr/bin:/bin
+UMask=0077
+TimeoutStartSec=33min
+Nice=10

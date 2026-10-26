@@ -39,7 +39,7 @@ async def read_account(config):
         await broker.close()
 
 
-def projection(config, previous, *, checked=None, monitor=None):
+def projection(config, previous, *, checked=None, monitor=None, operations=None):
     now = utcnow()
     primary = shared_account(read_json(Path(config['state_dir'])/'account-observation.json'), now)
     report = {'schema': 1, 'collector_observed_at': now.isoformat(), 'writes_to_broker': False,
@@ -59,6 +59,7 @@ def projection(config, previous, *, checked=None, monitor=None):
     if checked:
         report['independent_check'] = {'observed_at': checked['observed_at'], 'ok': checked['ok']}
     report.update(local_snapshot(config['state_dir'], now))
+    report['operations']=operations or {'status':'UNAVAILABLE'}
     report['daily_monitor'] = daily_monitor_view(monitor, now)
     runtime=report.get('runtime') or {}
     candidate=Path(__file__).resolve().parents[2].name
@@ -139,6 +140,14 @@ async def collect(config, output):
     return write_report(output, report)
 
 
+def operations_view(output,now):
+    value=read_json(Path(output).with_name('operations.json'),1024*1024)
+    health=read_json(Path(output).with_name('operations-health.json'),8192)
+    if not value or not health or health.get('status')!='AVAILABLE' or not freshness(health.get('observed_at'),now,20)['fresh']:
+        return {'status':'UNAVAILABLE'}
+    return value
+
+
 async def watch(config, output):
     """Publish local state each second, independently of slow verification GETs."""
     checked = None
@@ -158,7 +167,19 @@ async def watch(config, output):
             value=await asyncio.to_thread(build_learning,config,output,read_json(output) or {},utcnow())
             atomic_json(Path(output).with_name('learning.json'),value)
             await asyncio.sleep(30)
+    async def operations():
+        from .operations import build_operations
+        while True:
+            now=utcnow()
+            try:
+                await asyncio.to_thread(build_operations,config,output,read_json(output) or {},now)
+                health={'schema':1,'observed_at':now.isoformat(),'status':'AVAILABLE'}
+            except Exception as error:
+                health={'schema':1,'observed_at':now.isoformat(),'status':'UNAVAILABLE','error_type':type(error).__name__}
+            atomic_json(Path(output).with_name('operations-health.json'),health)
+            await asyncio.sleep(5)
     learning_task=asyncio.create_task(learning())
+    operations_task=asyncio.create_task(operations())
     task = asyncio.create_task(verify())
     history_cache=None
     last_history_time=-float('inf')
@@ -166,7 +187,7 @@ async def watch(config, output):
     try:
         while True:
             previous = read_json(output) or {}
-            report=projection(config,previous,checked=checked,monitor=read_json(Path(output).with_name('daily-monitor.json')))
+            report=projection(config,previous,checked=checked,monitor=read_json(Path(output).with_name('daily-monitor.json')),operations=operations_view(output,utcnow()))
             report['seconds_experiments']=seconds_view(read_json(Path(output).with_name('seconds-strategies.json')),utcnow())
             signature=history_signature(report)
             due=signature!=last_signature or time.monotonic()-last_history_time>=5
@@ -175,8 +196,8 @@ async def watch(config, output):
             if due:last_history_time=time.monotonic();last_signature=signature
             await asyncio.sleep(1)
     finally:
-        task.cancel();learning_task.cancel()
-        await asyncio.gather(task,learning_task, return_exceptions=True)
+        task.cancel();learning_task.cancel();operations_task.cancel()
+        await asyncio.gather(task,learning_task,operations_task, return_exceptions=True)
 
 
 def main():

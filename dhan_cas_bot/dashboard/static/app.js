@@ -565,8 +565,24 @@ function shockAssessmentSummary(row){
   return `Setup at ${timeOnly(row.candidate_signal_at)}: affordable contracts were found, but the best modeled scenario was ${best.toFixed(2)}× entry cash; requires 1.80×. No entry passed. This is a scenario test, not a profit forecast.`;
  return `Setup at ${timeOnly(row.candidate_signal_at)}: ${strategyReasons[row.last_execution_reason]||row.last_execution_reason?.replaceAll('_',' ').toLowerCase()||'execution outcome unavailable'}.`;
 }
+function renderOperations(d){
+ const ops=d.operations,seconds=elapsed(ops?.observed_at,d.server_time);
+ const fresh=d.available!==false&&d.collector?.fresh!==false&&ops?.status==='AVAILABLE'&&seconds!==null&&seconds<=20;
+ const incidents=fresh?ops.incidents||[]:[],open=incidents.filter(r=>r.state==='OPEN'),pending=incidents.filter(r=>r.state==='PENDING');
+ $('operations-status').textContent=!fresh?'Operational monitoring unavailable. Current fault status is unknown.':open.length?`${open.length} open ${open.length===1?'fault':'faults'}: ${open.map(r=>r.message).join(' ')}`:pending.length?'A technical check is pending confirmation; transient failures are being checked.':'Technical checks current · no open faults.';
+ $('operations-status').className=fresh&&!open.length&&!pending.length?'subtle':'notice';
+ const runner=ops?.repair_runner,runnerAge=elapsed(runner?.checked_at,d.server_time);
+ $('repair-status').textContent=runnerAge===null||runnerAge>180?'Automatic repair runner is not checking in. It needs the local computer and authenticated CLI online.':runner.state==='RUNNING'?`Automatic repair is running · started ${at(runner.last_attempt_at)}.`:runner.state==='NO_OPEN_INCIDENTS'?(open.length||pending.length?`Awaiting the next repair check · last checked ${at(runner.checked_at)}.`:'Automatic repair checks current · no AI repair needed.'):`Automatic repair: ${(runner.state||'unknown').replaceAll('_',' ').toLowerCase()} · ${runner.attempts_today??'unknown'} attempts today (limit 2).`;
+ $('operations-detail').hidden=!incidents.length;
+ if(changed('operations-incidents',incidents)){
+  $('operations-incidents').replaceChildren();
+  for(const row of [...incidents].reverse().slice(0,20))$('operations-incidents').append(el('p',`${row.state.toLowerCase()} · ${row.message} First seen ${at(row.first_seen)}${row.resolved_at?`; recovered ${at(row.resolved_at)}`:''}.`));
+ }
+ return fresh&&ops.session?.status==='AVAILABLE'&&ops.session.date===istDay(d.server_time)?ops.session:null;
+}
 function renderLive(d){
  renderSeconds(d);
+ const sessionTotals=renderOperations(d);
  const rt=d.runtime,a=d.account,configured=rt?.strategies||[],funded=rt?.funded_strategies;
  if(state.liveDay!==istDay(d.server_time)){state.liveChecks={};state.liveDay=istDay(d.server_time);}
  $('live-stamp').textContent=rt?.observed_at?`${rt.fresh?'Updated':'Last update'} ${timeOnly(rt.observed_at)}`:'Waiting for the bot';
@@ -591,7 +607,7 @@ function renderLive(d){
  $('live-trades-today').textContent=closed.complete?`${today} completed ${today===1?'trade':'trades'} today`:'Today’s completed count unknown';
  const checks=recordedChecks(d),completed=new Set(checks.filter(r=>['SIGNAL','NO_SIGNAL'].includes(r.state)).map(r=>r.strategy+':'+r.evaluated_at)),signals=new Set(checks.filter(r=>r.state==='SIGNAL').map(r=>r.strategy+':'+r.evaluated_at)),warnings=checks.filter(r=>r.state==='UNKNOWN').length;
  const recorded=d.ledger?.decision_history,known=d.ledger?.available===true&&recorded?.status==='AVAILABLE'&&recorded.date===istDay(d.server_time),partial=recorded?.strategies?.some(r=>r.truncated);
- const checkSummary=known?(checks.length?partial?`Latest ${completed.size} completed checks retained. Earlier checks are omitted; this is not a session total.`:`Recorded today: ${completed.size} completed checks · ${signals.size} signals${warnings?` · ${warnings} data warnings`:''}`:'No completed strategy checks recorded today.'):'Today’s recorded checks are unavailable.';
+ const checkSummary=sessionTotals?`Full day: ${sessionTotals.completed_checks} completed checks · ${sessionTotals.signal_minutes} signal minutes in ${sessionTotals.episodes} ${sessionTotals.episodes===1?'episode':'episodes'} · ${sessionTotals.entry_attempts} entry orders · ${sessionTotals.filled_entries} filled entries. ${partial?'Recent detail samples are limited.':''}`:known?(checks.length?partial?`Latest ${completed.size} completed checks retained. Earlier checks are omitted; this is not a session total.`:`Recorded today: ${completed.size} completed checks · ${signals.size} signals${warnings?` · ${warnings} data warnings`:''}`:'No completed strategy checks recorded today.'):'Today’s recorded checks are unavailable.';
  $('live-check-total').textContent=checkSummary;$('today-check-summary').textContent=checkSummary;
  if(changed('today-checks',[checks,known])){
   $('today-checks').replaceChildren();
