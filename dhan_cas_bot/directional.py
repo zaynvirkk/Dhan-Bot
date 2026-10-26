@@ -178,7 +178,9 @@ class DirectionalEngine:
         key = self.signal_key(signal) + ":assessment"
         value = {"reason": reason, "candidate_checks": checks or []}
         # Store changes to the binding result, not every incoming quote.
-        if ledger.metadata(key) != value:
+        previous=ledger.metadata(key,{})
+        if {k:v for k,v in previous.items() if k!='assessed_at'} != value:
+            if signal.strategy==SHOCK:value['assessed_at']=self.engine.now().isoformat()
             ledger.put_metadata(key, value)
 
     def refresh_ranking(self):
@@ -462,6 +464,7 @@ class DirectionalEngine:
                 row['last_execution_reason']=self.shock.last_reason
                 row['execution_blocking_reason']=self.shock.last_reason if self.shock.last_reason!='READY' else None
                 row['candidate_assessed_at']=self.shock.assessed_at
+                row['candidate_signal_at']=self.shock.candidate_signal_at
             from .expanded_strategies import SPECS
             spec=SPECS.get(strategy)
             row['family']=spec[0] if spec else 'GAP_FADE' if strategy==GAP else 'NIFTY_SELLOFF_REBOUND'

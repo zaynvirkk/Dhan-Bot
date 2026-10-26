@@ -557,6 +557,14 @@ function liveStrategyState(name,row,d){
  }
  return {label:row.state==='WAITING'?'Waiting':'No entry',reason:name==='TREND_PULLBACK_FAST'&&row.reason==='OUTSIDE_STRATEGY_WINDOW'?'Between scheduled five-minute decisions.':conditionSummary(row)};
 }
+function shockAssessmentSummary(row){
+ if(!row?.candidate_signal_at||!row.shock_candidates?.length)return '';
+ const affordable=row.shock_candidates.filter(c=>c.quantity>0&&c.scenario_multiple!=null&&Number.isFinite(Number(c.scenario_multiple)));
+ const best=affordable.length?Math.max(...affordable.map(c=>Number(c.scenario_multiple))):null;
+ if(affordable.length&&affordable.every(c=>c.reason==='SHOCK_SCENARIO_BELOW_FLOOR')&&best<1.8)
+  return `Setup at ${timeOnly(row.candidate_signal_at)}: affordable contracts were found, but the best modeled scenario was ${best.toFixed(2)}× entry cash; requires 1.80×. No entry passed. This is a scenario test, not a profit forecast.`;
+ return `Setup at ${timeOnly(row.candidate_signal_at)}: ${strategyReasons[row.last_execution_reason]||row.last_execution_reason?.replaceAll('_',' ').toLowerCase()||'execution outcome unavailable'}.`;
+}
 function renderLive(d){
  renderSeconds(d);
  const rt=d.runtime,a=d.account,configured=rt?.strategies||[],funded=rt?.funded_strategies;
@@ -599,13 +607,15 @@ function renderLive(d){
  const otherSignals=(d.ledger?.last_signals||[]).filter(r=>istDay(r.evaluated_at)===istDay(d.server_time)&&r.blocking_reason==='FUNDED_STRATEGY_DISABLED'&&!configured.includes(r.strategy));
  $('other-setups').textContent=otherSignals.length?`${otherSignals.length} other strategy configurations recorded setups today but had no funded permission. These are observations, not verified missed profits.`:'';
  const liveOn=rt?.fresh&&rt.authority==='ENABLED'&&Array.isArray(funded)&&funded.length>0;
- const entryBlocked=rt?.broker_route_verified===false||rt?.account_snapshot_fresh===false||rt?.software_verified===false||rt?.current_account_funded===false||['RECOVERING','ENTRY_HALTED'].includes(rt?.state);
+ const routeExhausted=Number.isSafeInteger(rt?.route_attempts_used)&&Number.isSafeInteger(rt?.route_attempt_limit)&&rt.route_attempt_limit>0&&rt.route_attempts_used>=rt.route_attempt_limit;
+ const routeFault=['REJECTED','SEND_UNKNOWN'].includes(d.ledger?.route_check?.state)||routeExhausted;
+ const entryBlocked=(rt?.broker_route_verified===false&&(!exchangeIsClosed(rt)||routeFault))||rt?.account_snapshot_fresh===false||rt?.software_verified===false||rt?.current_account_funded===false||['RECOVERING','ENTRY_HALTED'].includes(rt?.state);
  const exchangeClosed=exchangeIsClosed(rt);
  const entryReady=liveOn&&rt.broker_route_verified===true&&rt.account_snapshot_fresh===true&&rt.software_verified===true&&rt.current_account_funded===true&&!entryBlocked&&!exchangeClosed;
  $('live-funding').textContent=liveOn?(d.release?.upgrade_required?'Funded · update pending':entryBlocked?'Funded · entries blocked':exchangeClosed?'Funded · market closed':entryReady?'Funded · waiting for a signal':'Funded · readiness unknown'):rt?.fresh&&rt.authority==='DISABLED'?'New entries paused':rt?.fresh&&Array.isArray(funded)&&funded.length===0?'No funded strategies':'Permission unknown';
  $('live-funding').className='badge '+(entryReady&&!d.release?.upgrade_required?'good':'warn');
  const quote=rt?.observation,quoteAge=elapsed(quote?.ltp_at,d.server_time);
- $('live-market').textContent=quote?.ltp!=null?`NIFTY ${points(quote.ltp)} · ${rt?.fresh&&quoteAge!==null&&quoteAge<=5?'live':'last observed'}`:'NIFTY price unavailable';
+ $('live-market').textContent=quote?.ltp!=null?`NIFTY ${points(quote.ltp)} · ${rt?.fresh&&quoteAge!==null&&quoteAge<=5?'live':'last observed'}`:rt?.fresh&&exchangeClosed?'Market closed · quotes resume with the session':'NIFTY price unavailable';
  const snapshots=configured.map(name=>{const row=rt.strategy_evaluations?.find(r=>r.strategy===name);return {name,row,snapshot:liveStrategyState(name,row,d)};}).sort((a,b)=>Number(['Not today','Closed','Observe only'].includes(a.snapshot.label))-Number(['Not today','Closed','Observe only'].includes(b.snapshot.label)));
  let title='Waiting for a setup',reason='The bot will enter only when a strategy and its execution checks pass.';
  if(!rt?.fresh){title='Live status unavailable';reason='The last snapshot is historical. Check System for the connection status.';}
@@ -622,7 +632,7 @@ function renderLive(d){
  else if(!funded.length){title='No strategies are funded';reason='The configured strategies can observe without opening new money positions.';}
  else if(rt.software_verified===false){title='Entries are blocked';reason='The running software needs matching verification. See System.';}
  else if(rt.account_snapshot_fresh===false){title='Waiting for the account check';reason='New entries need a fresh reconciled balance and position read.';}
- else if(exchangeIsClosed(rt)&&rt.broker_route_verified!==false){title='Waiting for the market to open';reason='New entries wait for a verified exchange session.';}
+ else if(exchangeIsClosed(rt)&&!routeFault&&rt.state!=='ENTRY_HALTED'){title='Waiting for the market to open';reason='New entries wait for a verified exchange session.';if(rt.broker_route_verified===false)reason+=' The order connection will need to qualify during the next session.';}
  else if(rt.broker_route_verified===false){
   const used=rt.route_attempts_used,limit=rt.route_attempt_limit,exhausted=Number.isSafeInteger(used)&&Number.isSafeInteger(limit)&&limit>0&&used>=limit;
   const check=d.ledger?.route_check;
@@ -646,6 +656,9 @@ function renderLive(d){
   }
  }
  if(d.release?.upgrade_required&&rt?.fresh&&!['POSITION_OPEN','ENTRY_PENDING','EXIT_PENDING','SETTLEMENT_PENDING','RECOVERING'].includes(rt.state)){if(!entryBlocked){title='Trader software update pending';}reason+=' The dashboard is updated, but the running trader still needs the signal and connection repairs.';}
+ const shockRow=rt?.strategy_evaluations?.find(r=>r.strategy==='VOLATILITY_SHOCK_V1');
+ const historicShock=shockRow?.candidate_signal_at&&istDay(shockRow.candidate_signal_at)===istDay(d.server_time)?shockAssessmentSummary(shockRow):'';
+ if(historicShock&&rt?.fresh&&!['POSITION_OPEN','ENTRY_PENDING','EXIT_PENDING','SETTLEMENT_PENDING','RECOVERING'].includes(rt.state))reason+=' '+historicShock;
  $('live-decision-title').textContent=title;$('live-decision-reason').textContent=reason;
  $('live-strategy-count').textContent=Array.isArray(funded)?`${funded.length} funded`:'Permissions unknown';
  if(changed('live-strategies',[snapshots,rt?.fresh,funded])){
@@ -665,6 +678,7 @@ function renderLive(d){
     body.append(el('p','Experimental: the retained simulations had only one filled trade per period.'));
     if(check?.details)body.append(el('p',`Recorded trend ${signedPercent(check.details.trend_30m)}; pullback ${signedPercent(check.details.pullback_10m)}. Other confirmation values were not supplied in this snapshot.`));
    }else if(name==='VOLATILITY_SHOCK_V1'){
+    if(historicShock)body.append(el('p',historicShock));
     body.append(el('p','shock_v1 · only funded entry strategy. CAS and the earlier strategies are paused. New setups use completed minutes from 09:50–14:45 IST, subject to the actual exchange session and contract cutoff.'));
     if(row?.bar_at)body.append(el('p',`Completed minute ${at(row.bar_at)} · source observed ${at(row.source_received_at)}.`));
     if(row?.details?.spot_5m!=null)body.append(el('p',`NIFTY five-minute move ${signedPercent(row.details.spot_5m)} · prior median ${signedPercent(row.details.prior_abs_r5)} · futures ${signedPercent(row.details.future_5m_return)} · futures volume ${Number(row.details.volume_ratio).toFixed(2)}× baseline.`));
@@ -673,7 +687,7 @@ function renderLive(d){
     const selected=rt.strategy_selection;
     if(selected?.selected===name)body.append(el('p',`Last selection ${at(selected.evaluated_at)} · planned entry cash ${cash(selected.entry_cash)} / ${cash(selected.budget)} budget. Favorable scenario ${Number(selected.scenario_multiple).toFixed(2)}×; this is not expected profit.`));
     if(row?.shock_candidates?.length){
-     const candidates=el('details',undefined,'decision-inputs');candidates.append(el('summary',`${row.shock_candidates.length} contracts checked at ${at(row.candidate_assessed_at)}`));
+     const candidates=el('details',undefined,'decision-inputs');candidates.append(el('summary',`${row.shock_candidates.length} recorded contract checks${row.candidate_assessed_at?` · ${at(row.candidate_assessed_at)}`:' · assessment time not recorded'}`));
      for(const c of row.shock_candidates)candidates.append(el('p',`NIFTY ${points(c.strike)} · ${c.expiry||'expiry unavailable'}: ${c.reason.replaceAll('_',' ').toLowerCase()}${c.quantity?` · ${c.quantity} units · limit ${cash(c.limit)} · entry ${cash(c.entry_cash)} · exit reserve ${cash(c.exit_fee_reserve)} · scenario ${Number(c.scenario_multiple).toFixed(2)}×`:''}`));
      body.append(candidates);
     }

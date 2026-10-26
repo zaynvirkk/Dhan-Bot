@@ -108,6 +108,47 @@ def test_reconnect_consumes_incomplete_episode_without_disabling_position_manage
     assert l.metadata(e.directional.signal_key(original)+':consumed')['reason']=='SHOCK_RECONNECT_INVALIDATED'
 
 
+@pytest.mark.parametrize('reason',['ENTRY_DEADLINE_MISSED','DECISION_COMMITTED'])
+def test_reconnect_preserves_first_consumption_receipt(tmp_path,reason):
+    e,b,l,c,i=setup(tmp_path)
+    key=e.directional.signal_key(e.directional.shock.sample)+':consumed'
+    receipt={'reason':reason,'lifecycle_id':'original','blocking_reason':'SHOCK_SCENARIO_BELOW_FLOOR'}
+    l.put_metadata(key,receipt)
+    e.directional.shock.invalidate()
+    assert l.metadata(key)==receipt
+    assert e.directional.shock.sample is None and not b.requests
+
+
+def test_restart_restores_today_assessment_for_display_without_rearming(tmp_path):
+    e,b,l,c,i=setup(tmp_path)
+    original=e.directional.shock.sample
+    checks=[{'security_id':'s','reason':'SHOCK_SCENARIO_BELOW_FLOOR','scenario_multiple':'1.725','quantity':65}]
+    e.directional.record_assessment(original,'NO_AFFORDABLE_LIQUID_CONTRACT',checks)
+    e.directional=DirectionalEngine(e,[SHOCK])
+    row=e.directional.view()[0]
+    assert row['shock_candidates']==checks
+    assert row['last_execution_reason']=='SHOCK_SCENARIO_BELOW_FLOOR'
+    assert row['candidate_signal_at']==original.evaluated_at.isoformat()
+    assert e.directional.shock.sample is None and not b.requests
+    # The following session must not inherit today's diagnostic as current.
+    c[0]+=timedelta(days=1)
+    e.directional=DirectionalEngine(e,[SHOCK])
+    assert e.directional.view()[0]['shock_candidates']==[]
+
+
+def test_scenario_rejection_is_not_reported_as_unaffordable(tmp_path,monkeypatch):
+    async def run():
+        e,b,l,c,i=setup(tmp_path)
+        checks=[{'reason':'NO_AFFORDABLE_LIQUID_CONTRACT'},
+                {'reason':'SHOCK_SCENARIO_BELOW_FLOOR','quantity':65,'scenario_multiple':'1.725'}]
+        monkeypatch.setattr('dhan_cas_bot.shock_engine.select_shock_candidate',lambda *a:(None,checks))
+        assert not await e.cycle() and not b.requests
+        assessment=l.metadata(e.directional.signal_key(e.directional.shock.sample)+':assessment')
+        assert assessment['reason']=='SHOCK_SCENARIO_BELOW_FLOOR'
+        assert assessment['assessed_at']==c[0].isoformat()
+    asyncio.run(run())
+
+
 def test_live_future_reversal_prevents_dispatch(tmp_path):
     async def run():
         e,b,l,c,i=setup(tmp_path)

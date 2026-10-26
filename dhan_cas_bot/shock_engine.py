@@ -12,6 +12,14 @@ from .volatility_shock import SHOCK, RULE, EXIT, ALLOCATION, episode_id, shock_a
 from .session_strategies import IST
 
 
+def rejection_reason(checks):
+    """Report the furthest observed entry gate, never imply missing cash."""
+    reasons={c.get('reason') for c in checks}
+    if 'SHOCK_SCENARIO_BELOW_FLOOR' in reasons:return 'SHOCK_SCENARIO_BELOW_FLOOR'
+    if len(reasons)==1:return next(iter(reasons)) or 'NO_AFFORDABLE_LIQUID_CONTRACT'
+    return 'NO_AFFORDABLE_LIQUID_CONTRACT'
+
+
 class ShockEngine:
     def __init__(self,directional):
         self.directional=directional
@@ -21,6 +29,24 @@ class ShockEngine:
         self.last_checks=[]
         self.last_reason='INPUTS_NOT_RECEIVED'
         self.assessed_at=None
+        self.candidate_signal_at=None
+        # Restore diagnostics only. A historic signal never restores sample,
+        # permission, or a dispatchable order after restart.
+        prefix=f'directional-signal:{self.engine.now().astimezone(IST).date()}:{SHOCK}:'
+        ledger=self.engine.runtime.ledger
+        latest=None
+        for row in ledger.db.execute('SELECT key,value FROM metadata WHERE key>=? AND key<?',(prefix,prefix+'~')):
+            if row['key'].endswith((':assessment',':consumed')):continue
+            raw=json.loads(row['value'])
+            assessment=ledger.metadata(row['key']+':assessment',{})
+            stamp=raw.get('evaluated_at')
+            if stamp and assessment and (latest is None or stamp>latest[0]):latest=(stamp,assessment)
+        if latest:
+            self.candidate_signal_at,assessment=latest
+            self.last_checks=assessment.get('candidate_checks',[])
+            self.last_reason=assessment.get('reason','INPUTS_NOT_RECEIVED')
+            if self.last_reason=='NO_AFFORDABLE_LIQUID_CONTRACT':self.last_reason=rejection_reason(self.last_checks)
+            self.assessed_at=assessment.get('assessed_at')
 
     def update(self,sample):
         """Only a completed, usable new bar can rearm an episode; retries cannot."""
@@ -61,8 +87,9 @@ class ShockEngine:
 
     def invalidate(self):
         if self.sample:
-            self.engine.runtime.ledger.put_metadata(self.directional.signal_key(self.sample)+':consumed',
-                {'reason':'SHOCK_RECONNECT_INVALIDATED'})
+            ledger=self.engine.runtime.ledger
+            key=self.directional.signal_key(self.sample)+':consumed'
+            if not ledger.metadata(key):ledger.put_metadata(key,{'reason':'SHOCK_RECONNECT_INVALIDATED'})
         self.sample=None
 
     def valid(self,signal):
@@ -109,8 +136,9 @@ class ShockEngine:
         chosen,checks=select_shock_candidate(signal,e.instruments.values(),e.books,budget,e.now(),d.inputs.calendar)
         self.last_checks=checks;self.selected=chosen
         self.assessed_at=e.now().isoformat()
+        self.candidate_signal_at=signal.evaluated_at.isoformat()
         if not chosen:
-            self.last_reason='NO_AFFORDABLE_LIQUID_CONTRACT';d.record_assessment(signal,self.last_reason,checks);return False
+            self.last_reason=rejection_reason(checks);d.record_assessment(signal,self.last_reason,checks);return False
         d.record_assessment(signal,'READY',checks)
         self.last_reason='READY'
         selection={'evaluated_at':e.now().isoformat(),'mode':'DECLARED_CONTINUATION_SCENARIO',

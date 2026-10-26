@@ -620,3 +620,27 @@ setImmediate(()=>{
  assert.equal(vm.runInContext("liveStrategyState('VOLATILITY_SHOCK_V1',null,recoveryFixture).label",browser),'Market closed');
  console.log('Unknown route outcome and verified exchange session are distinct');
 });
+
+setImmediate(()=>{
+ browser.shockAudit={server_time:'2026-10-26T14:30:00Z',runtime:{fresh:true,authority:'ENABLED',state:'WAITING_EXCHANGE_SESSION',
+  exchange_session_open:false,strategies:['VOLATILITY_SHOCK_V1'],funded_strategies:['VOLATILITY_SHOCK_V1'],software_verified:true,
+  account_snapshot_fresh:true,current_account_funded:true,broker_route_verified:false,route_attempts_used:1,route_attempt_limit:2,
+  strategy_evaluations:[{strategy:'VOLATILITY_SHOCK_V1',state:'WAITING',reason:'EXCHANGE_CLOSED',
+   candidate_signal_at:'2026-10-26T04:25:00Z',last_execution_reason:'SHOCK_SCENARIO_BELOW_FLOOR',
+   shock_candidates:[{reason:'SHOCK_SCENARIO_BELOW_FLOOR',quantity:260,scenario_multiple:'1.725211'}]}]},ledger:{available:true}};
+ vm.runInContext('renderLive(shockAudit)',browser);
+ assert.equal(ids['live-funding'].textContent,'Funded · market closed');
+ assert.match(ids['live-decision-title'].textContent,/market.*open/i);
+ assert.match(ids['live-decision-reason'].textContent,/09:55.*1.73.*1.80/);
+ assert.match(ids['live-market'].textContent,/market closed/i);
+ browser.shockAudit.runtime.exchange_session_open=true;browser.shockAudit.runtime.state='ARMED_WAITING_SIGNAL';
+ browser.shockAudit.runtime.broker_route_verified=true;
+ browser.shockAudit.runtime.strategy_evaluations[0].state='SIGNAL';browser.shockAudit.runtime.strategy_evaluations[0].reason='SHOCK_CONFIRMED';
+ vm.runInContext('renderLive(shockAudit)',browser);
+ assert.match(ids['live-decision-reason'].textContent,/affordable.*1.73.*1.80/);
+ // Yesterday's diagnostics must not masquerade as today's missed opportunity.
+ browser.shockAudit.server_time='2026-10-27T04:30:00Z';
+ vm.runInContext('renderLive(shockAudit)',browser);
+ assert.doesNotMatch(ids['live-decision-reason'].textContent,/09:55/);
+ console.log('Shock scenario rejection survives restart and normal closed-session route reset');
+});

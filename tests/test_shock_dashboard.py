@@ -9,11 +9,13 @@ from dhan_cas_bot.volatility_shock import SHOCK
 
 def test_shock_fields_are_visible_without_private_payloads():
     raw=json_safe(asdict(signal()));raw['details']['token']='PRIVATE'
+    raw['candidate_signal_at']=raw['evaluated_at']
     raw['shock_candidates']=[{'security_id':'123','reason':'SHOCK_SPREAD_TOO_WIDE',
         'budget':'7772.25','expiry':'2026-10-27','token':'PRIVATE','raw_payload':'PRIVATE'}]
     row=strategy_projection([raw])[0]
     assert row['exit_policy']=='SHOCK_EXIT_V1' and len(row['conditions'])==6
     assert row['details']['spot_5m'] and row['bar_at'] and row['source_received_at']
+    assert row['candidate_signal_at']==raw['evaluated_at']
     assert row['shock_candidates'][0]['reason']=='SHOCK_SPREAD_TOO_WIDE'
     assert row['shock_candidates'][0]['expiry']=='2026-10-27'
     assert 'PRIVATE' not in json.dumps(row)

@@ -359,6 +359,7 @@ def strategy_projection(raw):
             'source_received_at':timestamp((row.get('details') or {}).get('source_received_at')),
             'shock_candidates':shock_candidate_projection(row.get('shock_candidates')),
             'candidate_assessed_at':timestamp(row.get('candidate_assessed_at')),
+            'candidate_signal_at':timestamp(row.get('candidate_signal_at')),
             'last_execution_reason':choice(str(row.get('last_execution_reason','')).split(':')[0],STRATEGY_REASONS),
             'execution_blocking_reason':choice(str(row.get('execution_blocking_reason','')).split(':')[0],STRATEGY_REASONS)})
     return result
