@@ -1,5 +1,6 @@
 import json
 from dataclasses import asdict
+from datetime import datetime
 from dhan_cas_bot.domain import json_safe
 from dhan_cas_bot.dashboard.data import strategy_projection, last_signal_views, active_trade_views
 from tests.test_volatility_shock import signal
@@ -15,7 +16,7 @@ def test_shock_fields_are_visible_without_private_payloads():
     row=strategy_projection([raw])[0]
     assert row['exit_policy']=='SHOCK_EXIT_V1' and len(row['conditions'])==6
     assert row['details']['spot_5m'] and row['bar_at'] and row['source_received_at']
-    assert row['candidate_signal_at']==raw['evaluated_at']
+    assert datetime.fromisoformat(row['candidate_signal_at'])==datetime.fromisoformat(raw['evaluated_at'])
     assert row['shock_candidates'][0]['reason']=='SHOCK_SPREAD_TOO_WIDE'
     assert row['shock_candidates'][0]['expiry']=='2026-10-27'
     assert 'PRIVATE' not in json.dumps(row)

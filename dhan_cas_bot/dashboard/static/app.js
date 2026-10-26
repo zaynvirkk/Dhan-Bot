@@ -591,7 +591,7 @@ function renderLive(d){
  $('live-trades-today').textContent=closed.complete?`${today} completed ${today===1?'trade':'trades'} today`:'Today’s completed count unknown';
  const checks=recordedChecks(d),completed=new Set(checks.filter(r=>['SIGNAL','NO_SIGNAL'].includes(r.state)).map(r=>r.strategy+':'+r.evaluated_at)),signals=new Set(checks.filter(r=>r.state==='SIGNAL').map(r=>r.strategy+':'+r.evaluated_at)),warnings=checks.filter(r=>r.state==='UNKNOWN').length;
  const recorded=d.ledger?.decision_history,known=d.ledger?.available===true&&recorded?.status==='AVAILABLE'&&recorded.date===istDay(d.server_time),partial=recorded?.strategies?.some(r=>r.truncated);
- const checkSummary=known?(checks.length?`${partial?'Retained today':'Recorded today'}: ${completed.size} completed checks · ${signals.size} signals${warnings?` · ${warnings} data warnings`:''}`:'No completed strategy checks recorded today.'):'Today’s recorded checks are unavailable.';
+ const checkSummary=known?(checks.length?partial?`Latest ${completed.size} completed checks retained. Earlier checks are omitted; this is not a session total.`:`Recorded today: ${completed.size} completed checks · ${signals.size} signals${warnings?` · ${warnings} data warnings`:''}`:'No completed strategy checks recorded today.'):'Today’s recorded checks are unavailable.';
  $('live-check-total').textContent=checkSummary;$('today-check-summary').textContent=checkSummary;
  if(changed('today-checks',[checks,known])){
   $('today-checks').replaceChildren();

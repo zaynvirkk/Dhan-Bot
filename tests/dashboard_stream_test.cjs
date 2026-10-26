@@ -633,6 +633,11 @@ setImmediate(()=>{
  assert.match(ids['live-decision-title'].textContent,/market.*open/i);
  assert.match(ids['live-decision-reason'].textContent,/09:55.*1.73.*1.80/);
  assert.match(ids['live-market'].textContent,/market closed/i);
+ browser.shockAudit.ledger.decision_history={status:'AVAILABLE',date:'2026-10-26',strategies:[{strategy:'VOLATILITY_SHOCK_V1',truncated:true,
+  records:[{strategy:'VOLATILITY_SHOCK_V1',evaluated_at:'2026-10-26T09:00:00Z',received_at:'2026-10-26T09:00:01Z',state:'NO_SIGNAL',details:{}}]}]};
+ vm.runInContext('renderLive(shockAudit)',browser);
+ assert.match(ids['live-check-total'].textContent,/Latest 1 completed checks.*Earlier checks are omitted/);
+ assert.doesNotMatch(ids['live-check-total'].textContent,/0 signals/);
  browser.shockAudit.runtime.exchange_session_open=true;browser.shockAudit.runtime.state='ARMED_WAITING_SIGNAL';
  browser.shockAudit.runtime.broker_route_verified=true;
  browser.shockAudit.runtime.strategy_evaluations[0].state='SIGNAL';browser.shockAudit.runtime.strategy_evaluations[0].reason='SHOCK_CONFIRMED';
