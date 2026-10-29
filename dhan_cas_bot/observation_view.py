@@ -48,3 +48,18 @@ def observation_view(engine, instruments):
         'expiry': min((i.expiry for i in instruments), default=None),
         'watchlist': books,
     })
+
+
+def cas_evaluation(now, session_open, expiry_today, funded):
+    """Native CAS loop status, not a directional signal or dispatch receipt."""
+    state, reason = 'WAITING', 'OUTSIDE_STRATEGY_WINDOW'
+    if session_open is None or expiry_today is None:
+        state, reason = 'INPUT_UNAVAILABLE', 'CALENDAR_UNAVAILABLE'
+    elif not session_open:
+        reason = 'EXCHANGE_CLOSED'
+    elif not expiry_today:
+        state, reason = 'NOT_APPLICABLE', 'NOT_EXPIRY_DAY'
+    return {'strategy':'CAS_LAG_V1','state':state,'reason':reason,
+            'evaluated_at':now.isoformat(),'enabled':True,'funded_enabled':funded,
+            'entry_rule':'Native auction engine; official indicative index, executable residual and account gates.',
+            'conditions':[]}

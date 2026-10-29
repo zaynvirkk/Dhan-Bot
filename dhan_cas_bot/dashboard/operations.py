@@ -121,6 +121,12 @@ def fault_candidates(report,now):
     if row.get('strategy') not in rt.get('funded_strategies',[]):continue
     if row.get('reason')=='EXCHANGE_CLOSED' and rt.get('exchange_session_open') is True:add('SESSION_STATE_MISMATCH')
     elif row.get('state') in {'UNKNOWN','INPUT_UNAVAILABLE'}:add('STRATEGY_INPUT_UNAVAILABLE')
+    # This result is tied to the latest completed minute bar, while the
+    # strategy deliberately waits outside its fixed evaluation window. Its
+    # timestamp may age between that bar and the next scheduled evaluation;
+    # the worker's live input health and top-level trader freshness remain
+    # independently checked above. Do not call this healthy wait a stall.
+    if row.get('reason')=='OUTSIDE_STRATEGY_WINDOW':continue
     try:
      if not 0<=(now-stamp(row.get('evaluated_at'))).total_seconds()<=120:add('STRATEGY_CHECK_STALE')
     except (ValueError,TypeError):add('STRATEGY_CHECK_STALE')

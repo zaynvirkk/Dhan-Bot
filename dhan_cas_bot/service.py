@@ -39,7 +39,7 @@ from .rules import RuleSource, DHAN_MASTER_URL, NSE_FREEZE_URL
 from .runtime import AutoLive
 from .transport import WebSocketRunner, message_received_ns, message_received_monotonic_ns
 from .upstox_signal import decode_binary, extract_status, observation, NIFTY_KEY
-from .observation_view import observation_view
+from .observation_view import observation_view, cas_evaluation
 from .directional import DirectionalEngine
 from .strategy_inputs import strategy_names, selected_contracts, route_window, StrategyInputWorker
 from .session_strategies import CAS, GAP, REBOUND
@@ -736,7 +736,7 @@ async def serve_session(config: dict, ledger: Ledger, stop: asyncio.Event, *, no
                              final_source_error=final_error, telemetry=runtime.telemetry.snapshot(),
                              account_snapshot_fresh=account_refresh.fresh, feed_health=feed_health,
                              monitoring_mode="IDLE" if idle else "ACTIVE", recorder_pending=records.qsize(),
-                             strategies=list(enabled), funded_strategies=sorted(runtime.enabled_strategies), strategy_evaluations=engine.directional.view(),
+                             strategies=list(enabled), funded_strategies=sorted(runtime.enabled_strategies), strategy_evaluations=engine.directional.view() + ([cas_evaluation(now(), calendar.is_open(now()) if calendar and calendar.fresh(now()) else None, expiry_today if metadata_admitted else None, "CAS_LAG_V1" in runtime.enabled_strategies)] if "CAS_LAG_V1" in enabled else []),
                              strategy_selection=engine.directional.selection,
                              execution_feedback=engine.directional.ranking,
                              minute_source=input_worker.minutes.spot_source if has_directional else None,

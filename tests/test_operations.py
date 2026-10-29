@@ -93,3 +93,24 @@ def test_missing_calendar_cannot_masquerade_as_a_normal_closed_market(reported_o
  report=healthy(False);report['runtime']['exchange_session_open']=reported_open
  report['runtime']['strategy_evaluations'][0].update(state='INPUT_UNAVAILABLE',reason='CALENDAR_UNAVAILABLE')
  assert 'MARKET_SESSION_UNKNOWN' in {r['code'] for r in fault_candidates(report,NOW)}
+
+
+def test_completed_bar_waiting_outside_strategy_window_is_not_stale():
+ report=healthy()
+ report['runtime']['strategy_evaluations'][0].update(
+  state='WAITING',reason='OUTSIDE_STRATEGY_WINDOW',
+  evaluated_at=(NOW-timedelta(minutes=10)).isoformat())
+ assert 'STRATEGY_CHECK_STALE' not in {r['code'] for r in fault_candidates(report,NOW)}
+
+
+def test_native_cas_status_is_reported_without_inventing_a_signal():
+ from dhan_cas_bot.observation_view import cas_evaluation
+ row=cas_evaluation(NOW,True,False,True)
+ assert row['strategy']=='CAS_LAG_V1' and row['state']=='NOT_APPLICABLE'
+ assert row['evaluated_at']==NOW.isoformat()
+ assert cas_evaluation(NOW,True,True,True)['state']=='WAITING'
+ assert cas_evaluation(NOW,None,True,True)['state']=='INPUT_UNAVAILABLE'
+ report=healthy();report['runtime']['funded_strategies'].append('CAS_LAG_V1')
+ assert 'STRATEGY_CHECK_STALE' in {r['code'] for r in fault_candidates(report,NOW)}
+ report['runtime']['strategy_evaluations'].append(row)
+ assert 'STRATEGY_CHECK_STALE' not in {r['code'] for r in fault_candidates(report,NOW)}
